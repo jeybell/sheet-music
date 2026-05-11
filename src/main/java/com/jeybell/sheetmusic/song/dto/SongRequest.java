@@ -2,6 +2,8 @@ package com.jeybell.sheetmusic.song.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
+import java.util.List;
 
 public record SongRequest(
         @NotBlank(message = "title is required")
@@ -11,9 +13,9 @@ public record SongRequest(
         @Size(max = 255, message = "artist must be 255 characters or less")
         String artist,
 
-        @Size(max = 20, message = "originalKey must be 20 characters or less")
-        String originalKey,
+        String memo,
 
-        String memo
+        @Valid
+        List<SongSheetRequest> sheets
 ) {
 }

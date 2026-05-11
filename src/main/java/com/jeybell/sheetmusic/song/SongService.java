@@ -3,6 +3,7 @@ package com.jeybell.sheetmusic.song;
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
+import com.jeybell.sheetmusic.song.dto.SongSheetRequest;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,8 +18,12 @@ public class SongService {
         this.songRepository = songRepository;
     }
 
-    public List<SongResponse> getSongs() {
-        return songRepository.findAllByDeletedAtIsNullOrderByCreatedAtDesc()
+    public List<SongResponse> getSongs(String songKey) {
+        List<Song> songs = songKey == null || songKey.isBlank()
+                ? songRepository.findAllActiveWithSheets()
+                : songRepository.findAllActiveBySongKeyWithSheets(songKey);
+
+        return songs
                 .stream()
                 .map(SongResponse::from)
                 .toList();
@@ -29,9 +34,9 @@ public class SongService {
         Song song = new Song(
                 request.title(),
                 request.artist(),
-                request.originalKey(),
                 request.memo()
         );
+        toSheets(request.sheets()).forEach(song::addSheet);
 
         return SongResponse.from(songRepository.save(song));
     }
@@ -46,7 +51,6 @@ public class SongService {
         song.update(
                 request.title(),
                 request.artist(),
-                request.originalKey(),
                 request.memo()
         );
 
@@ -60,7 +64,21 @@ public class SongService {
     }
 
     private Song getActiveSong(Long id) {
-        return songRepository.findByIdAndDeletedAtIsNull(id)
+        return songRepository.findActiveByIdWithSheets(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Song not found: " + id));
+    }
+
+    private List<SongSheet> toSheets(List<SongSheetRequest> requests) {
+        if (requests == null) {
+            return List.of();
+        }
+
+        return requests.stream()
+                .map(request -> new SongSheet(
+                        request.sheetKey(),
+                        request.versionName(),
+                        request.memo()
+                ))
+                .toList();
     }
 }

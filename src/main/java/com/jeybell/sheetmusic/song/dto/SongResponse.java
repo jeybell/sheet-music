@@ -2,13 +2,14 @@ package com.jeybell.sheetmusic.song.dto;
 
 import com.jeybell.sheetmusic.song.Song;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record SongResponse(
         Long id,
         String title,
         String artist,
-        String originalKey,
         String memo,
+        List<SongSheetResponse> sheets,
         Long createdBy,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
@@ -19,8 +20,12 @@ public record SongResponse(
                 song.getId(),
                 song.getTitle(),
                 song.getArtist(),
-                song.getOriginalKey(),
                 song.getMemo(),
+                song.getSheets()
+                        .stream()
+                        .filter(sheet -> sheet.getDeletedAt() == null)
+                        .map(SongSheetResponse::from)
+                        .toList(),
                 song.getCreatedBy(),
                 song.getCreatedAt(),
                 song.getUpdatedAt()

@@ -1,14 +1,19 @@
 package com.jeybell.sheetmusic.song;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name = "songs")
@@ -23,11 +28,11 @@ public class Song {
 
     private String artist;
 
-    @Column(name = "original_key")
-    private String originalKey;
-
     @Column(columnDefinition = "TEXT")
     private String memo;
+
+    @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)
+    private List<SongSheet> sheets = new ArrayList<>();
 
     @Column(name = "created_by")
     private Long createdBy;
@@ -44,10 +49,9 @@ public class Song {
     protected Song() {
     }
 
-    public Song(String title, String artist, String originalKey, String memo) {
+    public Song(String title, String artist, String memo) {
         this.title = title;
         this.artist = artist;
-        this.originalKey = originalKey;
         this.memo = memo;
     }
 
@@ -63,11 +67,20 @@ public class Song {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    public void update(String title, String artist, String originalKey, String memo) {
+    public void update(String title, String artist, String memo) {
         this.title = title;
         this.artist = artist;
-        this.originalKey = originalKey;
         this.memo = memo;
+    }
+
+    public void replaceSheets(List<SongSheet> newSheets) {
+        this.sheets.forEach(SongSheet::softDelete);
+        newSheets.forEach(this::addSheet);
+    }
+
+    public void addSheet(SongSheet sheet) {
+        sheet.assignSong(this);
+        this.sheets.add(sheet);
     }
 
     public void softDelete() {
@@ -86,12 +99,12 @@ public class Song {
         return artist;
     }
 
-    public String getOriginalKey() {
-        return originalKey;
-    }
-
     public String getMemo() {
         return memo;
+    }
+
+    public List<SongSheet> getSheets() {
+        return Collections.unmodifiableList(sheets);
     }
 
     public Long getCreatedBy() {

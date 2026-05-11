@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sheet-music-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: sheet_music
+      POSTGRES_USER: sheet_user
+      POSTGRES_PASSWORD: sheet_pass
+    volumes:
+      - sheet_music_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sheet_music_pgdata:

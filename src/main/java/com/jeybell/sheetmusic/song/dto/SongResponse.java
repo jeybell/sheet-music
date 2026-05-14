@@ -9,7 +9,7 @@ public record SongResponse(
         String title,
         String artist,
         String memo,
-        List<SongSheetResponse> sheets,
+        List<SongSheetSummaryResponse> songSheets,
         Long createdBy,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
@@ -24,7 +24,7 @@ public record SongResponse(
                 song.getSheets()
                         .stream()
                         .filter(sheet -> sheet.getDeletedAt() == null)
-                        .map(SongSheetResponse::from)
+                        .map(SongSheetSummaryResponse::from)
                         .toList(),
                 song.getCreatedBy(),
                 song.getCreatedAt(),

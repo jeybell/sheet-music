@@ -44,9 +44,13 @@ public class SongSheetService {
                 .toList();
     }
 
+    public SongSheetResponse getSheet(Long songSheetId) {
+        return SongSheetResponse.from(getActiveSheet(songSheetId));
+    }
+
     @Transactional
-    public SongSheetResponse updateSheet(Long sheetId, SongSheetRequest request) {
-        SongSheet sheet = getActiveSheet(sheetId);
+    public SongSheetResponse updateSheet(Long songSheetId, SongSheetRequest request) {
+        SongSheet sheet = getActiveSheet(songSheetId);
 
         sheet.update(
                 request.sheetKey(),
@@ -58,8 +62,8 @@ public class SongSheetService {
     }
 
     @Transactional
-    public void deleteSheet(Long sheetId) {
-        SongSheet sheet = getActiveSheet(sheetId);
+    public void deleteSheet(Long songSheetId) {
+        SongSheet sheet = getActiveSheet(songSheetId);
         sheet.softDelete();
     }
 
@@ -68,8 +72,8 @@ public class SongSheetService {
                 .orElseThrow(() -> new ResourceNotFoundException("Song not found: " + songId));
     }
 
-    private SongSheet getActiveSheet(Long sheetId) {
-        return songSheetRepository.findByIdAndDeletedAtIsNull(sheetId)
-                .orElseThrow(() -> new ResourceNotFoundException("Song sheet not found: " + sheetId));
+    private SongSheet getActiveSheet(Long songSheetId) {
+        return songSheetRepository.findByIdAndDeletedAtIsNull(songSheetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Song sheet not found: " + songSheetId));
     }
 }

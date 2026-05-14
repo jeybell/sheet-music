@@ -5,6 +5,7 @@ import com.jeybell.sheetmusic.song.dto.SongResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,25 +36,25 @@ public class SongController {
     public ResponseEntity<SongResponse> createSong(@Valid @RequestBody SongRequest request) {
         SongResponse response = songService.createSong(request);
         return ResponseEntity
-                .created(URI.create("/api/songs/" + response.id()))
+                .created(Objects.requireNonNull(URI.create("/api/songs/" + response.id())))
                 .body(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SongResponse> getSong(@PathVariable Long id) {
+    public ResponseEntity<SongResponse> getSong(@PathVariable("id") Long id) {
         return ResponseEntity.ok(songService.getSong(id));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<SongResponse> updateSong(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @Valid @RequestBody SongRequest request
     ) {
         return ResponseEntity.ok(songService.updateSong(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSong(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteSong(@PathVariable("id") Long id) {
         songService.deleteSong(id);
         return ResponseEntity.noContent().build();
     }

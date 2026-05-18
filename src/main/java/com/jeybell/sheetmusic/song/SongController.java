@@ -28,7 +28,7 @@ public class SongController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SongResponse>> getSongs(@RequestParam(required = false) String songKey) {
+    public ResponseEntity<List<SongResponse>> getSongs(@RequestParam(name = "songKey", required = false) String songKey) {
         return ResponseEntity.ok(songService.getSongs(songKey));
     }
 

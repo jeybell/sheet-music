@@ -10,6 +10,8 @@ const props = defineProps<{
 
 const songStore = useSongStore()
 
+const getArtistName = (artist: string | null) => artist?.trim() || '아티스트 미상'
+
 const loadSong = () => {
   if (Number.isFinite(props.id)) {
     void songStore.fetchSong(props.id)
@@ -32,7 +34,7 @@ watch(() => props.id, loadSong)
       <article v-else-if="songStore.selectedSong" class="song-detail">
         <p class="eyebrow">Song Detail</p>
         <h1>{{ songStore.selectedSong.title }}</h1>
-        <p class="detail-artist">{{ songStore.selectedSong.artist || '아티스트 미상' }}</p>
+        <p class="detail-artist">{{ getArtistName(songStore.selectedSong.artist) }}</p>
         <p v-if="songStore.selectedSong.memo" class="detail-memo">
           {{ songStore.selectedSong.memo }}
         </p>

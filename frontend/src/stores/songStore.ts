@@ -1,6 +1,20 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { getSong, getSongs, type Song } from '../apis/songs'
+import { isAxiosError } from 'axios'
+import { getSong, getSongs } from '../apis/songs'
+import type { Song } from '../types/song'
+
+interface ApiErrorResponse {
+  message?: string
+}
+
+const getErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (isAxiosError<ApiErrorResponse>(error)) {
+    return error.response?.data?.message ?? fallbackMessage
+  }
+
+  return fallbackMessage
+}
 
 export const useSongStore = defineStore('song', () => {
   const songs = ref<Song[]>([])
@@ -16,8 +30,8 @@ export const useSongStore = defineStore('song', () => {
 
     try {
       songs.value = await getSongs()
-    } catch {
-      errorMessage.value = '곡 목록을 불러오지 못했습니다.'
+    } catch (error) {
+      errorMessage.value = getErrorMessage(error, '곡 목록을 불러오지 못했습니다.')
     } finally {
       isLoading.value = false
     }
@@ -30,8 +44,8 @@ export const useSongStore = defineStore('song', () => {
 
     try {
       selectedSong.value = await getSong(id)
-    } catch {
-      errorMessage.value = '곡 정보를 불러오지 못했습니다.'
+    } catch (error) {
+      errorMessage.value = getErrorMessage(error, '곡 정보를 불러오지 못했습니다.')
     } finally {
       isLoading.value = false
     }

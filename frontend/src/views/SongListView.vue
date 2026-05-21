@@ -20,7 +20,7 @@ onMounted(() => {
     </section>
 
     <section class="panel">
-      <p v-if="songStore.isLoading" class="state-message">곡 목록을 불러오는 중입니다.</p>
+      <p v-if="songStore.isLoading" class="state-message">불러오는 중...</p>
       <p v-else-if="songStore.errorMessage" class="state-message error">
         {{ songStore.errorMessage }}
       </p>

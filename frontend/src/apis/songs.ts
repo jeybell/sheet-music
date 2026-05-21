@@ -1,11 +1,5 @@
 import http from './http'
-
-export interface Song {
-  id: number
-  title: string
-  artist: string | null
-  memo?: string | null
-}
+import type { Song } from '../types/song'
 
 export const getSongs = async () => {
   const { data } = await http.get<Song[]>('/api/songs')

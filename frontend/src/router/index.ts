@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import SongCreateView from '../views/SongCreateView.vue'
 import SongDetailView from '../views/SongDetailView.vue'
 import SongListView from '../views/SongListView.vue'
 
@@ -13,6 +14,11 @@ const router = createRouter({
       path: '/songs',
       name: 'songs',
       component: SongListView,
+    },
+    {
+      path: '/songs/new',
+      name: 'song-create',
+      component: SongCreateView,
     },
     {
       path: '/songs/:songId',

@@ -26,3 +26,10 @@ export interface Song {
   songSheets?: SongSheetSummary[]
   files?: SongFile[]
 }
+
+export interface SongCreateRequest {
+  title: string
+  artist?: string | null
+  composer?: string | null
+  memo?: string | null
+}

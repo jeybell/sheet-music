@@ -42,6 +42,14 @@ body {
   white-space: pre-line;
 }
 
+.form-field {
+  margin-bottom: 12px;
+}
+
+.form-field label {
+  display: block;
+}
+
 .error {
   color: #b00020;
 }

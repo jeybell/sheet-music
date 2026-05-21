@@ -14,6 +14,7 @@ onMounted(() => {
 <template>
   <DefaultLayout>
     <h1>곡 목록</h1>
+    <RouterLink to="/songs/new">곡 등록</RouterLink>
 
     <section>
       <p v-if="songStore.isLoading">불러오는 중...</p>

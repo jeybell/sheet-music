@@ -15,11 +15,11 @@ const router = createRouter({
       component: SongListView,
     },
     {
-      path: '/songs/:id',
+      path: '/songs/:songId',
       name: 'song-detail',
       component: SongDetailView,
       props: (route) => ({
-        id: Number(route.params.id),
+        songId: Number(route.params.songId),
       }),
     },
   ],

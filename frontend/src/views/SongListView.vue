@@ -13,18 +13,14 @@ onMounted(() => {
 
 <template>
   <DefaultLayout>
-    <section class="page-heading">
-      <p class="eyebrow">Songs</p>
-      <h1>곡 목록</h1>
-      <p class="description">등록된 찬양곡을 확인하고 상세 페이지로 이동할 수 있습니다.</p>
-    </section>
+    <h1>곡 목록</h1>
 
-    <section class="panel">
-      <p v-if="songStore.isLoading" class="state-message">불러오는 중...</p>
-      <p v-else-if="songStore.errorMessage" class="state-message error">
+    <section>
+      <p v-if="songStore.isLoading">불러오는 중...</p>
+      <p v-else-if="songStore.errorMessage" class="error">
         {{ songStore.errorMessage }}
       </p>
-      <p v-else-if="!songStore.hasSongs" class="state-message">등록된 곡이 없습니다.</p>
+      <p v-else-if="!songStore.hasSongs">등록된 곡이 없습니다.</p>
       <SongList v-else :songs="songStore.songs" />
     </section>
   </DefaultLayout>

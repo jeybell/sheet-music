@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { isAxiosError } from 'axios'
-import { getSong, getSongs } from '../apis/songs'
+import { getSong, getSongs } from '../apis/songApi'
 import type { Song } from '../types/song'
 
 interface ApiErrorResponse {

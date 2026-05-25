@@ -1,34 +1,32 @@
 package com.jeybell.sheetmusic.song.dto;
 
 import com.jeybell.sheetmusic.song.Song;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record SongResponse(
-        Long id,
+        Long songId,
         String title,
         String artist,
+        String composer,
         String memo,
         List<SongSheetSummaryResponse> songSheets,
-        Long createdBy,
-        OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        LocalDateTime createdAt
 ) {
 
     public static SongResponse from(Song song) {
         return new SongResponse(
-                song.getId(),
+                song.getSongId(),
                 song.getTitle(),
                 song.getArtist(),
+                song.getComposer(),
                 song.getMemo(),
                 song.getSheets()
                         .stream()
                         .filter(sheet -> sheet.getDeletedAt() == null)
                         .map(SongSheetSummaryResponse::from)
                         .toList(),
-                song.getCreatedBy(),
-                song.getCreatedAt(),
-                song.getUpdatedAt()
+                song.getCreatedAt()
         );
     }
 }

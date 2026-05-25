@@ -38,7 +38,7 @@ public class SongSheetService {
 
     public List<SongSheetResponse> getSheets(Long songId) {
         getActiveSong(songId);
-        return songSheetRepository.findAllBySongIdAndDeletedAtIsNullOrderByIdAsc(songId)
+        return songSheetRepository.findAllBySongSongIdAndDeletedAtIsNullOrderBySongSheetIdAsc(songId)
                 .stream()
                 .map(SongSheetResponse::from)
                 .toList();
@@ -68,12 +68,12 @@ public class SongSheetService {
     }
 
     private Song getActiveSong(Long songId) {
-        return songRepository.findActiveByIdWithSheets(songId)
+        return songRepository.findActiveBySongIdWithSheets(songId)
                 .orElseThrow(() -> new ResourceNotFoundException("Song not found: " + songId));
     }
 
     private SongSheet getActiveSheet(Long songSheetId) {
-        return songSheetRepository.findByIdAndDeletedAtIsNull(songSheetId)
+        return songSheetRepository.findBySongSheetIdAndDeletedAtIsNull(songSheetId)
                 .orElseThrow(() -> new ResourceNotFoundException("Song sheet not found: " + songSheetId));
     }
 }

@@ -10,7 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "song_files")
@@ -18,7 +18,8 @@ public class SongFile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "song_file_id")
+    private Long songFileId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "song_sheet_id", nullable = false)
@@ -30,7 +31,7 @@ public class SongFile {
     @Column(name = "stored_file_name", nullable = false)
     private String storedFileName;
 
-    @Column(name = "file_path", nullable = false, length = 1024)
+    @Column(name = "file_path", nullable = false, length = 1000)
     private String filePath;
 
     @Column(name = "content_type", length = 100)
@@ -40,10 +41,10 @@ public class SongFile {
     private Long fileSize;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "deleted_at")
-    private OffsetDateTime deletedAt;
+    private LocalDateTime deletedAt;
 
     protected SongFile() {
     }
@@ -66,15 +67,15 @@ public class SongFile {
 
     @PrePersist
     void prePersist() {
-        this.createdAt = OffsetDateTime.now();
+        this.createdAt = LocalDateTime.now();
     }
 
     public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+        this.deletedAt = LocalDateTime.now();
     }
 
-    public Long getId() {
-        return id;
+    public Long getSongFileId() {
+        return songFileId;
     }
 
     public SongSheet getSongSheet() {
@@ -101,11 +102,11 @@ public class SongFile {
         return fileSize;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public OffsetDateTime getDeletedAt() {
+    public LocalDateTime getDeletedAt() {
         return deletedAt;
     }
 }

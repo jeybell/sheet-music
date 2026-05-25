@@ -34,6 +34,7 @@ public class SongService {
         Song song = new Song(
                 request.title(),
                 request.artist(),
+                request.composer(),
                 request.memo()
         );
         toSheets(request.sheets()).forEach(song::addSheet);
@@ -41,16 +42,17 @@ public class SongService {
         return SongResponse.from(songRepository.save(song));
     }
 
-    public SongResponse getSong(Long id) {
-        return SongResponse.from(getActiveSong(id));
+    public SongResponse getSong(Long songId) {
+        return SongResponse.from(getActiveSong(songId));
     }
 
     @Transactional
-    public SongResponse updateSong(Long id, SongRequest request) {
-        Song song = getActiveSong(id);
+    public SongResponse updateSong(Long songId, SongRequest request) {
+        Song song = getActiveSong(songId);
         song.update(
                 request.title(),
                 request.artist(),
+                request.composer(),
                 request.memo()
         );
 
@@ -58,14 +60,14 @@ public class SongService {
     }
 
     @Transactional
-    public void deleteSong(Long id) {
-        Song song = getActiveSong(id);
+    public void deleteSong(Long songId) {
+        Song song = getActiveSong(songId);
         song.softDelete();
     }
 
-    private Song getActiveSong(Long id) {
-        return songRepository.findActiveByIdWithSheets(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Song not found: " + id));
+    private Song getActiveSong(Long songId) {
+        return songRepository.findActiveBySongIdWithSheets(songId)
+                .orElseThrow(() -> new ResourceNotFoundException("Song not found: " + songId));
     }
 
     private List<SongSheet> toSheets(List<SongSheetRequest> requests) {

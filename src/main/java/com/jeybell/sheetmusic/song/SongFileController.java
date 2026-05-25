@@ -34,7 +34,7 @@ public class SongFileController {
     ) {
         SongFileResponse response = songFileService.uploadFile(songSheetId, file);
         return ResponseEntity
-                .created(Objects.requireNonNull(URI.create("/api/song-files/" + response.id() + "/download")))
+                .created(Objects.requireNonNull(URI.create("/api/song-files/" + response.songFileId() + "/download")))
                 .body(response);
     }
 

@@ -13,6 +13,9 @@ public record SongRequest(
         @Size(max = 255, message = "artist must be 255 characters or less")
         String artist,
 
+        @Size(max = 255, message = "composer must be 255 characters or less")
+        String composer,
+
         String memo,
 
         @Valid

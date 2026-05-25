@@ -33,8 +33,8 @@ public interface SongRepository extends JpaRepository<Song, Long> {
             select distinct s
             from Song s
             left join fetch s.sheets sheets
-            where s.id = :id
+            where s.songId = :songId
               and s.deletedAt is null
             """)
-    Optional<Song> findActiveByIdWithSheets(@Param("id") Long id);
+    Optional<Song> findActiveBySongIdWithSheets(@Param("songId") Long songId);
 }

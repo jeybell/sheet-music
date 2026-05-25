@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SongSheetRepository extends JpaRepository<SongSheet, Long> {
 
-    List<SongSheet> findAllBySongIdAndDeletedAtIsNullOrderByIdAsc(Long songId);
+    List<SongSheet> findAllBySongSongIdAndDeletedAtIsNullOrderBySongSheetIdAsc(Long songId);
 
-    Optional<SongSheet> findByIdAndDeletedAtIsNull(Long id);
+    Optional<SongSheet> findBySongSheetIdAndDeletedAtIsNull(Long songSheetId);
 }

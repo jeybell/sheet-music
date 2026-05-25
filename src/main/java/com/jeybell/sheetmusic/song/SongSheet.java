@@ -8,8 +8,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name = "song_sheets")
@@ -17,7 +21,8 @@ public class SongSheet {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "song_sheet_id")
+    private Long songSheetId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "song_id", nullable = false)
@@ -32,8 +37,11 @@ public class SongSheet {
     @Column(columnDefinition = "TEXT")
     private String memo;
 
+    @OneToMany(mappedBy = "songSheet")
+    private List<SongFile> files = new ArrayList<>();
+
     @Column(name = "deleted_at")
-    private OffsetDateTime deletedAt;
+    private LocalDateTime deletedAt;
 
     protected SongSheet() {
     }
@@ -55,15 +63,15 @@ public class SongSheet {
     }
 
     public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+        this.deletedAt = LocalDateTime.now();
     }
 
     public boolean isActive() {
         return deletedAt == null;
     }
 
-    public Long getId() {
-        return id;
+    public Long getSongSheetId() {
+        return songSheetId;
     }
 
     public Song getSong() {
@@ -82,7 +90,11 @@ public class SongSheet {
         return memo;
     }
 
-    public OffsetDateTime getDeletedAt() {
+    public List<SongFile> getFiles() {
+        return Collections.unmodifiableList(files);
+    }
+
+    public LocalDateTime getDeletedAt() {
         return deletedAt;
     }
 }

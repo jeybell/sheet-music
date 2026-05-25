@@ -36,26 +36,26 @@ public class SongController {
     public ResponseEntity<SongResponse> createSong(@Valid @RequestBody SongRequest request) {
         SongResponse response = songService.createSong(request);
         return ResponseEntity
-                .created(Objects.requireNonNull(URI.create("/api/songs/" + response.id())))
+                .created(Objects.requireNonNull(URI.create("/api/songs/" + response.songId())))
                 .body(response);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<SongResponse> getSong(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(songService.getSong(id));
+    @GetMapping("/{songId}")
+    public ResponseEntity<SongResponse> getSong(@PathVariable("songId") Long songId) {
+        return ResponseEntity.ok(songService.getSong(songId));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{songId}")
     public ResponseEntity<SongResponse> updateSong(
-            @PathVariable("id") Long id,
+            @PathVariable("songId") Long songId,
             @Valid @RequestBody SongRequest request
     ) {
-        return ResponseEntity.ok(songService.updateSong(id, request));
+        return ResponseEntity.ok(songService.updateSong(songId, request));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSong(@PathVariable("id") Long id) {
-        songService.deleteSong(id);
+    @DeleteMapping("/{songId}")
+    public ResponseEntity<Void> deleteSong(@PathVariable("songId") Long songId) {
+        songService.deleteSong(songId);
         return ResponseEntity.noContent().build();
     }
 }

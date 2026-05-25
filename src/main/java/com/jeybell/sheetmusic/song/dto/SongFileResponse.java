@@ -3,7 +3,7 @@ package com.jeybell.sheetmusic.song.dto;
 import com.jeybell.sheetmusic.song.SongFile;
 
 public record SongFileResponse(
-        Long id,
+        Long songFileId,
         Long songSheetId,
         String originalFileName,
         String storedFileName,
@@ -14,8 +14,8 @@ public record SongFileResponse(
 
     public static SongFileResponse from(SongFile songFile) {
         return new SongFileResponse(
-                songFile.getId(),
-                songFile.getSongSheet().getId(),
+                songFile.getSongFileId(),
+                songFile.getSongSheet().getSongSheetId(),
                 songFile.getOriginalFileName(),
                 songFile.getStoredFileName(),
                 songFile.getFilePath(),

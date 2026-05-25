@@ -1,22 +1,29 @@
 package com.jeybell.sheetmusic.song.dto;
 
 import com.jeybell.sheetmusic.song.SongSheet;
+import java.util.List;
 
 public record SongSheetResponse(
-        Long id,
+        Long songSheetId,
         Long songId,
         String sheetKey,
         String versionName,
-        String memo
+        String memo,
+        List<SongFileResponse> files
 ) {
 
     public static SongSheetResponse from(SongSheet sheet) {
         return new SongSheetResponse(
-                sheet.getId(),
-                sheet.getSong().getId(),
+                sheet.getSongSheetId(),
+                sheet.getSong().getSongId(),
                 sheet.getSheetKey(),
                 sheet.getVersionName(),
-                sheet.getMemo()
+                sheet.getMemo(),
+                sheet.getFiles()
+                        .stream()
+                        .filter(file -> file.getDeletedAt() == null)
+                        .map(SongFileResponse::from)
+                        .toList()
         );
     }
 }

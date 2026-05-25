@@ -106,12 +106,12 @@ public class SongFileService {
     }
 
     private SongSheet getActiveSongSheet(Long songSheetId) {
-        return songSheetRepository.findByIdAndDeletedAtIsNull(songSheetId)
+        return songSheetRepository.findBySongSheetIdAndDeletedAtIsNull(songSheetId)
                 .orElseThrow(() -> new ResourceNotFoundException("Song sheet not found: " + songSheetId));
     }
 
     private SongFile getActiveSongFile(Long songFileId) {
-        return songFileRepository.findByIdAndDeletedAtIsNull(songFileId)
+        return songFileRepository.findBySongFileIdAndDeletedAtIsNull(songFileId)
                 .orElseThrow(() -> new ResourceNotFoundException("Song file not found: " + songFileId));
     }
 

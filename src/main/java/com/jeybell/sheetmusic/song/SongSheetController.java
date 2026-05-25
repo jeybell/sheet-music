@@ -31,7 +31,7 @@ public class SongSheetController {
     ) {
         SongSheetResponse response = songSheetService.createSheet(songId, request);
         return ResponseEntity
-                .created(Objects.requireNonNull(URI.create("/api/song-sheets/" + response.id())))
+                .created(Objects.requireNonNull(URI.create("/api/song-sheets/" + response.songSheetId())))
                 .body(response);
     }
 

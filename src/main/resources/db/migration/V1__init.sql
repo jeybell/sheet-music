@@ -1,65 +1,72 @@
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+create table songs (
+    song_id bigserial primary key,
+    title varchar(255) not null,
+    artist varchar(255),
+    composer varchar(255),
+    memo text,
+    created_at timestamp not null default now(),
+    deleted_at timestamp null
 );
 
-CREATE TABLE songs (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    artist VARCHAR(255),
-    original_key VARCHAR(20),
-    memo TEXT,
-    created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+create table song_sheets (
+    song_sheet_id bigserial primary key,
+    song_id bigint not null,
+    sheet_key varchar(20),
+    version_name varchar(100),
+    memo text,
+    created_at timestamp not null default now(),
+    deleted_at timestamp null,
+    constraint fk_song_sheets_song
+        foreign key (song_id)
+        references songs(song_id)
 );
 
-CREATE TABLE song_files (
-    id BIGSERIAL PRIMARY KEY,
-    song_id BIGINT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
-    file_name VARCHAR(255) NOT NULL,
-    file_path VARCHAR(1024) NOT NULL,
-    content_type VARCHAR(100),
-    file_size BIGINT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+create table song_files (
+    song_file_id bigserial primary key,
+    song_sheet_id bigint not null,
+    original_file_name varchar(255) not null,
+    stored_file_name varchar(255) not null,
+    file_path varchar(1000) not null,
+    content_type varchar(100),
+    file_size bigint,
+    created_at timestamp not null default now(),
+    deleted_at timestamp null,
+    constraint fk_song_files_song_sheet
+        foreign key (song_sheet_id)
+        references song_sheets(song_sheet_id)
 );
 
-CREATE TABLE song_tags (
-    id BIGSERIAL PRIMARY KEY,
-    song_id BIGINT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uk_song_tags_song_id_name UNIQUE (song_id, name)
+create table setlists (
+    setlist_id bigserial primary key,
+    service_date date not null,
+    service_type varchar(50),
+    title varchar(255),
+    memo text,
+    created_at timestamp not null default now(),
+    deleted_at timestamp null
 );
 
-CREATE TABLE setlists (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    service_date DATE NOT NULL,
-    memo TEXT,
-    created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+create table setlist_items (
+    setlist_item_id bigserial primary key,
+    setlist_id bigint not null,
+    song_id bigint not null,
+    song_sheet_id bigint,
+    order_no integer not null,
+    memo text,
+    constraint fk_setlist_items_setlist
+        foreign key (setlist_id)
+        references setlists(setlist_id),
+    constraint fk_setlist_items_song
+        foreign key (song_id)
+        references songs(song_id),
+    constraint fk_setlist_items_song_sheet
+        foreign key (song_sheet_id)
+        references song_sheets(song_sheet_id)
 );
 
-CREATE TABLE setlist_items (
-    id BIGSERIAL PRIMARY KEY,
-    setlist_id BIGINT NOT NULL REFERENCES setlists(id) ON DELETE CASCADE,
-    song_id BIGINT NOT NULL REFERENCES songs(id) ON DELETE RESTRICT,
-    item_order INTEGER NOT NULL,
-    song_key VARCHAR(20),
-    memo TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uk_setlist_items_setlist_id_item_order UNIQUE (setlist_id, item_order)
-);
-
-CREATE INDEX idx_songs_title ON songs(title);
-CREATE INDEX idx_song_files_song_id ON song_files(song_id);
-CREATE INDEX idx_song_tags_name ON song_tags(name);
-CREATE INDEX idx_setlists_service_date ON setlists(service_date);
-CREATE INDEX idx_setlist_items_setlist_id ON setlist_items(setlist_id);
-CREATE INDEX idx_setlist_items_song_id ON setlist_items(song_id);
+create index idx_songs_title on songs(title);
+create index idx_song_sheets_song_id on song_sheets(song_id);
+create index idx_song_sheets_sheet_key on song_sheets(sheet_key);
+create index idx_song_files_song_sheet_id on song_files(song_sheet_id);
+create index idx_setlists_service_date on setlists(service_date);
+create index idx_setlist_items_setlist_id on setlist_items(setlist_id);

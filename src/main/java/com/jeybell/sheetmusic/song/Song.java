@@ -8,9 +8,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,12 +20,15 @@ public class Song {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "song_id")
+    private Long songId;
 
     @Column(nullable = false)
     private String title;
 
     private String artist;
+
+    private String composer;
 
     @Column(columnDefinition = "TEXT")
     private String memo;
@@ -34,42 +36,31 @@ public class Song {
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)
     private List<SongSheet> sheets = new ArrayList<>();
 
-    @Column(name = "created_by")
-    private Long createdBy;
-
     @Column(name = "created_at", nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "deleted_at")
-    private OffsetDateTime deletedAt;
+    private LocalDateTime deletedAt;
 
     protected Song() {
     }
 
-    public Song(String title, String artist, String memo) {
+    public Song(String title, String artist, String composer, String memo) {
         this.title = title;
         this.artist = artist;
+        this.composer = composer;
         this.memo = memo;
     }
 
     @PrePersist
     void prePersist() {
-        OffsetDateTime now = OffsetDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.createdAt = LocalDateTime.now();
     }
 
-    @PreUpdate
-    void preUpdate() {
-        this.updatedAt = OffsetDateTime.now();
-    }
-
-    public void update(String title, String artist, String memo) {
+    public void update(String title, String artist, String composer, String memo) {
         this.title = title;
         this.artist = artist;
+        this.composer = composer;
         this.memo = memo;
     }
 
@@ -84,11 +75,11 @@ public class Song {
     }
 
     public void softDelete() {
-        this.deletedAt = OffsetDateTime.now();
+        this.deletedAt = LocalDateTime.now();
     }
 
-    public Long getId() {
-        return id;
+    public Long getSongId() {
+        return songId;
     }
 
     public String getTitle() {
@@ -99,6 +90,10 @@ public class Song {
         return artist;
     }
 
+    public String getComposer() {
+        return composer;
+    }
+
     public String getMemo() {
         return memo;
     }
@@ -107,19 +102,11 @@ public class Song {
         return Collections.unmodifiableList(sheets);
     }
 
-    public Long getCreatedBy() {
-        return createdBy;
-    }
-
-    public OffsetDateTime getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public OffsetDateTime getDeletedAt() {
+    public LocalDateTime getDeletedAt() {
         return deletedAt;
     }
 }

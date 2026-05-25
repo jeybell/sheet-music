@@ -1,13 +1,30 @@
-.gradle/
+# Java / Gradle / Maven build outputs
+bin/
 build/
 out/
+target/
+.gradle/
 
+# IntelliJ / Eclipse / VSCode / Cursor
 .idea/
 *.iml
+.classpath
+.project
+.settings/
+.vscode/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Local uploads
+uploads/
+
+# OS
 .DS_Store
 
-*.log
-
+# Env
 .env
-uploads/
+.env.*
+
+*.log

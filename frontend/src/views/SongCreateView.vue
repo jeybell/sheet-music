@@ -1,69 +1,69 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { isAxiosError } from 'axios'
-import { useRouter } from 'vue-router'
-import { createSong } from '../apis/songApi'
-import DefaultLayout from '../layouts/DefaultLayout.vue'
-import type { SongCreateRequest } from '../types/song'
+import { reactive, ref } from "vue";
+import { isAxiosError } from "axios";
+import { useRouter } from "vue-router";
+import { createSong } from "../apis/songApi";
+import DefaultLayout from "../layouts/DefaultLayout.vue";
+import type { SongCreateRequest } from "../types/song";
 
 interface ApiErrorResponse {
-  message?: string
+  message?: string;
 }
 
-const router = useRouter()
+const router = useRouter();
 
 const form = reactive<SongCreateRequest>({
-  title: '',
-  artist: '',
-  composer: '',
-  memo: '',
-})
+  title: "",
+  artist: "",
+  composer: "",
+  memo: "",
+});
 
-const isSaving = ref(false)
-const errorMessage = ref('')
+const isSaving = ref(false);
+const errorMessage = ref("");
 
 const toOptionalValue = (value: string) => {
-  const trimmedValue = value.trim()
-  return trimmedValue === '' ? null : trimmedValue
-}
+  const trimmedValue = value.trim();
+  return trimmedValue === "" ? null : trimmedValue;
+};
 
 const getErrorMessage = (error: unknown) => {
   if (isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.message ?? '곡을 저장하지 못했습니다.'
+    return error.response?.data?.message ?? "곡을 저장하지 못했습니다.";
   }
 
-  return '곡을 저장하지 못했습니다.'
-}
+  return "곡을 저장하지 못했습니다.";
+};
 
 const handleSubmit = async () => {
-  errorMessage.value = ''
+  errorMessage.value = "";
 
-  const title = form.title.trim()
+  const title = form.title.trim();
   if (!title) {
-    errorMessage.value = 'title은 필수값입니다.'
-    return
+    errorMessage.value = "title은 필수값입니다.";
+    return;
   }
 
-  isSaving.value = true
+  isSaving.value = true;
 
   try {
     await createSong({
       title,
-      artist: toOptionalValue(form.artist ?? ''),
-      composer: toOptionalValue(form.composer ?? ''),
-      memo: toOptionalValue(form.memo ?? ''),
-    })
-    await router.push('/songs')
+      artist: toOptionalValue(form.artist ?? ""),
+      composer: toOptionalValue(form.composer ?? ""),
+      memo: toOptionalValue(form.memo ?? ""),
+    });
+    await router.push("/songs");
   } catch (error) {
-    errorMessage.value = getErrorMessage(error)
+    errorMessage.value = getErrorMessage(error);
   } finally {
-    isSaving.value = false
+    isSaving.value = false;
   }
-}
+};
 
 const handleCancel = () => {
-  void router.push('/songs')
-}
+  void router.push("/songs");
+};
 </script>
 
 <template>
@@ -94,7 +94,7 @@ const handleCancel = () => {
       </div>
 
       <button type="submit" :disabled="isSaving">
-        {{ isSaving ? '저장 중...' : '저장' }}
+        {{ isSaving ? "저장 중..." : "저장" }}
       </button>
       <button type="button" @click="handleCancel">취소</button>
     </form>

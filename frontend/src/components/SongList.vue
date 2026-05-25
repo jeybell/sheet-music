@@ -11,8 +11,8 @@ const getArtistName = (artist: string | null) => artist?.trim() || '아티스트
 
 <template>
   <ul class="song-list">
-    <li v-for="song in songs" :key="song.id">
-      <RouterLink :to="`/songs/${song.id}`" class="song-link">{{ song.title }}</RouterLink>
+    <li v-for="song in songs" :key="song.songId">
+      <RouterLink :to="`/songs/${song.songId}`" class="song-link">{{ song.title }}</RouterLink>
       <span class="song-artist">{{ getArtistName(song.artist) }}</span>
       <span v-if="getSheetCount(song) > 0" class="song-sheet-count">
         악보 버전 {{ getSheetCount(song) }}개

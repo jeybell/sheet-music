@@ -37,13 +37,13 @@ export const useSongStore = defineStore('song', () => {
     }
   }
 
-  const fetchSong = async (id: number) => {
+  const fetchSong = async (songId: number) => {
     isLoading.value = true
     errorMessage.value = ''
     selectedSong.value = null
 
     try {
-      selectedSong.value = await getSong(id)
+      selectedSong.value = await getSong(songId)
     } catch (error) {
       errorMessage.value = getErrorMessage(error, '곡 정보를 불러오지 못했습니다.')
     } finally {

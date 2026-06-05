@@ -13,17 +13,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class SongService {
 
     private final SongRepository songRepository;
+    private final SongFileService songFileService;
 
-    public SongService(SongRepository songRepository) {
+    public SongService(SongRepository songRepository, SongFileService songFileService) {
         this.songRepository = songRepository;
+        this.songFileService = songFileService;
     }
 
-    public List<SongResponse> getSongs(String songKey) {
-        List<Song> songs = songKey == null || songKey.isBlank()
-                ? songRepository.findAllActiveWithSheets()
-                : songRepository.findAllActiveBySongKeyWithSheets(songKey);
+    public List<SongResponse> getSongs(String query, String songKey) {
+        String likeQuery = (query == null || query.isBlank())
+                ? null
+                : "%" + query.trim().toLowerCase() + "%";
+        String normalizedKey = (songKey == null || songKey.isBlank()) ? null : songKey.trim();
 
-        return songs
+        return songRepository.searchSongs(likeQuery, normalizedKey)
                 .stream()
                 .map(SongResponse::from)
                 .toList();
@@ -62,6 +65,12 @@ public class SongService {
     @Transactional
     public void deleteSong(Long songId) {
         Song song = getActiveSong(songId);
+        song.getSheets().stream()
+                .filter(SongSheet::isActive)
+                .forEach(sheet -> {
+                    songFileService.deleteFilesBySongSheetId(sheet.getSongSheetId());
+                    sheet.softDelete();
+                });
         song.softDelete();
     }
 

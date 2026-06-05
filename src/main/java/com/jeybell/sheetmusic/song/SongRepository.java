@@ -13,21 +13,20 @@ public interface SongRepository extends JpaRepository<Song, Long> {
             from Song s
             left join fetch s.sheets sheets
             where s.deletedAt is null
+              and (:query is null
+                or lower(s.title) like :query
+                or lower(s.artist) like :query
+                or lower(s.composer) like :query)
+              and (:songKey is null
+                or exists (
+                  select 1 from SongSheet ss
+                  where ss.song = s
+                    and ss.deletedAt is null
+                    and ss.sheetKey = :songKey
+                ))
             order by s.createdAt desc
             """)
-    List<Song> findAllActiveWithSheets();
-
-    @Query("""
-            select distinct s
-            from Song s
-            join s.sheets matchedSheet
-            left join fetch s.sheets sheets
-            where s.deletedAt is null
-              and matchedSheet.deletedAt is null
-              and matchedSheet.sheetKey = :songKey
-            order by s.createdAt desc
-            """)
-    List<Song> findAllActiveBySongKeyWithSheets(@Param("songKey") String songKey);
+    List<Song> searchSongs(@Param("query") String query, @Param("songKey") String songKey);
 
     @Query("""
             select distinct s

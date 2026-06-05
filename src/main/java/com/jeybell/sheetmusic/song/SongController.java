@@ -28,8 +28,11 @@ public class SongController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SongResponse>> getSongs(@RequestParam(name = "songKey", required = false) String songKey) {
-        return ResponseEntity.ok(songService.getSongs(songKey));
+    public ResponseEntity<List<SongResponse>> getSongs(
+            @RequestParam(name = "query", required = false) String query,
+            @RequestParam(name = "songKey", required = false) String songKey
+    ) {
+        return ResponseEntity.ok(songService.getSongs(query, songKey));
     }
 
     @PostMapping

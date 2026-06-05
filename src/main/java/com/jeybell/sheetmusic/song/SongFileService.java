@@ -7,8 +7,11 @@ import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class SongFileService {
 
+    private static final Logger log = LoggerFactory.getLogger(SongFileService.class);
     private static final Path UPLOAD_ROOT = Path.of(".", "uploads", "sheets");
 
     private final SongSheetRepository songSheetRepository;
@@ -103,6 +107,16 @@ public class SongFileService {
     public void deleteFile(Long songFileId) {
         SongFile songFile = getActiveSongFile(songFileId);
         songFile.softDelete();
+        deletePhysicalFile(Path.of(songFile.getFilePath()).normalize());
+    }
+
+    @Transactional
+    public void deleteFilesBySongSheetId(Long songSheetId) {
+        List<SongFile> files = songFileRepository.findAllBySongSheetSongSheetIdAndDeletedAtIsNull(songSheetId);
+        for (SongFile file : files) {
+            file.softDelete();
+            deletePhysicalFile(Path.of(file.getFilePath()).normalize());
+        }
     }
 
     private SongSheet getActiveSongSheet(Long songSheetId) {
@@ -150,6 +164,14 @@ public class SongFileService {
             Files.deleteIfExists(destination);
         } catch (IOException exception) {
             uploadException.addSuppressed(exception);
+        }
+    }
+
+    private void deletePhysicalFile(Path filePath) {
+        try {
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            log.warn("Failed to delete physical file: {}", filePath, e);
         }
     }
 }

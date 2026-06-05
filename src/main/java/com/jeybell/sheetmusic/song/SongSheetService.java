@@ -13,13 +13,16 @@ public class SongSheetService {
 
     private final SongRepository songRepository;
     private final SongSheetRepository songSheetRepository;
+    private final SongFileService songFileService;
 
     public SongSheetService(
             SongRepository songRepository,
-            SongSheetRepository songSheetRepository
+            SongSheetRepository songSheetRepository,
+            SongFileService songFileService
     ) {
         this.songRepository = songRepository;
         this.songSheetRepository = songSheetRepository;
+        this.songFileService = songFileService;
     }
 
     @Transactional
@@ -64,6 +67,7 @@ public class SongSheetService {
     @Transactional
     public void deleteSheet(Long songSheetId) {
         SongSheet sheet = getActiveSheet(songSheetId);
+        songFileService.deleteFilesBySongSheetId(songSheetId);
         sheet.softDelete();
     }
 

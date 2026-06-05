@@ -5,9 +5,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: sheet_music
-      POSTGRES_USER: sheet_user
-      POSTGRES_PASSWORD: sheet_pass
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - sheet_music_pgdata:/var/lib/postgresql/data
 

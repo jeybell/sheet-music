@@ -1,0 +1,60 @@
+package com.jeybell.sheetmusic.setlist;
+
+import com.jeybell.sheetmusic.setlist.dto.SetlistRequest;
+import com.jeybell.sheetmusic.setlist.dto.SetlistResponse;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.Objects;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/setlists")
+public class SetlistController {
+
+    private final SetlistService setlistService;
+
+    public SetlistController(SetlistService setlistService) {
+        this.setlistService = setlistService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<SetlistResponse>> getSetlists() {
+        return ResponseEntity.ok(setlistService.getSetlists());
+    }
+
+    @PostMapping
+    public ResponseEntity<SetlistResponse> createSetlist(@Valid @RequestBody SetlistRequest request) {
+        SetlistResponse response = setlistService.createSetlist(request);
+        return ResponseEntity
+                .created(Objects.requireNonNull(URI.create("/api/setlists/" + response.setlistId())))
+                .body(response);
+    }
+
+    @GetMapping("/{setlistId}")
+    public ResponseEntity<SetlistResponse> getSetlist(@PathVariable("setlistId") Long setlistId) {
+        return ResponseEntity.ok(setlistService.getSetlist(setlistId));
+    }
+
+    @PutMapping("/{setlistId}")
+    public ResponseEntity<SetlistResponse> updateSetlist(
+            @PathVariable("setlistId") Long setlistId,
+            @Valid @RequestBody SetlistRequest request
+    ) {
+        return ResponseEntity.ok(setlistService.updateSetlist(setlistId, request));
+    }
+
+    @DeleteMapping("/{setlistId}")
+    public ResponseEntity<Void> deleteSetlist(@PathVariable("setlistId") Long setlistId) {
+        setlistService.deleteSetlist(setlistId);
+        return ResponseEntity.noContent().build();
+    }
+}

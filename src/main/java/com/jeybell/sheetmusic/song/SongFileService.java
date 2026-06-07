@@ -3,16 +3,10 @@ package com.jeybell.sheetmusic.song;
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.song.dto.SongFileDownloadResponse;
 import com.jeybell.sheetmusic.song.dto.SongFileResponse;
-import jakarta.annotation.PostConstruct;
+import com.jeybell.sheetmusic.storage.StorageService;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,23 +17,18 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class SongFileService {
 
-    private static final Logger log = LoggerFactory.getLogger(SongFileService.class);
-    private static final Path UPLOAD_ROOT = Path.of(".", "uploads", "sheets");
-
     private final SongSheetRepository songSheetRepository;
     private final SongFileRepository songFileRepository;
+    private final StorageService storageService;
 
     public SongFileService(
             SongSheetRepository songSheetRepository,
-            SongFileRepository songFileRepository
+            SongFileRepository songFileRepository,
+            StorageService storageService
     ) {
         this.songSheetRepository = songSheetRepository;
         this.songFileRepository = songFileRepository;
-    }
-
-    @PostConstruct
-    void createUploadRoot() {
-        createDirectory(UPLOAD_ROOT);
+        this.storageService = storageService;
     }
 
     @Transactional
@@ -51,49 +40,35 @@ public class SongFileService {
         SongSheet songSheet = getActiveSongSheet(songSheetId);
         String originalFileName = cleanOriginalFileName(multipartFile.getOriginalFilename());
         String storedFileName = UUID.randomUUID() + getExtension(originalFileName);
-        Path sheetDirectory = UPLOAD_ROOT.resolve(String.valueOf(songSheetId)).normalize();
-        Path destination = sheetDirectory.resolve(storedFileName).normalize();
-        boolean fileStored = false;
-
-        if (!destination.startsWith(sheetDirectory)) {
-            throw new IllegalArgumentException("Invalid file path");
-        }
+        String key = "sheets/" + songSheetId + "/" + storedFileName;
 
         try {
-            createDirectory(sheetDirectory);
-            multipartFile.transferTo(destination);
-            fileStored = true;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to store file", exception);
+            storageService.store(key, multipartFile.getInputStream(), multipartFile.getSize(),
+                    multipartFile.getContentType());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read upload stream", e);
         }
 
         SongFile songFile = new SongFile(
                 songSheet,
                 originalFileName,
                 storedFileName,
-                toStoredPath(destination),
+                key,
                 multipartFile.getContentType(),
                 multipartFile.getSize()
         );
 
         try {
             return SongFileResponse.from(songFileRepository.save(songFile));
-        } catch (RuntimeException exception) {
-            if (fileStored) {
-                deleteStoredFile(destination, exception);
-            }
-            throw exception;
+        } catch (RuntimeException e) {
+            storageService.delete(key);
+            throw e;
         }
     }
 
     public SongFileDownloadResponse downloadFile(Long songFileId) {
         SongFile songFile = getActiveSongFile(songFileId);
-        Path filePath = Path.of(songFile.getFilePath()).normalize();
-        Resource resource = new PathResource(Objects.requireNonNull(filePath));
-
-        if (!resource.exists() || !resource.isReadable()) {
-            throw new ResourceNotFoundException("Song file not found on disk: " + songFileId);
-        }
+        Resource resource = storageService.load(songFile.getFilePath());
 
         return new SongFileDownloadResponse(
                 songFile.getOriginalFileName(),
@@ -107,7 +82,7 @@ public class SongFileService {
     public void deleteFile(Long songFileId) {
         SongFile songFile = getActiveSongFile(songFileId);
         songFile.softDelete();
-        deletePhysicalFile(Path.of(songFile.getFilePath()).normalize());
+        storageService.delete(songFile.getFilePath());
     }
 
     @Transactional
@@ -115,7 +90,7 @@ public class SongFileService {
         List<SongFile> files = songFileRepository.findAllBySongSheetSongSheetIdAndDeletedAtIsNull(songSheetId);
         for (SongFile file : files) {
             file.softDelete();
-            deletePhysicalFile(Path.of(file.getFilePath()).normalize());
+            storageService.delete(file.getFilePath());
         }
     }
 
@@ -130,48 +105,17 @@ public class SongFileService {
     }
 
     private String cleanOriginalFileName(String originalFileName) {
-        String cleanedFileName = StringUtils.cleanPath(
+        String cleaned = StringUtils.cleanPath(
                 originalFileName == null || originalFileName.isBlank() ? "file" : originalFileName
         );
-        if (cleanedFileName.contains("..")) {
+        if (cleaned.contains("..")) {
             throw new IllegalArgumentException("Invalid file name");
         }
-        return cleanedFileName;
+        return cleaned;
     }
 
     private String getExtension(String fileName) {
-        int extensionIndex = fileName.lastIndexOf('.');
-        if (extensionIndex < 0) {
-            return "";
-        }
-        return fileName.substring(extensionIndex);
-    }
-
-    private String toStoredPath(Path destination) {
-        return "./" + destination.toString();
-    }
-
-    private void createDirectory(Path directory) {
-        try {
-            Files.createDirectories(directory);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to create upload directory", exception);
-        }
-    }
-
-    private void deleteStoredFile(Path destination, RuntimeException uploadException) {
-        try {
-            Files.deleteIfExists(destination);
-        } catch (IOException exception) {
-            uploadException.addSuppressed(exception);
-        }
-    }
-
-    private void deletePhysicalFile(Path filePath) {
-        try {
-            Files.deleteIfExists(filePath);
-        } catch (IOException e) {
-            log.warn("Failed to delete physical file: {}", filePath, e);
-        }
+        int idx = fileName.lastIndexOf('.');
+        return idx < 0 ? "" : fileName.substring(idx);
     }
 }

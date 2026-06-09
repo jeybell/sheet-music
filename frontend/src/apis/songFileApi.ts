@@ -16,3 +16,7 @@ export const uploadSongSheetFile = async (songSheetId: number, file: File) => {
   );
   return data;
 };
+
+export const deleteSongFile = async (songFileId: number) => {
+  await http.delete(`/api/song-files/${songFileId}`);
+};

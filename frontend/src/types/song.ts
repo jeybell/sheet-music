@@ -33,6 +33,13 @@ export interface SongCreateRequest {
   memo?: string | null;
 }
 
+export interface SongUpdateRequest {
+  title: string;
+  artist?: string | null;
+  composer?: string | null;
+  memo?: string | null;
+}
+
 export interface SongSheetCreateRequest {
   sheetKey?: string | null;
   versionName?: string | null;

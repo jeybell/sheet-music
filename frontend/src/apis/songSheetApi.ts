@@ -11,3 +11,7 @@ export const createSongSheet = async (
   );
   return data;
 };
+
+export const deleteSongSheet = async (songSheetId: number) => {
+  await http.delete(`/api/song-sheets/${songSheetId}`);
+};

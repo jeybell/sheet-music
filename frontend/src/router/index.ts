@@ -3,6 +3,7 @@ import SongCreateView from "../views/SongCreateView.vue";
 import SongDetailView from "../views/SongDetailView.vue";
 import SongListView from "../views/SongListView.vue";
 import SetlistListView from "../views/SetlistListView.vue";
+import SetlistDetailView from "../views/SetlistDetailView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -33,6 +34,12 @@ const router = createRouter({
       path: "/setlists",
       name: "setlists",
       component: SetlistListView,
+    },
+    {
+      path: "/setlists/:setlistId",
+      name: "setlist-detail",
+      component: SetlistDetailView,
+      props: (route) => ({ setlistId: Number(route.params.setlistId) }),
     },
   ],
 });

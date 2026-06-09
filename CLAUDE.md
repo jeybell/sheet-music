@@ -15,7 +15,7 @@
 - **백엔드**: Java, Spring Boot, Gradle
 - **프론트엔드**: Vue 3, TypeScript
 - **DB**: PostgreSQL
-- **인프라**: Docker Compose → Railway 배포 예정
+- **인프라**: Docker Compose / Fly.io (백엔드) + Vercel (프론트엔드)
 - **스토리지**: Cloudflare R2 (파일 업로드)
 
 ## 도메인 구조
@@ -48,26 +48,26 @@ setlists (셋리스트/콘티)
 - ERD 설계
 - API 설계 (README 문서화)
 - songs, song_sheets, song_files 기본 CRUD 구현
+- #2 `song_files` 삭제 처리 구현 보강
+- #3 곡 검색 API 구현
+- #4 GlobalExceptionHandler 정리
+- #11 setlists CRUD 구현
+- #12 setlist_items 구현
+- #14 환경변수 정리
+- #15 Docker Compose 정리
+- #16 Cloudflare R2 연동 (STORAGE_TYPE 환경변수로 전환, 현재 local 모드)
+- #17 배포 완료 (백엔드: Fly.io / 프론트엔드: Vercel / DB: Supabase)
+- #6 공통 Layout 구성 (헤더 네비게이션, 글로벌 스타일)
+- #9 곡 상세 화면 구현 (수정/삭제, 악보 버전/파일 관리)
+- #13 콘티 화면 구현 (셋리스트 목록/상세, 곡 추가/삭제)
 
-### 🔄 진행 중 (Open Issues)
+### 🔄 남은 작업
+- Cloudflare R2 실제 전환 (현재 Fly.io 로컬 스토리지 사용 중)
 
-#### 백엔드
-- [x] #2 `song_files` 삭제 처리 구현 보강
-- [x] #3 곡 검색 API 구현
-- [x] #4 GlobalExceptionHandler 정리
-- [x] #11 setlists CRUD 구현
-- [x] #12 setlist_items 구현
-
-#### 프론트엔드
-- [ ] #6 공통 Layout 구성
-- [ ] #9 곡 상세 화면 구현
-- [ ] #13 콘티 화면 구현
-
-#### 인프라
-- [x] #14 환경변수 정리
-- [x] #15 Docker Compose 정리
-- [ ] #16 Cloudflare R2 연동
-- [ ] #17 Railway 배포
+### 배포 정보
+- 백엔드: https://worship-sheet.fly.dev
+- 프론트엔드: https://worship-sheet.vercel.app
+- DB: Supabase
 
 ## 다음 세션 시작 가이드
 새 세션 시작 시 Claude에게 전달할 것:

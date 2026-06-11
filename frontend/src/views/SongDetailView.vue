@@ -2,10 +2,18 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
+import { ChevronLeft, Pencil, Trash2, Plus, Upload, FileText, X } from '@lucide/vue'
 import { deleteSong, updateSong } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet } from '../apis/songSheetApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
+import Button from '../components/ui/Button.vue'
+import Input from '../components/ui/Input.vue'
+import Textarea from '../components/ui/Textarea.vue'
+import Label from '../components/ui/Label.vue'
+import Badge from '../components/ui/Badge.vue'
+import Card from '../components/ui/Card.vue'
+import Separator from '../components/ui/Separator.vue'
 import { useSongStore } from '../stores/songStore'
 import type { SongSheetSummary } from '../types/song'
 
@@ -29,7 +37,7 @@ const apiError = (error: unknown, fallback: string) => {
 
 const toOpt = (v: string) => v.trim() || null
 
-// ── 곡 수정 ──────────────────────────────────────────────────
+// ── 곡 수정
 const isEditing = ref(false)
 const editForm = reactive({ title: '', artist: '', composer: '', memo: '' })
 const editError = ref('')
@@ -72,7 +80,7 @@ const handleUpdateSong = async () => {
   }
 }
 
-// ── 곡 삭제 ──────────────────────────────────────────────────
+// ── 곡 삭제
 const handleDeleteSong = async () => {
   if (!confirm(`"${song.value?.title}" 곡을 삭제할까요?`)) return
   try {
@@ -83,11 +91,10 @@ const handleDeleteSong = async () => {
   }
 }
 
-// ── 악보 버전 추가 ─────────────────────────────────────────
+// ── 악보 버전 추가
 const showAddSheet = ref(false)
 const sheetForm = reactive({ sheetKey: '', versionName: '', memo: '' })
 const sheetError = ref('')
-const sheetMessage = ref('')
 const isCreatingSheet = ref(false)
 
 const resetSheetForm = () => {
@@ -95,12 +102,10 @@ const resetSheetForm = () => {
   sheetForm.versionName = ''
   sheetForm.memo = ''
   sheetError.value = ''
-  sheetMessage.value = ''
 }
 
 const handleCreateSheet = async () => {
   sheetError.value = ''
-  sheetMessage.value = ''
   isCreatingSheet.value = true
   try {
     await createSongSheet(props.songId, {
@@ -118,7 +123,7 @@ const handleCreateSheet = async () => {
   }
 }
 
-// ── 악보 버전 삭제 ─────────────────────────────────────────
+// ── 악보 버전 삭제
 const handleDeleteSheet = async (sheet: SongSheetSummary) => {
   const label = sheet.versionName || sheet.sheetKey || '이 버전'
   if (!confirm(`"${label}"을 삭제할까요?`)) return
@@ -130,7 +135,7 @@ const handleDeleteSheet = async (sheet: SongSheetSummary) => {
   }
 }
 
-// ── 파일 업로드 ────────────────────────────────────────────
+// ── 파일 업로드
 const selectedFiles = ref<Record<number, File | undefined>>({})
 const uploadInputKeys = ref<Record<number, number>>({})
 const uploadMessages = ref<Record<number, string | undefined>>({})
@@ -166,7 +171,7 @@ const handleUpload = async (sheetId: number) => {
   }
 }
 
-// ── 파일 삭제 ──────────────────────────────────────────────
+// ── 파일 삭제
 const handleDeleteFile = async (fileId: number, fileName: string) => {
   if (!confirm(`"${fileName}" 파일을 삭제할까요?`)) return
   try {
@@ -177,7 +182,6 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   }
 }
 
-// ── 초기 로드 ──────────────────────────────────────────────
 const loadSong = () => {
   if (Number.isFinite(props.songId)) void songStore.fetchSong(props.songId)
 }
@@ -188,345 +192,208 @@ watch(() => props.songId, loadSong)
 
 <template>
   <DefaultLayout>
-    <div class="detail-back">
-      <button type="button" class="btn-back" @click="$router.push('/songs')">
-        ← 목록으로
+    <div class="mb-6">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
+        @click="$router.push('/songs')"
+      >
+        <ChevronLeft class="w-4 h-4" />
+        목록으로
       </button>
     </div>
 
-    <p v-if="songStore.isLoading" class="text-muted">불러오는 중...</p>
-    <p v-else-if="songStore.errorMessage" class="error">{{ songStore.errorMessage }}</p>
+    <p v-if="songStore.isLoading" class="text-sm text-zinc-400 py-8 text-center">불러오는 중...</p>
+    <p v-else-if="songStore.errorMessage" class="text-sm text-red-500">{{ songStore.errorMessage }}</p>
 
     <template v-else-if="song">
-      <!-- 곡 정보 -->
-      <section class="detail-card">
+      <!-- 곡 정보 카드 -->
+      <Card class="p-6 mb-6">
         <template v-if="!isEditing">
-          <div class="detail-header">
-            <h1 class="detail-title">{{ song.title }}</h1>
-            <div class="detail-actions">
-              <button type="button" @click="startEdit">수정</button>
-              <button type="button" class="btn-danger" @click="handleDeleteSong">삭제</button>
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <h1 class="text-2xl font-bold text-zinc-900 leading-tight">{{ song.title }}</h1>
+              <div class="mt-3 flex flex-col gap-1.5 text-sm">
+                <p v-if="song.artist" class="text-zinc-500">
+                  <span class="text-zinc-400 mr-2">아티스트</span>{{ song.artist }}
+                </p>
+                <p v-if="song.composer" class="text-zinc-500">
+                  <span class="text-zinc-400 mr-2">작곡가</span>{{ song.composer }}
+                </p>
+                <p v-if="song.memo" class="text-zinc-500 whitespace-pre-line mt-1">{{ song.memo }}</p>
+              </div>
+            </div>
+            <div class="flex gap-2 flex-shrink-0">
+              <Button variant="outline" size="sm" @click="startEdit">
+                <Pencil class="w-3.5 h-3.5" />
+                수정
+              </Button>
+              <Button variant="destructive" size="sm" @click="handleDeleteSong">
+                <Trash2 class="w-3.5 h-3.5" />
+                삭제
+              </Button>
             </div>
           </div>
-          <dl class="detail-meta">
-            <template v-if="song.artist">
-              <dt>아티스트</dt>
-              <dd>{{ song.artist }}</dd>
-            </template>
-            <template v-if="song.composer">
-              <dt>작곡가</dt>
-              <dd>{{ song.composer }}</dd>
-            </template>
-            <template v-if="song.memo">
-              <dt>메모</dt>
-              <dd class="song-memo">{{ song.memo }}</dd>
-            </template>
-          </dl>
         </template>
 
         <template v-else>
-          <h2 style="margin-top:0">곡 수정</h2>
-          <p v-if="editError" class="error">{{ editError }}</p>
-          <div class="form-field">
-            <label for="edit-title">제목 *</label>
-            <input id="edit-title" v-model="editForm.title" type="text" />
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-zinc-900">곡 수정</h2>
+            <button type="button" class="text-zinc-400 hover:text-zinc-600" @click="cancelEdit">
+              <X class="w-4 h-4" />
+            </button>
           </div>
-          <div class="form-field">
-            <label for="edit-artist">아티스트</label>
-            <input id="edit-artist" v-model="editForm.artist" type="text" />
+          <p v-if="editError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ editError }}</p>
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1.5">
+              <Label for="edit-title">제목 <span class="text-red-400">*</span></Label>
+              <Input id="edit-title" v-model="editForm.title" type="text" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <Label for="edit-artist">아티스트</Label>
+                <Input id="edit-artist" v-model="editForm.artist" type="text" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <Label for="edit-composer">작곡가</Label>
+                <Input id="edit-composer" v-model="editForm.composer" type="text" />
+              </div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="edit-memo">메모</Label>
+              <Textarea id="edit-memo" v-model="editForm.memo" rows="3" />
+            </div>
+            <div class="flex gap-2">
+              <Button :disabled="isSavingEdit" @click="handleUpdateSong">
+                {{ isSavingEdit ? '저장 중...' : '저장' }}
+              </Button>
+              <Button variant="outline" :disabled="isSavingEdit" @click="cancelEdit">취소</Button>
+            </div>
           </div>
-          <div class="form-field">
-            <label for="edit-composer">작곡가</label>
-            <input id="edit-composer" v-model="editForm.composer" type="text" />
-          </div>
-          <div class="form-field">
-            <label for="edit-memo">메모</label>
-            <textarea id="edit-memo" v-model="editForm.memo" rows="3" />
-          </div>
-          <button type="button" class="btn-primary" :disabled="isSavingEdit" @click="handleUpdateSong">
-            {{ isSavingEdit ? '저장 중...' : '저장' }}
-          </button>
-          <button type="button" :disabled="isSavingEdit" @click="cancelEdit">취소</button>
         </template>
-      </section>
+      </Card>
 
-      <!-- 악보 버전 -->
-      <section>
-        <div class="section-header">
-          <h2 style="margin:0">악보 버전</h2>
-          <button type="button" @click="showAddSheet = !showAddSheet">
-            {{ showAddSheet ? '취소' : '+ 버전 추가' }}
-          </button>
+      <!-- 악보 버전 섹션 -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold text-zinc-900">악보 버전</h2>
+          <Button variant="outline" size="sm" @click="showAddSheet = !showAddSheet">
+            <template v-if="showAddSheet">
+              <X class="w-3.5 h-3.5" />
+              취소
+            </template>
+            <template v-else>
+              <Plus class="w-3.5 h-3.5" />
+              버전 추가
+            </template>
+          </Button>
         </div>
 
         <!-- 버전 추가 폼 -->
-        <div v-if="showAddSheet" class="add-sheet-form">
-          <p v-if="sheetError" class="error">{{ sheetError }}</p>
-          <div class="form-row">
-            <div class="form-field">
-              <label for="sheet-key">키</label>
-              <input id="sheet-key" v-model="sheetForm.sheetKey" type="text" placeholder="예) C, G" />
+        <Card v-if="showAddSheet" class="p-5 mb-4 bg-zinc-50">
+          <p v-if="sheetError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ sheetError }}</p>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="flex flex-col gap-1.5">
+              <Label for="sheet-key">키</Label>
+              <Input id="sheet-key" v-model="sheetForm.sheetKey" type="text" placeholder="예) C, G, Am" />
             </div>
-            <div class="form-field">
-              <label for="version-name">버전명</label>
-              <input id="version-name" v-model="sheetForm.versionName" type="text" placeholder="예) 원본, 남성용" />
+            <div class="flex flex-col gap-1.5">
+              <Label for="version-name">버전명</Label>
+              <Input id="version-name" v-model="sheetForm.versionName" type="text" placeholder="예) 원본, 남성용" />
             </div>
           </div>
-          <div class="form-field">
-            <label for="sheet-memo">메모</label>
-            <textarea id="sheet-memo" v-model="sheetForm.memo" rows="2" />
+          <div class="flex flex-col gap-1.5 mb-4">
+            <Label for="sheet-memo">메모</Label>
+            <Textarea id="sheet-memo" v-model="sheetForm.memo" rows="2" />
           </div>
-          <button type="button" class="btn-primary" :disabled="isCreatingSheet" @click="handleCreateSheet">
+          <Button :disabled="isCreatingSheet" @click="handleCreateSheet">
             {{ isCreatingSheet ? '추가 중...' : '추가' }}
-          </button>
-        </div>
+          </Button>
+        </Card>
+
+        <!-- 버전 없음 -->
+        <p v-if="sheets.length === 0" class="text-sm text-zinc-400 py-6 text-center">
+          등록된 악보 버전이 없습니다.
+        </p>
 
         <!-- 버전 목록 -->
-        <p v-if="sheets.length === 0" class="text-muted">등록된 악보 버전이 없습니다.</p>
-        <ul v-else class="sheet-list">
-          <li v-for="sheet in sheets" :key="sheet.songSheetId" class="sheet-item">
-            <div class="sheet-header">
-              <div class="sheet-label">
-                <span v-if="sheet.sheetKey" class="sheet-key">{{ sheet.sheetKey }}</span>
-                <span v-if="sheet.versionName" class="sheet-version">{{ sheet.versionName }}</span>
-                <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-muted">버전명 없음</span>
+        <div v-else class="flex flex-col gap-3">
+          <Card v-for="sheet in sheets" :key="sheet.songSheetId" class="p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2 flex-wrap">
+                <Badge v-if="sheet.sheetKey" variant="violet">{{ sheet.sheetKey }}</Badge>
+                <span v-if="sheet.versionName" class="text-sm font-medium text-zinc-900">{{ sheet.versionName }}</span>
+                <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-sm text-zinc-400">버전명 없음</span>
               </div>
-              <button type="button" class="btn-danger btn-sm" @click="handleDeleteSheet(sheet)">삭제</button>
+              <Button variant="destructive" size="sm" @click="handleDeleteSheet(sheet)">
+                <Trash2 class="w-3.5 h-3.5" />
+                삭제
+              </Button>
             </div>
-            <p v-if="sheet.memo" class="sheet-memo text-muted">{{ sheet.memo }}</p>
+
+            <p v-if="sheet.memo" class="text-xs text-zinc-400 mb-3">{{ sheet.memo }}</p>
+
+            <Separator class="mb-3" />
 
             <!-- 파일 목록 -->
-            <ul v-if="sheet.files?.length" class="file-list">
-              <li v-for="file in sheet.files" :key="file.songFileId" class="file-item">
-                <span class="file-name">{{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}</span>
+            <div v-if="sheet.files?.length" class="flex flex-col gap-1.5 mb-3">
+              <div
+                v-for="file in sheet.files"
+                :key="file.songFileId"
+                class="flex items-center justify-between py-1.5 px-3 rounded-md bg-zinc-50"
+              >
+                <div class="flex items-center gap-2 min-w-0">
+                  <FileText class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                  <span class="text-xs text-zinc-600 truncate">
+                    {{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}
+                  </span>
+                </div>
                 <button
                   type="button"
-                  class="btn-danger btn-sm"
+                  class="ml-2 text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0"
                   @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
-                >삭제</button>
-              </li>
-            </ul>
-            <p v-else class="text-muted" style="font-size:13px; margin: 6px 0">파일 없음</p>
+                >
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-zinc-400 mb-3">파일 없음</p>
 
             <!-- 파일 업로드 -->
-            <div class="upload-row">
-              <input
-                :key="`${sheet.songSheetId}-${uploadInputKeys[sheet.songSheetId] ?? 0}`"
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
-                @change="handleFileChange($event, sheet.songSheetId)"
-              />
-              <button
-                type="button"
-                :disabled="uploadingSheets[sheet.songSheetId]"
+            <div class="flex items-center gap-2 flex-wrap">
+              <label
+                class="flex items-center gap-1.5 h-8 px-3 rounded-md border border-zinc-200 bg-white text-xs text-zinc-600 hover:bg-zinc-50 cursor-pointer transition-colors"
+              >
+                <Upload class="w-3.5 h-3.5" />
+                파일 선택
+                <input
+                  :key="`${sheet.songSheetId}-${uploadInputKeys[sheet.songSheetId] ?? 0}`"
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  class="hidden"
+                  @change="handleFileChange($event, sheet.songSheetId)"
+                />
+              </label>
+              <span v-if="selectedFiles[sheet.songSheetId]" class="text-xs text-zinc-500 truncate max-w-[160px]">
+                {{ selectedFiles[sheet.songSheetId]?.name }}
+              </span>
+              <Button
+                size="sm"
+                :disabled="uploadingSheets[sheet.songSheetId] || !selectedFiles[sheet.songSheetId]"
                 @click="handleUpload(sheet.songSheetId)"
               >
                 {{ uploadingSheets[sheet.songSheetId] ? '업로드 중...' : '업로드' }}
-              </button>
-              <span v-if="uploadMessages[sheet.songSheetId]" class="success">{{ uploadMessages[sheet.songSheetId] }}</span>
-              <span v-if="uploadErrors[sheet.songSheetId]" class="error">{{ uploadErrors[sheet.songSheetId] }}</span>
+              </Button>
+              <span v-if="uploadMessages[sheet.songSheetId]" class="text-xs text-green-600">
+                {{ uploadMessages[sheet.songSheetId] }}
+              </span>
+              <span v-if="uploadErrors[sheet.songSheetId]" class="text-xs text-red-500">
+                {{ uploadErrors[sheet.songSheetId] }}
+              </span>
             </div>
-          </li>
-        </ul>
-      </section>
+          </Card>
+        </div>
+      </div>
     </template>
   </DefaultLayout>
 </template>
-
-<style scoped>
-.detail-back {
-  margin-bottom: 20px;
-}
-
-.btn-back {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #1971c2;
-  font-size: 14px;
-  cursor: pointer;
-  margin-left: 0;
-}
-
-.btn-back:hover {
-  text-decoration: underline;
-}
-
-.detail-card {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  padding: 24px;
-  margin-bottom: 32px;
-}
-
-.detail-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.detail-title {
-  margin: 0;
-  font-size: 24px;
-}
-
-.detail-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.detail-meta {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 6px 12px;
-  margin: 0;
-  font-size: 14px;
-}
-
-.detail-meta dt {
-  color: #868e96;
-  font-weight: 500;
-}
-
-.detail-meta dd {
-  margin: 0;
-  color: #1a1a2e;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.add-sheet-form {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.sheet-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.sheet-item {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.sheet-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sheet-key {
-  background: #e8f4fd;
-  color: #1971c2;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.sheet-version {
-  font-size: 14px;
-  font-weight: 500;
-  color: #343a40;
-}
-
-.sheet-memo {
-  margin: 0 0 10px;
-  font-size: 13px;
-}
-
-.file-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  padding: 4px 0;
-  border-bottom: 1px solid #f1f3f5;
-}
-
-.file-name {
-  color: #495057;
-}
-
-.upload-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.upload-row input[type="file"] {
-  width: auto;
-  font-size: 13px;
-  padding: 4px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-}
-
-.btn-primary {
-  background: #1971c2;
-  color: #fff;
-  border-color: #1971c2;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #1864ab;
-}
-
-.btn-danger {
-  background: #fff;
-  color: #c92a2a;
-  border-color: #ffc9c9;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #fff5f5;
-}
-
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-</style>

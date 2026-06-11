@@ -1,102 +1,112 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
-import { isAxiosError } from "axios";
-import { useRouter } from "vue-router";
-import { createSong } from "../apis/songApi";
-import DefaultLayout from "../layouts/DefaultLayout.vue";
-import type { SongCreateRequest } from "../types/song";
+import { reactive, ref } from 'vue'
+import { isAxiosError } from 'axios'
+import { useRouter } from 'vue-router'
+import { ChevronLeft } from '@lucide/vue'
+import { createSong } from '../apis/songApi'
+import DefaultLayout from '../layouts/DefaultLayout.vue'
+import Button from '../components/ui/Button.vue'
+import Input from '../components/ui/Input.vue'
+import Textarea from '../components/ui/Textarea.vue'
+import Label from '../components/ui/Label.vue'
 
 interface ApiErrorResponse {
-  message?: string;
+  message?: string
 }
 
-const router = useRouter();
+const router = useRouter()
 
-const form = reactive<SongCreateRequest>({
-  title: "",
-  artist: "",
-  composer: "",
-  memo: "",
-});
+const form = reactive({
+  title: '',
+  artist: '',
+  composer: '',
+  memo: '',
+})
 
-const isSaving = ref(false);
-const errorMessage = ref("");
+const isSaving = ref(false)
+const errorMessage = ref('')
 
-const toOptionalValue = (value: string) => {
-  const trimmedValue = value.trim();
-  return trimmedValue === "" ? null : trimmedValue;
-};
+const toOpt = (v: string) => v.trim() || null
 
 const getErrorMessage = (error: unknown) => {
   if (isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.message ?? "곡을 저장하지 못했습니다.";
+    return error.response?.data?.message ?? '곡을 저장하지 못했습니다.'
   }
-
-  return "곡을 저장하지 못했습니다.";
-};
+  return '곡을 저장하지 못했습니다.'
+}
 
 const handleSubmit = async () => {
-  errorMessage.value = "";
-
-  const title = form.title.trim();
+  errorMessage.value = ''
+  const title = form.title.trim()
   if (!title) {
-    errorMessage.value = "title은 필수값입니다.";
-    return;
+    errorMessage.value = '제목은 필수입니다.'
+    return
   }
-
-  isSaving.value = true;
-
+  isSaving.value = true
   try {
     await createSong({
       title,
-      artist: toOptionalValue(form.artist ?? ""),
-      composer: toOptionalValue(form.composer ?? ""),
-      memo: toOptionalValue(form.memo ?? ""),
-    });
-    await router.push("/songs");
+      artist: toOpt(form.artist ?? ''),
+      composer: toOpt(form.composer ?? ''),
+      memo: toOpt(form.memo ?? ''),
+    })
+    await router.push('/songs')
   } catch (error) {
-    errorMessage.value = getErrorMessage(error);
+    errorMessage.value = getErrorMessage(error)
   } finally {
-    isSaving.value = false;
+    isSaving.value = false
   }
-};
-
-const handleCancel = () => {
-  void router.push("/songs");
-};
+}
 </script>
 
 <template>
   <DefaultLayout>
-    <h1>곡 등록</h1>
-
-    <form @submit.prevent="handleSubmit">
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-
-      <div class="form-field">
-        <label for="title">title</label>
-        <input id="title" v-model="form.title" type="text" required />
-      </div>
-
-      <div class="form-field">
-        <label for="artist">artist</label>
-        <input id="artist" v-model="form.artist" type="text" />
-      </div>
-
-      <div class="form-field">
-        <label for="composer">composer</label>
-        <input id="composer" v-model="form.composer" type="text" />
-      </div>
-
-      <div class="form-field">
-        <label for="memo">memo</label>
-        <textarea id="memo" v-model="form.memo" rows="4" />
-      </div>
-
-      <button type="submit" :disabled="isSaving">
-        {{ isSaving ? "저장 중..." : "저장" }}
+    <div class="mb-6">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
+        @click="$router.push('/songs')"
+      >
+        <ChevronLeft class="w-4 h-4" />
+        목록으로
       </button>
-      <button type="button" @click="handleCancel">취소</button>
-    </form>
+    </div>
+
+    <div class="max-w-lg">
+      <h1 class="text-xl font-bold text-zinc-900 mb-6">곡 등록</h1>
+
+      <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-6">
+        <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+          <p v-if="errorMessage" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2">{{ errorMessage }}</p>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="title">제목 <span class="text-red-400">*</span></Label>
+            <Input id="title" v-model="form.title" type="text" placeholder="곡 제목을 입력하세요" required />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="artist">아티스트</Label>
+            <Input id="artist" v-model="form.artist" type="text" placeholder="아티스트명" />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="composer">작곡가</Label>
+            <Input id="composer" v-model="form.composer" type="text" placeholder="작곡가명" />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="memo">메모</Label>
+            <Textarea id="memo" v-model="form.memo" rows="3" placeholder="메모를 입력하세요" />
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <Button type="submit" :disabled="isSaving">
+              {{ isSaving ? '저장 중...' : '저장' }}
+            </Button>
+            <Button type="button" variant="outline" @click="$router.push('/songs')">취소</Button>
+          </div>
+        </form>
+      </div>
+    </div>
   </DefaultLayout>
 </template>

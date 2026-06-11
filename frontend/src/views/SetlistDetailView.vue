@@ -2,10 +2,18 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
+import { ChevronLeft, Pencil, Trash2, Plus, X } from '@lucide/vue'
 import { deleteSetlist, updateSetlist } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
+import Button from '../components/ui/Button.vue'
+import Input from '../components/ui/Input.vue'
+import Textarea from '../components/ui/Textarea.vue'
+import Label from '../components/ui/Label.vue'
+import Badge from '../components/ui/Badge.vue'
+import Card from '../components/ui/Card.vue'
+import Select from '../components/ui/Select.vue'
 import { useSetlistStore } from '../stores/setlistStore'
 import { useSongStore } from '../stores/songStore'
 import type { SongSheetSummary } from '../types/song'
@@ -23,7 +31,7 @@ const items = computed(() => [...(setlist.value?.items ?? [])].sort((a, b) => a.
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
 
-// ── 셋리스트 수정 ─────────────────────────────────────────
+// ── 셋리스트 수정
 const isEditing = ref(false)
 const editForm = reactive({ serviceDate: '', serviceType: '', title: '', memo: '' })
 const editError = ref('')
@@ -61,7 +69,7 @@ const handleUpdate = async () => {
   }
 }
 
-// ── 셋리스트 삭제 ─────────────────────────────────────────
+// ── 셋리스트 삭제
 const handleDelete = async () => {
   const label = setlist.value?.title ?? setlist.value?.serviceDate ?? '이 셋리스트'
   if (!confirm(`"${label}"을 삭제할까요?`)) return
@@ -73,7 +81,7 @@ const handleDelete = async () => {
   }
 }
 
-// ── 곡 추가 ───────────────────────────────────────────────
+// ── 곡 추가
 const showAddItem = ref(false)
 const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, memo: '' })
 const addError = ref('')
@@ -126,7 +134,7 @@ const handleAddItem = async () => {
   }
 }
 
-// ── 곡 삭제 ───────────────────────────────────────────────
+// ── 곡 삭제
 const handleDeleteItem = async (itemId: number, songTitle: string) => {
   if (!confirm(`"${songTitle}"을 셋리스트에서 제거할까요?`)) return
   try {
@@ -160,292 +168,172 @@ watch(() => props.setlistId, load)
 
 <template>
   <DefaultLayout>
-    <div class="detail-back">
-      <button type="button" class="btn-back" @click="$router.push('/setlists')">
-        ← 목록으로
+    <div class="mb-6">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
+        @click="$router.push('/setlists')"
+      >
+        <ChevronLeft class="w-4 h-4" />
+        목록으로
       </button>
     </div>
 
-    <p v-if="store.isLoading" class="text-muted">불러오는 중...</p>
-    <p v-else-if="store.errorMessage" class="error">{{ store.errorMessage }}</p>
+    <p v-if="store.isLoading" class="text-sm text-zinc-400 py-8 text-center">불러오는 중...</p>
+    <p v-else-if="store.errorMessage" class="text-sm text-red-500">{{ store.errorMessage }}</p>
 
     <template v-else-if="setlist">
-      <!-- 셋리스트 정보 -->
-      <section class="detail-card">
+      <!-- 셋리스트 정보 카드 -->
+      <Card class="p-6 mb-6">
         <template v-if="!isEditing">
-          <div class="detail-header">
-            <div>
-              <div class="setlist-meta-row">
-                <span class="setlist-date">{{ formatDate(setlist.serviceDate) }}</span>
-                <span v-if="setlist.serviceType" class="setlist-type">{{ setlist.serviceType }}</span>
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 mb-2 flex-wrap">
+                <span class="text-sm text-zinc-500 font-medium">{{ formatDate(setlist.serviceDate) }}</span>
+                <Badge v-if="setlist.serviceType" variant="blue">{{ setlist.serviceType }}</Badge>
               </div>
-              <h1 class="detail-title">{{ setlist.title ?? '제목 없음' }}</h1>
+              <h1 class="text-2xl font-bold text-zinc-900 leading-tight">{{ setlist.title ?? '제목 없음' }}</h1>
+              <p v-if="setlist.memo" class="text-sm text-zinc-500 mt-2 whitespace-pre-line">{{ setlist.memo }}</p>
             </div>
-            <div class="detail-actions">
-              <button type="button" @click="startEdit">수정</button>
-              <button type="button" class="btn-danger" @click="handleDelete">삭제</button>
+            <div class="flex gap-2 flex-shrink-0">
+              <Button variant="outline" size="sm" @click="startEdit">
+                <Pencil class="w-3.5 h-3.5" />
+                수정
+              </Button>
+              <Button variant="destructive" size="sm" @click="handleDelete">
+                <Trash2 class="w-3.5 h-3.5" />
+                삭제
+              </Button>
             </div>
           </div>
-          <p v-if="setlist.memo" class="setlist-memo text-muted">{{ setlist.memo }}</p>
         </template>
 
         <template v-else>
-          <h2 style="margin-top:0">셋리스트 수정</h2>
-          <p v-if="editError" class="error">{{ editError }}</p>
-          <div class="form-row">
-            <div class="form-field">
-              <label for="edit-date">날짜 *</label>
-              <input id="edit-date" v-model="editForm.serviceDate" type="date" />
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-zinc-900">셋리스트 수정</h2>
+            <button type="button" class="text-zinc-400 hover:text-zinc-600" @click="isEditing = false">
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+          <p v-if="editError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ editError }}</p>
+          <div class="flex flex-col gap-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <Label for="edit-date">날짜 <span class="text-red-400">*</span></Label>
+                <Input id="edit-date" v-model="editForm.serviceDate" type="date" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <Label for="edit-type">예배 종류</Label>
+                <Input id="edit-type" v-model="editForm.serviceType" type="text" />
+              </div>
             </div>
-            <div class="form-field">
-              <label for="edit-type">예배 종류</label>
-              <input id="edit-type" v-model="editForm.serviceType" type="text" />
+            <div class="flex flex-col gap-1.5">
+              <Label for="edit-title">제목</Label>
+              <Input id="edit-title" v-model="editForm.title" type="text" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="edit-memo">메모</Label>
+              <Textarea id="edit-memo" v-model="editForm.memo" rows="2" />
+            </div>
+            <div class="flex gap-2">
+              <Button :disabled="isSavingEdit" @click="handleUpdate">
+                {{ isSavingEdit ? '저장 중...' : '저장' }}
+              </Button>
+              <Button variant="outline" :disabled="isSavingEdit" @click="isEditing = false">취소</Button>
             </div>
           </div>
-          <div class="form-field">
-            <label for="edit-title">제목</label>
-            <input id="edit-title" v-model="editForm.title" type="text" />
-          </div>
-          <div class="form-field">
-            <label for="edit-memo">메모</label>
-            <textarea id="edit-memo" v-model="editForm.memo" rows="2" />
-          </div>
-          <button type="button" class="btn-primary" :disabled="isSavingEdit" @click="handleUpdate">
-            {{ isSavingEdit ? '저장 중...' : '저장' }}
-          </button>
-          <button type="button" :disabled="isSavingEdit" @click="isEditing = false">취소</button>
         </template>
-      </section>
+      </Card>
 
-      <!-- 곡 목록 -->
-      <section>
-        <div class="section-header">
-          <h2 style="margin:0">곡 목록 ({{ items.length }}곡)</h2>
-          <button type="button" @click="showAddItem = !showAddItem">
-            {{ showAddItem ? '취소' : '+ 곡 추가' }}
-          </button>
+      <!-- 곡 목록 섹션 -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold text-zinc-900">
+            곡 목록
+            <span class="ml-1.5 text-sm font-normal text-zinc-400">{{ items.length }}곡</span>
+          </h2>
+          <Button variant="outline" size="sm" @click="showAddItem = !showAddItem">
+            <template v-if="showAddItem">
+              <X class="w-3.5 h-3.5" />
+              취소
+            </template>
+            <template v-else>
+              <Plus class="w-3.5 h-3.5" />
+              곡 추가
+            </template>
+          </Button>
         </div>
 
         <!-- 곡 추가 폼 -->
-        <div v-if="showAddItem" class="add-item-form">
-          <p v-if="addError" class="error">{{ addError }}</p>
-          <div class="form-field">
-            <label for="add-song">곡 선택 *</label>
-            <select id="add-song" v-model="addForm.songId">
-              <option :value="null" disabled>곡을 선택하세요</option>
-              <option v-for="song in songStore.songs" :key="song.songId" :value="song.songId">
-                {{ song.title }}{{ song.artist ? ` — ${song.artist}` : '' }}
-              </option>
-            </select>
-          </div>
-          <div v-if="addForm.songId" class="form-field">
-            <label for="add-sheet">악보 버전</label>
-            <select id="add-sheet" v-model="addForm.songSheetId" :disabled="isLoadingSheets">
-              <option :value="null">선택 안 함</option>
-              <option
-                v-for="sheet in availableSheets"
-                :key="sheet.songSheetId"
-                :value="sheet.songSheetId"
-              >
-                {{ sheetLabel(sheet.sheetKey, sheet.versionName) ?? '버전명 없음' }}
-              </option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="add-memo">메모</label>
-            <input id="add-memo" v-model="addForm.memo" type="text" placeholder="선택사항" />
-          </div>
-          <button type="button" class="btn-primary" :disabled="isAddingItem" @click="handleAddItem">
-            {{ isAddingItem ? '추가 중...' : '추가' }}
-          </button>
-        </div>
-
-        <p v-if="items.length === 0" class="text-muted">곡이 없습니다.</p>
-        <ol v-else class="item-list">
-          <li v-for="item in items" :key="item.setlistItemId" class="item-row">
-            <span class="item-no">{{ item.orderNo }}</span>
-            <div class="item-info">
-              <span class="item-song">{{ item.songTitle }}</span>
-              <span v-if="item.songArtist" class="item-artist text-muted">{{ item.songArtist }}</span>
-              <span v-if="sheetLabel(item.sheetKey, item.versionName)" class="item-sheet">
-                {{ sheetLabel(item.sheetKey, item.versionName) }}
-              </span>
-              <span v-if="item.memo" class="item-memo text-muted">{{ item.memo }}</span>
+        <Card v-if="showAddItem" class="p-5 mb-4 bg-zinc-50">
+          <p v-if="addError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ addError }}</p>
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1.5">
+              <Label for="add-song">곡 선택 <span class="text-red-400">*</span></Label>
+              <Select id="add-song" v-model="addForm.songId">
+                <option :value="null" disabled>곡을 선택하세요</option>
+                <option v-for="song in songStore.songs" :key="song.songId" :value="song.songId">
+                  {{ song.title }}{{ song.artist ? ` — ${song.artist}` : '' }}
+                </option>
+              </Select>
             </div>
-            <button
-              type="button"
-              class="btn-danger btn-sm"
+            <div v-if="addForm.songId" class="flex flex-col gap-1.5">
+              <Label for="add-sheet">악보 버전</Label>
+              <Select id="add-sheet" v-model="addForm.songSheetId" :disabled="isLoadingSheets">
+                <option :value="null">선택 안 함</option>
+                <option
+                  v-for="sheet in availableSheets"
+                  :key="sheet.songSheetId"
+                  :value="sheet.songSheetId"
+                >
+                  {{ sheetLabel(sheet.sheetKey, sheet.versionName) ?? '버전명 없음' }}
+                </option>
+              </Select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="add-memo">메모</Label>
+              <Input id="add-memo" v-model="addForm.memo" type="text" placeholder="선택사항" />
+            </div>
+            <Button :disabled="isAddingItem" @click="handleAddItem">
+              {{ isAddingItem ? '추가 중...' : '추가' }}
+            </Button>
+          </div>
+        </Card>
+
+        <p v-if="items.length === 0" class="text-sm text-zinc-400 py-6 text-center">
+          곡이 없습니다.
+        </p>
+
+        <div v-else class="flex flex-col gap-2">
+          <Card
+            v-for="item in items"
+            :key="item.setlistItemId"
+            class="px-5 py-4 flex items-center gap-4"
+          >
+            <div class="flex-shrink-0 w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center">
+              <span class="text-xs font-bold text-zinc-400">{{ item.orderNo }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-zinc-900">{{ item.songTitle }}</span>
+                <span v-if="item.songArtist" class="text-xs text-zinc-400">{{ item.songArtist }}</span>
+                <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet">
+                  {{ sheetLabel(item.sheetKey, item.versionName) }}
+                </Badge>
+              </div>
+              <p v-if="item.memo" class="text-xs text-zinc-400 mt-0.5">{{ item.memo }}</p>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              class="flex-shrink-0"
               @click="handleDeleteItem(item.setlistItemId, item.songTitle)"
-            >삭제</button>
-          </li>
-        </ol>
-      </section>
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </Button>
+          </Card>
+        </div>
+      </div>
     </template>
   </DefaultLayout>
 </template>
-
-<style scoped>
-.detail-back { margin-bottom: 20px; }
-
-.btn-back {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #1971c2;
-  font-size: 14px;
-  cursor: pointer;
-  margin-left: 0;
-}
-.btn-back:hover { text-decoration: underline; }
-
-.detail-card {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  padding: 24px;
-  margin-bottom: 32px;
-}
-
-.detail-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.setlist-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.setlist-date {
-  font-size: 14px;
-  color: #495057;
-  font-weight: 500;
-}
-
-.setlist-type {
-  background: #e8f4fd;
-  color: #1971c2;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.detail-title {
-  margin: 0;
-  font-size: 22px;
-}
-
-.detail-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.setlist-memo {
-  margin: 0;
-  font-size: 13px;
-  white-space: pre-line;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.add-item-form {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  counter-reset: none;
-}
-
-.item-row {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.item-no {
-  font-size: 13px;
-  font-weight: 700;
-  color: #adb5bd;
-  min-width: 20px;
-  text-align: center;
-}
-
-.item-info {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.item-song {
-  font-weight: 600;
-  font-size: 14px;
-  color: #1a1a2e;
-}
-
-.item-artist {
-  font-size: 13px;
-}
-
-.item-sheet {
-  background: #f3f0ff;
-  color: #7048e8;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.item-memo {
-  font-size: 13px;
-}
-
-.btn-primary {
-  background: #1971c2;
-  color: #fff;
-  border-color: #1971c2;
-}
-.btn-primary:hover:not(:disabled) { background: #1864ab; }
-
-.btn-danger {
-  background: #fff;
-  color: #c92a2a;
-  border-color: #ffc9c9;
-}
-.btn-danger:hover:not(:disabled) { background: #fff5f5; }
-
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-</style>

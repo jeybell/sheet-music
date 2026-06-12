@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, Upload, FileText, X } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, Upload, FileText, X, Eye, Download } from '@lucide/vue'
 import { deleteSong, updateSong } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet } from '../apis/songSheetApi'
@@ -182,6 +182,18 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   }
 }
 
+const fileUrl = (fileId: number) => {
+  const base = import.meta.env.VITE_API_BASE_URL || ''
+  return `${base}/api/song-files/${fileId}`
+}
+
+const isPdf = (file: { contentType?: string | null; originalFileName?: string | null }) => {
+  if (file.contentType?.includes('pdf')) return true
+  return file.originalFileName?.toLowerCase().endsWith('.pdf') ?? false
+}
+
+const previewOpen = ref<Record<number, boolean>>({})
+
 const loadSong = () => {
   if (Number.isFinite(props.songId)) void songStore.fetchSong(props.songId)
 }
@@ -336,25 +348,93 @@ watch(() => props.songId, loadSong)
             <Separator class="mb-3" />
 
             <!-- 파일 목록 -->
-            <div v-if="sheet.files?.length" class="flex flex-col gap-1.5 mb-3">
+            <div v-if="sheet.files?.length" class="flex flex-col gap-2 mb-3">
               <div
                 v-for="file in sheet.files"
                 :key="file.songFileId"
-                class="flex items-center justify-between py-1.5 px-3 rounded-md bg-zinc-50"
+                class="rounded-md border border-zinc-100 overflow-hidden"
               >
-                <div class="flex items-center gap-2 min-w-0">
-                  <FileText class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-                  <span class="text-xs text-zinc-600 truncate">
-                    {{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}
-                  </span>
+                <!-- 이미지 미리보기 -->
+                <div v-if="!isPdf(file)">
+                  <button
+                    type="button"
+                    class="w-full text-left"
+                    @click="previewOpen[file.songFileId] = !previewOpen[file.songFileId]"
+                  >
+                    <img
+                      v-if="previewOpen[file.songFileId]"
+                      :src="fileUrl(file.songFileId)"
+                      :alt="file.originalFileName ?? '악보'"
+                      class="w-full object-contain bg-zinc-50"
+                    />
+                    <div
+                      v-else
+                      class="flex items-center justify-between py-1.5 px-3 bg-zinc-50 hover:bg-zinc-100 transition-colors"
+                    >
+                      <div class="flex items-center gap-2 min-w-0">
+                        <FileText class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                        <span class="text-xs text-zinc-600 truncate">
+                          {{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}
+                        </span>
+                      </div>
+                      <Eye class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                    </div>
+                  </button>
+                  <div v-if="previewOpen[file.songFileId]" class="flex items-center justify-between px-3 py-1.5 bg-zinc-50 border-t border-zinc-100">
+                    <span class="text-xs text-zinc-500 truncate">{{ file.originalFileName ?? '파일명 없음' }}</span>
+                    <div class="flex gap-1.5 flex-shrink-0 ml-2">
+                      <a
+                        :href="fileUrl(file.songFileId)"
+                        :download="file.originalFileName ?? 'sheet'"
+                        class="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
+                      >
+                        <Download class="w-3.5 h-3.5" />
+                      </a>
+                      <button
+                        type="button"
+                        class="p-1 text-zinc-400 hover:text-red-500 transition-colors"
+                        @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
+                      >
+                        <X class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  class="ml-2 text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0"
-                  @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
-                >
-                  <X class="w-3.5 h-3.5" />
-                </button>
+
+                <!-- PDF 파일 -->
+                <div v-else class="flex items-center justify-between py-1.5 px-3 bg-zinc-50">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <FileText class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                    <span class="text-xs text-zinc-600 truncate">
+                      {{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}
+                    </span>
+                  </div>
+                  <div class="flex gap-1.5 flex-shrink-0 ml-2">
+                    <a
+                      :href="fileUrl(file.songFileId)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="flex items-center gap-1 h-6 px-2 rounded text-xs bg-zinc-200 hover:bg-zinc-300 text-zinc-700 transition-colors"
+                    >
+                      <Eye class="w-3 h-3" />
+                      PDF 보기
+                    </a>
+                    <a
+                      :href="fileUrl(file.songFileId)"
+                      :download="file.originalFileName ?? 'sheet.pdf'"
+                      class="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
+                    >
+                      <Download class="w-3.5 h-3.5" />
+                    </a>
+                    <button
+                      type="button"
+                      class="p-1 text-zinc-400 hover:text-red-500 transition-colors"
+                      @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
+                    >
+                      <X class="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             <p v-else class="text-xs text-zinc-400 mb-3">파일 없음</p>

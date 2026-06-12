@@ -2,11 +2,13 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen } from '@lucide/vue'
 import { deleteSetlist, updateSetlist } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
+import SheetViewerModal from '../components/SheetViewerModal.vue'
+import type { ViewerSong } from '../components/SheetViewerModal.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Textarea from '../components/ui/Textarea.vue'
@@ -155,6 +157,45 @@ const sheetLabel = (key: string | null, version: string | null) => {
   return key ?? version ?? null
 }
 
+// ── 악보 뷰어
+const showViewer = ref(false)
+const viewerSongs = ref<ViewerSong[]>([])
+const isLoadingViewer = ref(false)
+
+const openViewer = async () => {
+  isLoadingViewer.value = true
+  try {
+    const songIds = [...new Set(items.value.map(i => i.songId))]
+    const songMap = new Map<number, Awaited<ReturnType<typeof getSong>>>()
+    await Promise.all(songIds.map(async id => {
+      const song = await getSong(id)
+      songMap.set(id, song)
+    }))
+
+    viewerSongs.value = items.value.map(item => {
+      const song = songMap.get(item.songId)
+      const sheets = song?.sheets ?? song?.songSheets ?? []
+      const sheet = item.songSheetId
+        ? sheets.find(s => s.songSheetId === item.songSheetId)
+        : sheets[0]
+      return {
+        title: item.songTitle,
+        artist: item.songArtist,
+        sheetKey: item.sheetKey,
+        versionName: item.versionName,
+        files: (sheet?.files ?? []).map(f => ({
+          songFileId: f.songFileId,
+          originalFileName: f.originalFileName ?? null,
+          contentType: f.contentType ?? null,
+        })),
+      }
+    })
+    showViewer.value = true
+  } finally {
+    isLoadingViewer.value = false
+  }
+}
+
 const load = () => {
   if (Number.isFinite(props.setlistId)) {
     void store.fetchSetlist(props.setlistId)
@@ -179,6 +220,13 @@ watch(() => props.setlistId, load)
       </button>
     </div>
 
+    <SheetViewerModal
+      v-if="showViewer"
+      :songs="viewerSongs"
+      :setlist-title="setlist?.title ?? setlist?.serviceDate ?? null"
+      @close="showViewer = false"
+    />
+
     <p v-if="store.isLoading" class="text-sm text-zinc-400 py-8 text-center">불러오는 중...</p>
     <p v-else-if="store.errorMessage" class="text-sm text-red-500">{{ store.errorMessage }}</p>
 
@@ -196,6 +244,15 @@ watch(() => props.setlistId, load)
               <p v-if="setlist.memo" class="text-sm text-zinc-500 mt-2 whitespace-pre-line">{{ setlist.memo }}</p>
             </div>
             <div class="flex gap-2 flex-shrink-0">
+              <Button
+                variant="secondary"
+                size="sm"
+                :disabled="isLoadingViewer || items.length === 0"
+                @click="openViewer"
+              >
+                <BookOpen class="w-3.5 h-3.5" />
+                {{ isLoadingViewer ? '로딩 중...' : '악보 보기' }}
+              </Button>
               <Button variant="outline" size="sm" @click="startEdit">
                 <Pencil class="w-3.5 h-3.5" />
                 수정

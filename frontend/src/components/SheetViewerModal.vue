@@ -25,9 +25,9 @@ const isDownloading = ref(false)
 const prev = () => { if (currentIndex.value > 0) currentIndex.value-- }
 const next = () => { if (currentIndex.value < props.songs.length - 1) currentIndex.value++ }
 
-const fileUrl = (fileId: number) => {
+const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
   const base = import.meta.env.VITE_API_BASE_URL || ''
-  return `${base}/api/song-files/${fileId}`
+  return `${base}/api/song-files/${fileId}/${mode}`
 }
 
 const isPdf = (file: { contentType: string | null; originalFileName: string | null }) => {
@@ -158,7 +158,7 @@ const downloadPdf = async () => {
           class="text-white text-sm"
         >
           <a
-            :href="fileUrl(file.songFileId)"
+            :href="fileUrl(file.songFileId, 'download')"
             target="_blank"
             rel="noopener noreferrer"
             class="underline text-violet-300 hover:text-violet-200"

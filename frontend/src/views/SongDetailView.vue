@@ -182,9 +182,9 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   }
 }
 
-const fileUrl = (fileId: number) => {
+const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
   const base = import.meta.env.VITE_API_BASE_URL || ''
-  return `${base}/api/song-files/${fileId}`
+  return `${base}/api/song-files/${fileId}/${mode}`
 }
 
 const isPdf = (file: { contentType?: string | null; originalFileName?: string | null }) => {
@@ -384,7 +384,7 @@ watch(() => props.songId, loadSong)
                     <span class="text-xs text-zinc-500 truncate">{{ file.originalFileName ?? '파일명 없음' }}</span>
                     <div class="flex gap-1.5 flex-shrink-0 ml-2">
                       <a
-                        :href="fileUrl(file.songFileId)"
+                        :href="fileUrl(file.songFileId, 'download')"
                         :download="file.originalFileName ?? 'sheet'"
                         class="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
                       >
@@ -411,7 +411,7 @@ watch(() => props.songId, loadSong)
                   </div>
                   <div class="flex gap-1.5 flex-shrink-0 ml-2">
                     <a
-                      :href="fileUrl(file.songFileId)"
+                      :href="fileUrl(file.songFileId, 'view')"
                       target="_blank"
                       rel="noopener noreferrer"
                       class="flex items-center gap-1 h-6 px-2 rounded text-xs bg-zinc-200 hover:bg-zinc-300 text-zinc-700 transition-colors"
@@ -420,7 +420,7 @@ watch(() => props.songId, loadSong)
                       PDF 보기
                     </a>
                     <a
-                      :href="fileUrl(file.songFileId)"
+                      :href="fileUrl(file.songFileId, 'download')"
                       :download="file.originalFileName ?? 'sheet.pdf'"
                       class="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
                     >

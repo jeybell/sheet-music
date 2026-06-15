@@ -56,6 +56,24 @@ public class SongFileController {
                 .body(response.resource());
     }
 
+    @GetMapping("/api/song-files/{songFileId}/view")
+    public ResponseEntity<Resource> viewFile(@PathVariable("songFileId") Long songFileId) {
+        SongFileDownloadResponse response = songFileService.downloadFile(songFileId);
+        String contentTypeValue = Objects.toString(response.contentType(), "");
+        MediaType contentType = contentTypeValue.isBlank()
+                ? MediaType.APPLICATION_OCTET_STREAM
+                : Objects.requireNonNull(MediaType.parseMediaType(contentTypeValue));
+
+        return ResponseEntity.ok()
+                .contentType(Objects.requireNonNull(contentType))
+                .contentLength(response.fileSize())
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
+                        .filename(response.originalFileName(), StandardCharsets.UTF_8)
+                        .build()
+                        .toString())
+                .body(response.resource());
+    }
+
     @DeleteMapping("/api/song-files/{songFileId}")
     public ResponseEntity<Void> deleteFile(@PathVariable("songFileId") Long songFileId) {
         songFileService.deleteFile(songFileId);

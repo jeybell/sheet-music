@@ -8,6 +8,10 @@ primary_region = 'nrt'
 
 [build]
 
+[[mounts]]
+  source = 'uploads_data'
+  destination = '/app/uploads'
+
 [http_service]
   internal_port = 8080
   force_https = true

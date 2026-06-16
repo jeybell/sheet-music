@@ -150,6 +150,7 @@ const downloadPdf = async () => {
             :src="fileUrl(file.songFileId)"
             :alt="file.originalFileName ?? '악보'"
             class="max-w-full max-h-[80vh] object-contain rounded shadow-lg"
+            @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')"
           />
         </template>
         <div

@@ -366,6 +366,7 @@ watch(() => props.songId, loadSong)
                       :src="fileUrl(file.songFileId)"
                       :alt="file.originalFileName ?? '악보'"
                       class="w-full object-contain bg-zinc-50"
+                      @error="(e) => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).alt = '이미지를 불러올 수 없습니다.' }"
                     />
                     <div
                       v-else

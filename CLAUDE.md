@@ -39,7 +39,7 @@ setlists (셋리스트/콘티)
 |--------|------|
 | Songs | `/api/songs` |
 | Song Sheets | `/api/songs/{songId}/sheets`, `/api/song-sheets/{id}` |
-| Song Files | `/api/song-sheets/{id}/files`, `/api/song-files/{id}` |
+| Song Files | `/api/song-sheets/{id}/files`, `/api/song-files/{id}/view`, `/api/song-files/{id}/download` |
 | Setlists | `/api/setlists` (구현 예정) |
 
 ## 현재 진행 상황
@@ -64,13 +64,15 @@ setlists (셋리스트/콘티)
 ### ✅ 추가 완료
 - #20 전체 디자인 리뉴얼 (shadcn-vue 스타일 + Tailwind CSS v4 + lucide 아이콘)
 - #21 악보 뷰어 및 셋리스트 PDF 다운로드 (이미지 미리보기, 전체화면 뷰어 모달, jsPDF 다운로드)
+- #22 악보 첨부파일 뷰어 파일 깨짐 현상 수정 (CORS 헤더 노출 추가, Fly 업로드 볼륨 마운트로 재배포 시 파일 유실 방지, `/view`·`/download` 엔드포인트 분리)
+- CI/CD 자동배포 구성 (GitHub Actions → Fly.io 자동배포, Vercel Git 연동 → 프론트 자동배포). `main` push만 하면 백엔드/프론트 모두 자동 반영됨
 
 ### 🔄 남은 작업
 - 없음 (모든 이슈 완료)
 
 ### 배포 정보
-- 백엔드: https://worship-sheet.fly.dev
-- 프론트엔드: https://worship-sheet.vercel.app
+- 백엔드: https://worship-sheet.fly.dev (Fly.io, GitHub Actions로 `main` push 시 자동배포)
+- 프론트엔드: https://worship-sheet.vercel.app (Vercel, Git 연동으로 `main` push 시 자동배포, Root Directory: `frontend`)
 - DB: Supabase
 
 ## 다음 세션 시작 가이드

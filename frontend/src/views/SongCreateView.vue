@@ -64,7 +64,7 @@ const handleSubmit = async () => {
     <div class="mb-6">
       <button
         type="button"
-        class="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
+        class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         @click="$router.push('/songs')"
       >
         <ChevronLeft class="w-4 h-4" />
@@ -73,14 +73,14 @@ const handleSubmit = async () => {
     </div>
 
     <div class="max-w-lg">
-      <h1 class="text-xl font-bold text-zinc-900 mb-6">곡 등록</h1>
+      <h1 class="text-xl font-bold text-foreground mb-6">곡 등록</h1>
 
-      <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-6">
+      <div class="bg-card rounded-xl border border-border shadow-sm p-6">
         <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
-          <p v-if="errorMessage" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2">{{ errorMessage }}</p>
+          <p v-if="errorMessage" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2">{{ errorMessage }}</p>
 
           <div class="flex flex-col gap-1.5">
-            <Label for="title">제목 <span class="text-red-400">*</span></Label>
+            <Label for="title">제목 <span class="text-destructive">*</span></Label>
             <Input id="title" v-model="form.title" type="text" placeholder="곡 제목을 입력하세요" required />
           </div>
 

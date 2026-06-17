@@ -1,8 +1,18 @@
 import http from "./http";
 import type { Song, SongCreateRequest, SongUpdateRequest } from "../types/song";
 
-export const getSongs = async () => {
-  const { data } = await http.get<Song[]>("/api/songs");
+export interface SongSearchParams {
+  query?: string | null;
+  songKey?: string | null;
+}
+
+export const getSongs = async (params?: SongSearchParams) => {
+  const { data } = await http.get<Song[]>("/api/songs", {
+    params: {
+      query: params?.query?.trim() || undefined,
+      songKey: params?.songKey?.trim() || undefined,
+    },
+  });
   return data;
 };
 

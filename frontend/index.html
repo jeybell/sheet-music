@@ -4,7 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>Worship Sheet</title>
+    <script>
+      // FOUC 방지: 번들 로드 전에 테마 클래스 선적용 (기본 다크)
+      (function () {
+        var t = localStorage.getItem('theme')
+        if (t !== 'light') document.documentElement.classList.add('dark')
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

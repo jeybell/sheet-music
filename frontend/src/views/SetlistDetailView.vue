@@ -212,7 +212,7 @@ watch(() => props.setlistId, load)
     <div class="mb-6">
       <button
         type="button"
-        class="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
+        class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         @click="$router.push('/setlists')"
       >
         <ChevronLeft class="w-4 h-4" />
@@ -227,8 +227,8 @@ watch(() => props.setlistId, load)
       @close="showViewer = false"
     />
 
-    <p v-if="store.isLoading" class="text-sm text-zinc-400 py-8 text-center">불러오는 중...</p>
-    <p v-else-if="store.errorMessage" class="text-sm text-red-500">{{ store.errorMessage }}</p>
+    <p v-if="store.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
+    <p v-else-if="store.errorMessage" class="text-sm text-destructive">{{ store.errorMessage }}</p>
 
     <template v-else-if="setlist">
       <!-- 셋리스트 정보 카드 -->
@@ -237,11 +237,11 @@ watch(() => props.setlistId, load)
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
               <div class="flex items-center gap-2 mb-2 flex-wrap">
-                <span class="text-sm text-zinc-500 font-medium">{{ formatDate(setlist.serviceDate) }}</span>
+                <span class="text-sm text-muted-foreground font-medium">{{ formatDate(setlist.serviceDate) }}</span>
                 <Badge v-if="setlist.serviceType" variant="blue">{{ setlist.serviceType }}</Badge>
               </div>
-              <h1 class="text-2xl font-bold text-zinc-900 leading-tight">{{ setlist.title ?? '제목 없음' }}</h1>
-              <p v-if="setlist.memo" class="text-sm text-zinc-500 mt-2 whitespace-pre-line">{{ setlist.memo }}</p>
+              <h1 class="text-2xl font-bold text-foreground leading-tight">{{ setlist.title ?? '제목 없음' }}</h1>
+              <p v-if="setlist.memo" class="text-sm text-muted-foreground mt-2 whitespace-pre-line">{{ setlist.memo }}</p>
             </div>
             <div class="flex gap-2 flex-shrink-0">
               <Button
@@ -267,16 +267,16 @@ watch(() => props.setlistId, load)
 
         <template v-else>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-base font-semibold text-zinc-900">셋리스트 수정</h2>
-            <button type="button" class="text-zinc-400 hover:text-zinc-600" @click="isEditing = false">
+            <h2 class="text-base font-semibold text-foreground">셋리스트 수정</h2>
+            <button type="button" class="text-muted-foreground hover:text-foreground" @click="isEditing = false">
               <X class="w-4 h-4" />
             </button>
           </div>
-          <p v-if="editError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ editError }}</p>
+          <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ editError }}</p>
           <div class="flex flex-col gap-4">
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5">
-                <Label for="edit-date">날짜 <span class="text-red-400">*</span></Label>
+                <Label for="edit-date">날짜 <span class="text-destructive">*</span></Label>
                 <Input id="edit-date" v-model="editForm.serviceDate" type="date" />
               </div>
               <div class="flex flex-col gap-1.5">
@@ -305,9 +305,9 @@ watch(() => props.setlistId, load)
       <!-- 곡 목록 섹션 -->
       <div>
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-zinc-900">
+          <h2 class="text-base font-semibold text-foreground">
             곡 목록
-            <span class="ml-1.5 text-sm font-normal text-zinc-400">{{ items.length }}곡</span>
+            <span class="ml-1.5 text-sm font-normal text-muted-foreground">{{ items.length }}곡</span>
           </h2>
           <Button variant="outline" size="sm" @click="showAddItem = !showAddItem">
             <template v-if="showAddItem">
@@ -322,11 +322,11 @@ watch(() => props.setlistId, load)
         </div>
 
         <!-- 곡 추가 폼 -->
-        <Card v-if="showAddItem" class="p-5 mb-4 bg-zinc-50">
-          <p v-if="addError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ addError }}</p>
+        <Card v-if="showAddItem" class="p-5 mb-4 bg-muted/40">
+          <p v-if="addError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ addError }}</p>
           <div class="flex flex-col gap-4">
             <div class="flex flex-col gap-1.5">
-              <Label for="add-song">곡 선택 <span class="text-red-400">*</span></Label>
+              <Label for="add-song">곡 선택 <span class="text-destructive">*</span></Label>
               <Select id="add-song" v-model="addForm.songId">
                 <option :value="null" disabled>곡을 선택하세요</option>
                 <option v-for="song in songStore.songs" :key="song.songId" :value="song.songId">
@@ -357,7 +357,7 @@ watch(() => props.setlistId, load)
           </div>
         </Card>
 
-        <p v-if="items.length === 0" class="text-sm text-zinc-400 py-6 text-center">
+        <p v-if="items.length === 0" class="text-sm text-muted-foreground py-6 text-center">
           곡이 없습니다.
         </p>
 
@@ -367,18 +367,18 @@ watch(() => props.setlistId, load)
             :key="item.setlistItemId"
             class="px-5 py-4 flex items-center gap-4"
           >
-            <div class="flex-shrink-0 w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center">
-              <span class="text-xs font-bold text-zinc-400">{{ item.orderNo }}</span>
+            <div class="flex-shrink-0 w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+              <span class="text-xs font-bold text-muted-foreground">{{ item.orderNo }}</span>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-sm font-semibold text-zinc-900">{{ item.songTitle }}</span>
-                <span v-if="item.songArtist" class="text-xs text-zinc-400">{{ item.songArtist }}</span>
+                <span class="text-sm font-semibold text-foreground">{{ item.songTitle }}</span>
+                <span v-if="item.songArtist" class="text-xs text-muted-foreground">{{ item.songArtist }}</span>
                 <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet">
                   {{ sheetLabel(item.sheetKey, item.versionName) }}
                 </Badge>
               </div>
-              <p v-if="item.memo" class="text-xs text-zinc-400 mt-0.5">{{ item.memo }}</p>
+              <p v-if="item.memo" class="text-xs text-muted-foreground mt-0.5">{{ item.memo }}</p>
             </div>
             <Button
               variant="destructive"

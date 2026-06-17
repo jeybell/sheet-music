@@ -1,3 +1,3 @@
 <template>
-  <hr class="border-0 border-t border-zinc-200 my-0" />
+  <hr class="border-0 border-t border-border my-0" />
 </template>

@@ -1,7 +1,94 @@
 @import "tailwindcss";
 
+/* 다크 모드: <html class="dark"> 기준 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── 디자인 토큰 (라이트 기본값) ───────────────────────── */
+:root {
+  --background: #ffffff;
+  --foreground: #18181b;
+
+  --card: #ffffff;
+  --card-foreground: #18181b;
+
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --primary-soft: #f5f3ff;
+
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #8b5cf6;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #fef2f2;
+  --destructive-border: #fecaca;
+
+  --radius: 0.75rem;
+}
+
+/* ── 다크 토큰 (기본 적용) ─────────────────────────────── */
+.dark {
+  --background: #0a0a0b;
+  --foreground: #fafafa;
+
+  --card: #161618;
+  --card-foreground: #fafafa;
+
+  --muted: #232326;
+  --muted-foreground: #a1a1aa;
+
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --primary-soft: #1e1b2e;
+
+  --border: #27272a;
+  --input: #2e2e32;
+  --ring: #a78bfa;
+
+  --destructive: #f87171;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #2a1416;
+  --destructive-border: #4c1d1d;
+}
+
+/* ── 시맨틱 유틸리티로 노출 (Tailwind v4) ──────────────── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-border: var(--destructive-border);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-sm: calc(var(--radius) - 0.4rem);
+}
+
 @layer base {
+  html {
+    color-scheme: light dark;
+  }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  * {
+    border-color: var(--border);
   }
 }

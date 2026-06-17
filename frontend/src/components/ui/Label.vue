@@ -1,5 +1,5 @@
 <template>
-  <label class="text-sm font-medium text-zinc-700 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+  <label class="text-sm font-medium text-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
     <slot />
   </label>
 </template>

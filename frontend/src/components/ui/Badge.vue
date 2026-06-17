@@ -10,11 +10,11 @@ const props = withDefaults(defineProps<{
 
 const badgeClass = computed(() => cn(
   'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-  props.variant === 'default' && 'bg-zinc-100 text-zinc-700',
-  props.variant === 'secondary' && 'bg-zinc-100 text-zinc-600',
-  props.variant === 'violet' && 'bg-violet-100 text-violet-700',
-  props.variant === 'blue' && 'bg-blue-100 text-blue-700',
-  props.variant === 'destructive' && 'bg-red-100 text-red-700',
+  props.variant === 'default' && 'bg-muted text-muted-foreground',
+  props.variant === 'secondary' && 'bg-muted text-muted-foreground',
+  props.variant === 'violet' && 'bg-primary-soft text-primary',
+  props.variant === 'blue' && 'bg-primary-soft text-primary',
+  props.variant === 'destructive' && 'bg-destructive-soft text-destructive',
 ))
 </script>
 

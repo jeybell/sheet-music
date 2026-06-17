@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { isAxiosError } from 'axios'
-import { getSong, getSongs } from '../apis/songApi'
+import { getSong, getSongs, type SongSearchParams } from '../apis/songApi'
 import type { Song } from '../types/song'
 
 interface ApiErrorResponse {
@@ -24,12 +24,12 @@ export const useSongStore = defineStore('song', () => {
 
   const hasSongs = computed(() => songs.value.length > 0)
 
-  const fetchSongs = async () => {
+  const fetchSongs = async (params?: SongSearchParams) => {
     isLoading.value = true
     errorMessage.value = ''
 
     try {
-      songs.value = await getSongs()
+      songs.value = await getSongs(params)
     } catch (error) {
       errorMessage.value = getErrorMessage(error, '곡 목록을 불러오지 못했습니다.')
     } finally {

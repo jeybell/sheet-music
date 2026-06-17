@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, Upload, FileText, X, Eye, Download } from '@lucide/vue'
+import {
+  ChevronLeft, ChevronRight, Pencil, Trash2, Plus, Upload, FileText,
+  X, Eye, Download, Settings2, Music, Maximize2,
+} from '@lucide/vue'
 import { deleteSong, updateSong } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet } from '../apis/songSheetApi'
@@ -13,9 +16,8 @@ import Textarea from '../components/ui/Textarea.vue'
 import Label from '../components/ui/Label.vue'
 import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
-import Separator from '../components/ui/Separator.vue'
 import { useSongStore } from '../stores/songStore'
-import type { SongSheetSummary } from '../types/song'
+import type { SongSheetSummary, SongFile } from '../types/song'
 
 interface ApiErrorResponse {
   message?: string
@@ -36,6 +38,52 @@ const apiError = (error: unknown, fallback: string) => {
 }
 
 const toOpt = (v: string) => v.trim() || null
+
+const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
+  const base = import.meta.env.VITE_API_BASE_URL || ''
+  return `${base}/api/song-files/${fileId}/${mode}`
+}
+
+const isPdf = (file: { contentType?: string | null; originalFileName?: string | null }) => {
+  if (file.contentType?.includes('pdf')) return true
+  return file.originalFileName?.toLowerCase().endsWith('.pdf') ?? false
+}
+
+// ── 슬라이드(이미지 1장 = 1슬라이드) ─────────────────────
+interface Slide {
+  sheet: SongSheetSummary
+  file: SongFile
+}
+
+const slides = computed<Slide[]>(() =>
+  sheets.value.flatMap((sheet) =>
+    (sheet.files ?? []).map((file) => ({ sheet, file })),
+  ),
+)
+
+const currentIndex = ref(0)
+const currentSlide = computed<Slide | undefined>(() => slides.value[currentIndex.value])
+
+watch(slides, (list) => {
+  if (currentIndex.value > list.length - 1) currentIndex.value = Math.max(0, list.length - 1)
+})
+
+const go = (delta: number) => {
+  const len = slides.value.length
+  if (len === 0) return
+  currentIndex.value = (currentIndex.value + delta + len) % len
+}
+const goTo = (i: number) => { currentIndex.value = i }
+
+const slideLabel = (slide: Slide) => slide.sheet.versionName || slide.sheet.sheetKey || '버전'
+
+const onKey = (e: KeyboardEvent) => {
+  if (e.key === 'ArrowLeft') go(-1)
+  else if (e.key === 'ArrowRight') go(1)
+}
+
+// ── 관리 패널 토글
+const showManage = ref(false)
 
 // ── 곡 수정
 const isEditing = ref(false)
@@ -182,32 +230,24 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   }
 }
 
-const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  return `${base}/api/song-files/${fileId}/${mode}`
-}
-
-const isPdf = (file: { contentType?: string | null; originalFileName?: string | null }) => {
-  if (file.contentType?.includes('pdf')) return true
-  return file.originalFileName?.toLowerCase().endsWith('.pdf') ?? false
-}
-
-const previewOpen = ref<Record<number, boolean>>({})
-
 const loadSong = () => {
   if (Number.isFinite(props.songId)) void songStore.fetchSong(props.songId)
 }
 
-onMounted(loadSong)
+onMounted(() => {
+  loadSong()
+  window.addEventListener('keydown', onKey)
+})
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 watch(() => props.songId, loadSong)
 </script>
 
 <template>
   <DefaultLayout>
-    <div class="mb-6">
+    <div class="mb-5">
       <button
         type="button"
-        class="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
+        class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         @click="$router.push('/songs')"
       >
         <ChevronLeft class="w-4 h-4" />
@@ -215,53 +255,176 @@ watch(() => props.songId, loadSong)
       </button>
     </div>
 
-    <p v-if="songStore.isLoading" class="text-sm text-zinc-400 py-8 text-center">불러오는 중...</p>
-    <p v-else-if="songStore.errorMessage" class="text-sm text-red-500">{{ songStore.errorMessage }}</p>
+    <p v-if="songStore.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
+    <p v-else-if="songStore.errorMessage" class="text-sm text-destructive">{{ songStore.errorMessage }}</p>
 
     <template v-else-if="song">
-      <!-- 곡 정보 카드 -->
-      <Card class="p-6 mb-6">
-        <template v-if="!isEditing">
-          <div class="flex items-start justify-between gap-4">
-            <div class="min-w-0">
-              <h1 class="text-2xl font-bold text-zinc-900 leading-tight">{{ song.title }}</h1>
-              <div class="mt-3 flex flex-col gap-1.5 text-sm">
-                <p v-if="song.artist" class="text-zinc-500">
-                  <span class="text-zinc-400 mr-2">아티스트</span>{{ song.artist }}
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-6">
+        <!-- ── 악보 뷰어 (메인) ───────────────────────── -->
+        <div>
+          <div
+            class="relative rounded-xl border border-border bg-muted/40 overflow-hidden flex items-center justify-center"
+            style="min-height: 60vh"
+          >
+            <template v-if="currentSlide">
+              <!-- 이미지 슬라이드 -->
+              <img
+                v-if="!isPdf(currentSlide.file)"
+                :src="fileUrl(currentSlide.file.songFileId)"
+                :alt="currentSlide.file.originalFileName ?? '악보'"
+                class="max-h-[78vh] w-full object-contain"
+              />
+              <!-- PDF 슬라이드 -->
+              <div v-else class="flex flex-col items-center gap-3 py-20 text-center px-6">
+                <FileText class="w-10 h-10 text-muted-foreground" />
+                <p class="text-sm text-muted-foreground">
+                  {{ currentSlide.file.originalFileName ?? 'PDF 파일' }}
                 </p>
-                <p v-if="song.composer" class="text-zinc-500">
-                  <span class="text-zinc-400 mr-2">작곡가</span>{{ song.composer }}
-                </p>
-                <p v-if="song.memo" class="text-zinc-500 whitespace-pre-line mt-1">{{ song.memo }}</p>
+                <a
+                  :href="fileUrl(currentSlide.file.songFileId, 'view')"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+                >
+                  <Eye class="w-4 h-4" />
+                  PDF 새 탭에서 보기
+                </a>
               </div>
-            </div>
-            <div class="flex gap-2 flex-shrink-0">
-              <Button variant="outline" size="sm" @click="startEdit">
-                <Pencil class="w-3.5 h-3.5" />
-                수정
-              </Button>
-              <Button variant="destructive" size="sm" @click="handleDeleteSong">
-                <Trash2 class="w-3.5 h-3.5" />
-                삭제
-              </Button>
+
+              <!-- 좌우 화살표 -->
+              <template v-if="slides.length > 1">
+                <button
+                  type="button"
+                  aria-label="이전 악보"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur border border-border flex items-center justify-center text-foreground hover:bg-background transition-colors"
+                  @click="go(-1)"
+                >
+                  <ChevronLeft class="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="다음 악보"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur border border-border flex items-center justify-center text-foreground hover:bg-background transition-colors"
+                  @click="go(1)"
+                >
+                  <ChevronRight class="w-5 h-5" />
+                </button>
+              </template>
+
+              <!-- 상단 캡션: 키/버전 + 카운터 -->
+              <div class="absolute top-2 left-2 flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-background/80 backdrop-blur border border-border text-xs font-medium text-foreground">
+                  <Badge v-if="currentSlide.sheet.sheetKey" variant="violet">{{ currentSlide.sheet.sheetKey }}</Badge>
+                  {{ currentSlide.sheet.versionName || (currentSlide.sheet.sheetKey ? '' : '버전') }}
+                </span>
+              </div>
+              <div class="absolute top-2 right-2 flex items-center gap-1.5">
+                <a
+                  :href="fileUrl(currentSlide.file.songFileId)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="전체화면"
+                  class="w-7 h-7 rounded-full bg-background/80 backdrop-blur border border-border flex items-center justify-center text-foreground hover:bg-background"
+                >
+                  <Maximize2 class="w-3.5 h-3.5" />
+                </a>
+                <span class="h-7 px-2.5 rounded-full bg-background/80 backdrop-blur border border-border text-xs font-medium text-muted-foreground flex items-center">
+                  {{ currentIndex + 1 }} / {{ slides.length }}
+                </span>
+              </div>
+            </template>
+
+            <!-- 악보 없음 -->
+            <div v-else class="flex flex-col items-center gap-3 py-20 text-center px-6">
+              <Music class="w-10 h-10 text-muted-foreground" />
+              <p class="text-sm font-medium text-foreground">등록된 악보가 없습니다</p>
+              <p class="text-sm text-muted-foreground">아래 ‘악보 관리’에서 버전과 파일을 추가하세요.</p>
             </div>
           </div>
-        </template>
 
-        <template v-else>
+          <!-- 썸네일 인디케이터 -->
+          <div v-if="slides.length > 1" class="mt-3 flex flex-wrap gap-2">
+            <button
+              v-for="(slide, i) in slides"
+              :key="`${slide.file.songFileId}`"
+              type="button"
+              class="h-8 px-3 rounded-md border text-xs font-medium transition-colors"
+              :class="i === currentIndex
+                ? 'border-primary bg-primary-soft text-primary'
+                : 'border-border bg-card text-muted-foreground hover:bg-muted'"
+              @click="goTo(i)"
+            >
+              {{ slideLabel(slide) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- ── 곡 정보 사이드 ─────────────────────────── -->
+        <aside class="lg:order-last">
+          <Card class="p-4">
+            <h1 class="text-lg font-bold text-foreground leading-snug break-words">{{ song.title }}</h1>
+            <dl class="mt-3 space-y-1.5 text-sm">
+              <div v-if="song.artist" class="flex gap-2">
+                <dt class="text-muted-foreground shrink-0 w-12">아티스트</dt>
+                <dd class="text-foreground break-words">{{ song.artist }}</dd>
+              </div>
+              <div v-if="song.composer" class="flex gap-2">
+                <dt class="text-muted-foreground shrink-0 w-12">작곡가</dt>
+                <dd class="text-foreground break-words">{{ song.composer }}</dd>
+              </div>
+            </dl>
+            <p v-if="song.memo" class="mt-3 text-xs text-muted-foreground whitespace-pre-line border-t border-border pt-3">
+              {{ song.memo }}
+            </p>
+
+            <button
+              type="button"
+              class="mt-4 w-full inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              @click="showManage = !showManage"
+            >
+              <Settings2 class="w-4 h-4" />
+              {{ showManage ? '관리 닫기' : '악보 관리' }}
+            </button>
+          </Card>
+
+          <!-- 버전 요약 -->
+          <div v-if="sheets.length" class="mt-3 text-xs text-muted-foreground px-1">
+            악보 버전 {{ sheets.length }}개 · 총 {{ slides.length }}장
+          </div>
+        </aside>
+      </div>
+
+      <!-- ── 관리 패널 (접이식) ─────────────────────── -->
+      <div v-if="showManage" class="mt-8 border-t border-border pt-6">
+        <!-- 곡 정보 수정 -->
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold text-foreground">곡 관리</h2>
+          <div v-if="!isEditing" class="flex gap-2">
+            <Button variant="outline" size="sm" @click="startEdit">
+              <Pencil class="w-3.5 h-3.5" />
+              곡 정보 수정
+            </Button>
+            <Button variant="destructive" size="sm" @click="handleDeleteSong">
+              <Trash2 class="w-3.5 h-3.5" />
+              곡 삭제
+            </Button>
+          </div>
+        </div>
+
+        <Card v-if="isEditing" class="p-5 mb-6">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-base font-semibold text-zinc-900">곡 수정</h2>
-            <button type="button" class="text-zinc-400 hover:text-zinc-600" @click="cancelEdit">
+            <h3 class="text-sm font-semibold text-foreground">곡 정보 수정</h3>
+            <button type="button" class="text-muted-foreground hover:text-foreground" @click="cancelEdit">
               <X class="w-4 h-4" />
             </button>
           </div>
-          <p v-if="editError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ editError }}</p>
+          <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ editError }}</p>
           <div class="flex flex-col gap-4">
             <div class="flex flex-col gap-1.5">
-              <Label for="edit-title">제목 <span class="text-red-400">*</span></Label>
+              <Label for="edit-title">제목 <span class="text-destructive">*</span></Label>
               <Input id="edit-title" v-model="editForm.title" type="text" />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="flex flex-col gap-1.5">
                 <Label for="edit-artist">아티스트</Label>
                 <Input id="edit-artist" v-model="editForm.artist" type="text" />
@@ -282,29 +445,20 @@ watch(() => props.songId, loadSong)
               <Button variant="outline" :disabled="isSavingEdit" @click="cancelEdit">취소</Button>
             </div>
           </div>
-        </template>
-      </Card>
+        </Card>
 
-      <!-- 악보 버전 섹션 -->
-      <div>
+        <!-- 악보 버전 관리 -->
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold text-zinc-900">악보 버전</h2>
+          <h3 class="text-sm font-semibold text-foreground">악보 버전</h3>
           <Button variant="outline" size="sm" @click="showAddSheet = !showAddSheet">
-            <template v-if="showAddSheet">
-              <X class="w-3.5 h-3.5" />
-              취소
-            </template>
-            <template v-else>
-              <Plus class="w-3.5 h-3.5" />
-              버전 추가
-            </template>
+            <template v-if="showAddSheet"><X class="w-3.5 h-3.5" />취소</template>
+            <template v-else><Plus class="w-3.5 h-3.5" />버전 추가</template>
           </Button>
         </div>
 
-        <!-- 버전 추가 폼 -->
-        <Card v-if="showAddSheet" class="p-5 mb-4 bg-zinc-50">
-          <p v-if="sheetError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ sheetError }}</p>
-          <div class="grid grid-cols-2 gap-3 mb-3">
+        <Card v-if="showAddSheet" class="p-5 mb-4 bg-muted/40">
+          <p v-if="sheetError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ sheetError }}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div class="flex flex-col gap-1.5">
               <Label for="sheet-key">키</Label>
               <Input id="sheet-key" v-model="sheetForm.sheetKey" type="text" placeholder="예) C, G, Am" />
@@ -323,19 +477,17 @@ watch(() => props.songId, loadSong)
           </Button>
         </Card>
 
-        <!-- 버전 없음 -->
-        <p v-if="sheets.length === 0" class="text-sm text-zinc-400 py-6 text-center">
+        <p v-if="sheets.length === 0" class="text-sm text-muted-foreground py-6 text-center">
           등록된 악보 버전이 없습니다.
         </p>
 
-        <!-- 버전 목록 -->
         <div v-else class="flex flex-col gap-3">
           <Card v-for="sheet in sheets" :key="sheet.songSheetId" class="p-5">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-2 flex-wrap">
                 <Badge v-if="sheet.sheetKey" variant="violet">{{ sheet.sheetKey }}</Badge>
-                <span v-if="sheet.versionName" class="text-sm font-medium text-zinc-900">{{ sheet.versionName }}</span>
-                <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-sm text-zinc-400">버전명 없음</span>
+                <span v-if="sheet.versionName" class="text-sm font-medium text-foreground">{{ sheet.versionName }}</span>
+                <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-sm text-muted-foreground">버전명 없음</span>
               </div>
               <Button variant="destructive" size="sm" @click="handleDeleteSheet(sheet)">
                 <Trash2 class="w-3.5 h-3.5" />
@@ -343,107 +495,56 @@ watch(() => props.songId, loadSong)
               </Button>
             </div>
 
-            <p v-if="sheet.memo" class="text-xs text-zinc-400 mb-3">{{ sheet.memo }}</p>
-
-            <Separator class="mb-3" />
+            <p v-if="sheet.memo" class="text-xs text-muted-foreground mb-3">{{ sheet.memo }}</p>
 
             <!-- 파일 목록 -->
             <div v-if="sheet.files?.length" class="flex flex-col gap-2 mb-3">
               <div
                 v-for="file in sheet.files"
                 :key="file.songFileId"
-                class="rounded-md border border-zinc-100 overflow-hidden"
+                class="flex items-center justify-between py-1.5 px-3 rounded-md bg-muted/50"
               >
-                <!-- 이미지 미리보기 -->
-                <div v-if="!isPdf(file)">
+                <div class="flex items-center gap-2 min-w-0">
+                  <FileText class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span class="text-xs text-foreground truncate">
+                    {{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}
+                  </span>
+                </div>
+                <div class="flex gap-1.5 shrink-0 ml-2">
+                  <a
+                    :href="fileUrl(file.songFileId, 'view')"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="보기"
+                  >
+                    <Eye class="w-3.5 h-3.5" />
+                  </a>
+                  <a
+                    :href="fileUrl(file.songFileId, 'download')"
+                    :download="file.originalFileName ?? 'sheet'"
+                    class="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="다운로드"
+                  >
+                    <Download class="w-3.5 h-3.5" />
+                  </a>
                   <button
                     type="button"
-                    class="w-full text-left"
-                    @click="previewOpen[file.songFileId] = !previewOpen[file.songFileId]"
+                    class="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label="삭제"
+                    @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
                   >
-                    <img
-                      v-if="previewOpen[file.songFileId]"
-                      :src="fileUrl(file.songFileId)"
-                      :alt="file.originalFileName ?? '악보'"
-                      class="w-full object-contain bg-zinc-50"
-                      @error="(e) => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).alt = '이미지를 불러올 수 없습니다.' }"
-                    />
-                    <div
-                      v-else
-                      class="flex items-center justify-between py-1.5 px-3 bg-zinc-50 hover:bg-zinc-100 transition-colors"
-                    >
-                      <div class="flex items-center gap-2 min-w-0">
-                        <FileText class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-                        <span class="text-xs text-zinc-600 truncate">
-                          {{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}
-                        </span>
-                      </div>
-                      <Eye class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-                    </div>
+                    <X class="w-3.5 h-3.5" />
                   </button>
-                  <div v-if="previewOpen[file.songFileId]" class="flex items-center justify-between px-3 py-1.5 bg-zinc-50 border-t border-zinc-100">
-                    <span class="text-xs text-zinc-500 truncate">{{ file.originalFileName ?? '파일명 없음' }}</span>
-                    <div class="flex gap-1.5 flex-shrink-0 ml-2">
-                      <a
-                        :href="fileUrl(file.songFileId, 'download')"
-                        :download="file.originalFileName ?? 'sheet'"
-                        class="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
-                      >
-                        <Download class="w-3.5 h-3.5" />
-                      </a>
-                      <button
-                        type="button"
-                        class="p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                        @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
-                      >
-                        <X class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PDF 파일 -->
-                <div v-else class="flex items-center justify-between py-1.5 px-3 bg-zinc-50">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <FileText class="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-                    <span class="text-xs text-zinc-600 truncate">
-                      {{ file.originalFileName ?? file.storedFileName ?? '파일명 없음' }}
-                    </span>
-                  </div>
-                  <div class="flex gap-1.5 flex-shrink-0 ml-2">
-                    <a
-                      :href="fileUrl(file.songFileId, 'view')"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="flex items-center gap-1 h-6 px-2 rounded text-xs bg-zinc-200 hover:bg-zinc-300 text-zinc-700 transition-colors"
-                    >
-                      <Eye class="w-3 h-3" />
-                      PDF 보기
-                    </a>
-                    <a
-                      :href="fileUrl(file.songFileId, 'download')"
-                      :download="file.originalFileName ?? 'sheet.pdf'"
-                      class="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
-                    >
-                      <Download class="w-3.5 h-3.5" />
-                    </a>
-                    <button
-                      type="button"
-                      class="p-1 text-zinc-400 hover:text-red-500 transition-colors"
-                      @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
-                    >
-                      <X class="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
-            <p v-else class="text-xs text-zinc-400 mb-3">파일 없음</p>
+            <p v-else class="text-xs text-muted-foreground mb-3">파일 없음</p>
 
             <!-- 파일 업로드 -->
             <div class="flex items-center gap-2 flex-wrap">
               <label
-                class="flex items-center gap-1.5 h-8 px-3 rounded-md border border-zinc-200 bg-white text-xs text-zinc-600 hover:bg-zinc-50 cursor-pointer transition-colors"
+                class="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-card text-xs text-foreground hover:bg-muted cursor-pointer transition-colors"
               >
                 <Upload class="w-3.5 h-3.5" />
                 파일 선택
@@ -455,7 +556,7 @@ watch(() => props.songId, loadSong)
                   @change="handleFileChange($event, sheet.songSheetId)"
                 />
               </label>
-              <span v-if="selectedFiles[sheet.songSheetId]" class="text-xs text-zinc-500 truncate max-w-[160px]">
+              <span v-if="selectedFiles[sheet.songSheetId]" class="text-xs text-muted-foreground truncate max-w-[160px]">
                 {{ selectedFiles[sheet.songSheetId]?.name }}
               </span>
               <Button
@@ -465,10 +566,10 @@ watch(() => props.songId, loadSong)
               >
                 {{ uploadingSheets[sheet.songSheetId] ? '업로드 중...' : '업로드' }}
               </Button>
-              <span v-if="uploadMessages[sheet.songSheetId]" class="text-xs text-green-600">
+              <span v-if="uploadMessages[sheet.songSheetId]" class="text-xs text-green-500">
                 {{ uploadMessages[sheet.songSheetId] }}
               </span>
-              <span v-if="uploadErrors[sheet.songSheetId]" class="text-xs text-red-500">
+              <span v-if="uploadErrors[sheet.songSheetId]" class="text-xs text-destructive">
                 {{ uploadErrors[sheet.songSheetId] }}
               </span>
             </div>

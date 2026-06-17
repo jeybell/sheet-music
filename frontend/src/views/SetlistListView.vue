@@ -82,7 +82,7 @@ onMounted(() => store.fetchSetlists())
 <template>
   <DefaultLayout>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-xl font-bold text-zinc-900">셋리스트</h1>
+      <h1 class="text-xl font-bold text-foreground">셋리스트</h1>
       <Button @click="showCreateForm = !showCreateForm" :variant="showCreateForm ? 'outline' : 'default'">
         <template v-if="showCreateForm">
           <X class="w-4 h-4" />
@@ -96,13 +96,13 @@ onMounted(() => store.fetchSetlists())
     </div>
 
     <!-- 생성 폼 -->
-    <Card v-if="showCreateForm" class="p-5 mb-6 bg-zinc-50">
-      <h2 class="text-sm font-semibold text-zinc-900 mb-4">새 셋리스트 만들기</h2>
-      <p v-if="createError" class="text-sm text-red-500 bg-red-50 rounded-md px-3 py-2 mb-4">{{ createError }}</p>
+    <Card v-if="showCreateForm" class="p-5 mb-6 bg-muted/40">
+      <h2 class="text-sm font-semibold text-foreground mb-4">새 셋리스트 만들기</h2>
+      <p v-if="createError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ createError }}</p>
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-2 gap-3">
           <div class="flex flex-col gap-1.5">
-            <Label for="service-date">날짜 <span class="text-red-400">*</span></Label>
+            <Label for="service-date">날짜 <span class="text-destructive">*</span></Label>
             <Input id="service-date" v-model="createForm.serviceDate" type="date" />
           </div>
           <div class="flex flex-col gap-1.5">
@@ -126,26 +126,30 @@ onMounted(() => store.fetchSetlists())
       </div>
     </Card>
 
-    <p v-if="store.isLoading" class="text-sm text-zinc-400 py-8 text-center">불러오는 중...</p>
-    <p v-else-if="store.errorMessage" class="text-sm text-red-500 py-4">{{ store.errorMessage }}</p>
-    <div v-else-if="store.setlists.length === 0" class="py-16 text-center">
-      <p class="text-sm text-zinc-400">셋리스트가 없습니다.</p>
+    <p v-if="store.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
+    <p v-else-if="store.errorMessage" class="text-sm text-destructive py-4">{{ store.errorMessage }}</p>
+    <div v-else-if="store.setlists.length === 0" class="py-16 flex flex-col items-center text-center">
+      <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+        <Plus class="w-6 h-6 text-muted-foreground" />
+      </div>
+      <p class="text-sm font-medium text-foreground">셋리스트가 없습니다</p>
+      <p class="text-sm text-muted-foreground mt-1">새 셋리스트를 만들어 콘티를 구성해보세요.</p>
     </div>
 
     <div v-else class="flex flex-col gap-2">
       <div
         v-for="setlist in store.setlists"
         :key="setlist.setlistId"
-        class="bg-white rounded-xl border border-zinc-200 px-5 py-4 flex items-center justify-between gap-4 hover:border-violet-300 hover:shadow-sm transition-all cursor-pointer group"
+        class="bg-card rounded-xl border border-border px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
         @click="$router.push(`/setlists/${setlist.setlistId}`)"
       >
         <div class="flex items-center gap-3 min-w-0">
-          <span class="text-sm font-semibold text-zinc-900 flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+          <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
           <Badge v-if="setlist.serviceType" variant="blue">{{ setlist.serviceType }}</Badge>
-          <span v-if="setlist.title" class="text-sm text-zinc-500 truncate">{{ setlist.title }}</span>
+          <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
         </div>
         <div class="flex items-center gap-3 flex-shrink-0">
-          <span class="text-xs text-zinc-400">{{ setlist.items.length }}곡</span>
+          <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
           <Button
             variant="destructive"
             size="sm"
@@ -153,7 +157,7 @@ onMounted(() => store.fetchSetlists())
           >
             <Trash2 class="w-3.5 h-3.5" />
           </Button>
-          <ChevronRight class="w-4 h-4 text-zinc-300 group-hover:text-violet-400 transition-colors" />
+          <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
       </div>
     </div>

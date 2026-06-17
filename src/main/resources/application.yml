@@ -26,6 +26,10 @@ spring:
 server:
   port: ${PORT:8080}
 
+ocr:
+  service:
+    url: ${OCR_SERVICE_URL:}
+
 storage:
   type: ${STORAGE_TYPE:local}
   local:

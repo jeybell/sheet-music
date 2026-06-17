@@ -9,10 +9,15 @@ public record SongFileResponse(
         String storedFileName,
         String filePath,
         String contentType,
-        Long fileSize
+        Long fileSize,
+        OcrResult ocrResult
 ) {
 
     public static SongFileResponse from(SongFile songFile) {
+        return from(songFile, null);
+    }
+
+    public static SongFileResponse from(SongFile songFile, OcrResult ocrResult) {
         return new SongFileResponse(
                 songFile.getSongFileId(),
                 songFile.getSongSheet().getSongSheetId(),
@@ -20,7 +25,8 @@ public record SongFileResponse(
                 songFile.getStoredFileName(),
                 songFile.getFilePath(),
                 songFile.getContentType(),
-                songFile.getFileSize()
+                songFile.getFileSize(),
+                ocrResult
         );
     }
 }

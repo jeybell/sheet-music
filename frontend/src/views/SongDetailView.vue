@@ -4,11 +4,12 @@ import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2,
+  X, Eye, Download, Settings2, Music, Maximize2, ScanText,
 } from '@lucide/vue'
 import { deleteSong, updateSong } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
-import { createSongSheet, deleteSongSheet } from '../apis/songSheetApi'
+import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
+import type { OcrResult } from '../types/song'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
@@ -189,6 +190,7 @@ const uploadInputKeys = ref<Record<number, number>>({})
 const uploadMessages = ref<Record<number, string | undefined>>({})
 const uploadErrors = ref<Record<number, string | undefined>>({})
 const uploadingSheets = ref<Record<number, boolean>>({})
+const ocrResults = reactive<Record<number, OcrResult | undefined>>({})
 
 const handleFileChange = (event: Event, sheetId: number) => {
   const input = event.target as HTMLInputElement
@@ -207,15 +209,51 @@ const handleUpload = async (sheetId: number) => {
   uploadErrors.value[sheetId] = undefined
   uploadMessages.value[sheetId] = undefined
   try {
-    await uploadSongSheetFile(sheetId, file)
+    const result = await uploadSongSheetFile(sheetId, file)
     selectedFiles.value[sheetId] = undefined
     uploadInputKeys.value[sheetId] = (uploadInputKeys.value[sheetId] ?? 0) + 1
     uploadMessages.value[sheetId] = '업로드 완료'
+    if (result.ocrResult && (result.ocrResult.title || result.ocrResult.key || result.ocrResult.chords?.length)) {
+      ocrResults[sheetId] = result.ocrResult
+    }
     await songStore.fetchSong(props.songId)
   } catch (e) {
     uploadErrors.value[sheetId] = apiError(e, '업로드에 실패했습니다.')
   } finally {
     uploadingSheets.value[sheetId] = false
+  }
+}
+
+const dismissOcr = (sheetId: number) => {
+  delete ocrResults[sheetId]
+}
+
+const applyOcrKey = async (sheet: SongSheetSummary, key: string) => {
+  try {
+    await updateSongSheet(sheet.songSheetId, {
+      sheetKey: key,
+      versionName: sheet.versionName,
+      memo: sheet.memo,
+    })
+    delete ocrResults[sheet.songSheetId]
+    await songStore.fetchSong(props.songId)
+  } catch (e) {
+    alert(apiError(e, '키 적용에 실패했습니다.'))
+  }
+}
+
+const applyOcrTitle = async (title: string) => {
+  if (!song.value) return
+  try {
+    await updateSong(props.songId, {
+      title,
+      artist: song.value.artist ?? null,
+      composer: song.value.composer ?? null,
+      memo: song.value.memo ?? null,
+    })
+    await songStore.fetchSong(props.songId)
+  } catch (e) {
+    alert(apiError(e, '제목 적용에 실패했습니다.'))
   }
 }
 
@@ -572,6 +610,54 @@ watch(() => props.songId, loadSong)
               <span v-if="uploadErrors[sheet.songSheetId]" class="text-xs text-destructive">
                 {{ uploadErrors[sheet.songSheetId] }}
               </span>
+            </div>
+
+            <!-- OCR 결과 배너 -->
+            <div
+              v-if="ocrResults[sheet.songSheetId]"
+              class="mt-3 p-3 rounded-md bg-muted border border-border text-sm"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <ScanText class="w-3.5 h-3.5 text-primary" />
+                  OCR 감지 결과
+                </span>
+                <button
+                  type="button"
+                  class="text-muted-foreground hover:text-foreground transition-colors"
+                  @click="dismissOcr(sheet.songSheetId)"
+                >
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <div v-if="ocrResults[sheet.songSheetId]?.title" class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs text-muted-foreground w-8">제목</span>
+                  <span class="text-xs text-foreground">{{ ocrResults[sheet.songSheetId]?.title }}</span>
+                  <button
+                    type="button"
+                    class="text-xs text-primary hover:underline"
+                    @click="applyOcrTitle(ocrResults[sheet.songSheetId]!.title!)"
+                  >
+                    곡 제목에 적용
+                  </button>
+                </div>
+                <div v-if="ocrResults[sheet.songSheetId]?.key" class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs text-muted-foreground w-8">키</span>
+                  <Badge variant="violet">{{ ocrResults[sheet.songSheetId]?.key }}</Badge>
+                  <button
+                    type="button"
+                    class="text-xs text-primary hover:underline"
+                    @click="applyOcrKey(sheet, ocrResults[sheet.songSheetId]!.key!)"
+                  >
+                    악보 키에 적용
+                  </button>
+                </div>
+                <div v-if="ocrResults[sheet.songSheetId]?.chords?.length" class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs text-muted-foreground w-8">코드</span>
+                  <span class="text-xs text-foreground">{{ ocrResults[sheet.songSheetId]?.chords?.join(', ') }}</span>
+                </div>
+              </div>
             </div>
           </Card>
         </div>

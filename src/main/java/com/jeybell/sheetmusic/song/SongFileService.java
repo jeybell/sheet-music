@@ -1,9 +1,12 @@
 package com.jeybell.sheetmusic.song;
 
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
+import com.jeybell.sheetmusic.ocr.OcrService;
+import com.jeybell.sheetmusic.song.dto.OcrResult;
 import com.jeybell.sheetmusic.song.dto.SongFileDownloadResponse;
 import com.jeybell.sheetmusic.song.dto.SongFileResponse;
 import com.jeybell.sheetmusic.storage.StorageService;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -20,15 +23,18 @@ public class SongFileService {
     private final SongSheetRepository songSheetRepository;
     private final SongFileRepository songFileRepository;
     private final StorageService storageService;
+    private final OcrService ocrService;
 
     public SongFileService(
             SongSheetRepository songSheetRepository,
             SongFileRepository songFileRepository,
-            StorageService storageService
+            StorageService storageService,
+            OcrService ocrService
     ) {
         this.songSheetRepository = songSheetRepository;
         this.songFileRepository = songFileRepository;
         this.storageService = storageService;
+        this.ocrService = ocrService;
     }
 
     @Transactional
@@ -38,32 +44,42 @@ public class SongFileService {
         }
 
         SongSheet songSheet = getActiveSongSheet(songSheetId);
+        String contentType = multipartFile.getContentType();
         String originalFileName = cleanOriginalFileName(multipartFile.getOriginalFilename());
         String storedFileName = UUID.randomUUID() + getExtension(originalFileName);
         String key = "sheets/" + songSheetId + "/" + storedFileName;
 
+        byte[] fileBytes;
         try {
-            storageService.store(key, multipartFile.getInputStream(), multipartFile.getSize(),
-                    multipartFile.getContentType());
+            fileBytes = multipartFile.getBytes();
         } catch (IOException e) {
             throw new IllegalStateException("Failed to read upload stream", e);
         }
+
+        storageService.store(key, new ByteArrayInputStream(fileBytes), multipartFile.getSize(), contentType);
 
         SongFile songFile = new SongFile(
                 songSheet,
                 originalFileName,
                 storedFileName,
                 key,
-                multipartFile.getContentType(),
+                contentType,
                 multipartFile.getSize()
         );
 
         try {
-            return SongFileResponse.from(songFileRepository.save(songFile));
+            songFile = songFileRepository.save(songFile);
         } catch (RuntimeException e) {
             storageService.delete(key);
             throw e;
         }
+
+        OcrResult ocrResult = null;
+        if (isImageContentType(contentType)) {
+            ocrResult = ocrService.analyze(fileBytes, originalFileName);
+        }
+
+        return SongFileResponse.from(songFile, ocrResult);
     }
 
     public SongFileDownloadResponse downloadFile(Long songFileId) {
@@ -92,6 +108,10 @@ public class SongFileService {
             file.softDelete();
             storageService.delete(file.getFilePath());
         }
+    }
+
+    private boolean isImageContentType(String contentType) {
+        return contentType != null && contentType.startsWith("image/");
     }
 
     private SongSheet getActiveSongSheet(Long songSheetId) {

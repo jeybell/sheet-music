@@ -12,6 +12,17 @@ export const createSongSheet = async (
   return data;
 };
 
+export const updateSongSheet = async (
+  songSheetId: number,
+  request: SongSheetCreateRequest,
+) => {
+  const { data } = await http.put<SongSheetSummary>(
+    `/api/song-sheets/${songSheetId}`,
+    request,
+  );
+  return data;
+};
+
 export const deleteSongSheet = async (songSheetId: number) => {
   await http.delete(`/api/song-sheets/${songSheetId}`);
 };

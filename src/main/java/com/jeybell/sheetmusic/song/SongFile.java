@@ -58,6 +58,9 @@ public class SongFile {
     @Column(name = "ocr_raw_text", columnDefinition = "TEXT")
     private String ocrRawText;
 
+    @Column(name = "ocr_lyrics", columnDefinition = "TEXT")
+    private String ocrLyrics;
+
     @Column(name = "ocr_done", nullable = false)
     private boolean ocrDone = false;
 
@@ -125,10 +128,11 @@ public class SongFile {
         return deletedAt;
     }
 
-    public void applyOcrResult(String title, String key, String chords, String rawText) {
+    public void applyOcrResult(String title, String key, String chords, String lyrics, String rawText) {
         this.ocrTitle = title;
         this.ocrKey = key;
         this.ocrChords = chords;
+        this.ocrLyrics = lyrics;
         this.ocrRawText = rawText;
         this.ocrDone = true;
     }
@@ -136,6 +140,7 @@ public class SongFile {
     public String getOcrTitle() { return ocrTitle; }
     public String getOcrKey() { return ocrKey; }
     public String getOcrChords() { return ocrChords; }
+    public String getOcrLyrics() { return ocrLyrics; }
     public String getOcrRawText() { return ocrRawText; }
     public boolean isOcrDone() { return ocrDone; }
 }

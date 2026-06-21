@@ -56,7 +56,7 @@ public class OcrService {
             );
 
             if (response == null) return null;
-            return new OcrResult(response.title(), response.key(), response.chords(), response.rawText());
+            return new OcrResult(response.title(), response.key(), response.chords(), response.lyrics(), response.rawText());
         } catch (Exception e) {
             log.warn("OCR 분석 실패 (무시됨): {}", e.getMessage());
             return null;
@@ -67,6 +67,7 @@ public class OcrService {
             String title,
             String key,
             List<String> chords,
+            String lyrics,
             String rawText
     ) {}
 }

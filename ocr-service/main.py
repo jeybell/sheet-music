@@ -29,6 +29,8 @@ _CHORD = re.compile(
 )
 # 단독 알파벳 한 글자는 코드로 보지 않음
 _SINGLE_LETTER = re.compile(r'^[A-G]$')
+# 한글 음절
+_HANGUL = re.compile(r'[가-힣]+')
 
 
 def _parse_key(text: str) -> Optional[str]:
@@ -45,6 +47,20 @@ def _parse_chords(text: str) -> list[str]:
             seen.add(chord)
             result.append(chord)
     return result[:15]
+
+
+def _parse_lyrics(text: str, chords: list[str]) -> Optional[str]:
+    """첫 번째 코드 이후 구간의 한글 텍스트를 가사로 추출."""
+    start = 0
+    if chords:
+        m = _CHORD.search(text)
+        if m:
+            start = m.start()
+    music_section = text[start:]
+    # 코드 심볼 제거 후 한글만 추출
+    cleaned = _CHORD.sub(' ', music_section)
+    words = _HANGUL.findall(cleaned)
+    return ' '.join(words) if words else None
 
 
 def _parse_title(results: list) -> Optional[str]:
@@ -76,13 +92,15 @@ async def ocr(file: UploadFile = File(...)):
 
     full_text = " ".join(text for _, text, conf in results if conf > 0.3)
     title = _parse_title([(b, t, c) for b, t, c in results if c > 0.5])
-    key = _parse_key(full_text)
     chords = _parse_chords(full_text)
+    key = _parse_key(full_text) or (chords[0] if chords else None)
+    lyrics = _parse_lyrics(full_text, chords)
 
     return {
         "title": title,
         "key": key,
         "chords": chords,
+        "lyrics": lyrics,
         "rawText": full_text,
     }
 

@@ -33,7 +33,7 @@ public class AsyncOcrService {
         }
         songFileRepository.findById(songFileId).ifPresent(file -> {
             String chords = result.chords() == null ? "" : String.join(",", result.chords());
-            file.applyOcrResult(result.title(), result.key(), chords, result.rawText());
+            file.applyOcrResult(result.title(), result.key(), chords, result.lyrics(), result.rawText());
             log.info("OCR 저장 완료 (songFileId={}, title={})", songFileId, result.title());
         });
     }

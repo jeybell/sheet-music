@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Upload, X } from '@lucide/vue'
+import { ChevronLeft, Upload, X, ScanText } from '@lucide/vue'
 import { createSong } from '../apis/songApi'
 import { createSongSheet } from '../apis/songSheetApi'
 import { uploadSongSheetFile } from '../apis/songFileApi'
+import { previewOcr } from '../apis/ocrApi'
 import { extractApiError } from '../composables/useApiError'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
@@ -24,17 +25,29 @@ const form = reactive({
 
 const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
+const isOcrLoading = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
 
 const toOpt = (v: string) => v.trim() || null
 
-const handleImageChange = (e: Event) => {
+const handleImageChange = async (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
   imageFile.value = file
   imagePreviewUrl.value = URL.createObjectURL(file)
+
+  isOcrLoading.value = true
+  try {
+    const result = await previewOcr(file)
+    if (result.title && !form.title) form.title = result.title
+    if (result.key && !form.sheetKey) form.sheetKey = result.key
+  } catch {
+    // OCR 실패해도 수동 입력으로 진행
+  } finally {
+    isOcrLoading.value = false
+  }
 }
 
 const clearImage = () => {
@@ -132,8 +145,8 @@ const handleSubmit = async () => {
               </button>
             </div>
 
-            <p v-if="imageFile" class="text-xs text-muted-foreground mt-1">
-              저장 후 악보 상세에서 OCR 분석 결과를 확인할 수 있습니다.
+            <p v-if="isOcrLoading" class="text-xs text-primary flex items-center gap-1 mt-1">
+              <ScanText class="w-3.5 h-3.5 animate-pulse" /> OCR 분석 중... 제목과 키를 자동으로 입력합니다.
             </p>
           </div>
 
@@ -166,8 +179,8 @@ const handleSubmit = async () => {
           </div>
 
           <div class="flex gap-2 pt-1">
-            <Button type="submit" :disabled="isSaving">
-              {{ isSaving ? '저장 중...' : '저장' }}
+            <Button type="submit" :disabled="isSaving || isOcrLoading">
+              {{ isSaving ? '저장 중...' : isOcrLoading ? 'OCR 분석 중...' : '저장' }}
             </Button>
             <Button type="button" variant="outline" @click="$router.push('/songs')">취소</Button>
           </div>

@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { ChevronLeft } from '@lucide/vue'
 import { createSong } from '../apis/songApi'
+import { extractApiError } from '../composables/useApiError'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Textarea from '../components/ui/Textarea.vue'
 import Label from '../components/ui/Label.vue'
-
-interface ApiErrorResponse {
-  message?: string
-}
 
 const router = useRouter()
 
@@ -27,13 +23,6 @@ const isSaving = ref(false)
 const errorMessage = ref('')
 
 const toOpt = (v: string) => v.trim() || null
-
-const getErrorMessage = (error: unknown) => {
-  if (isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.message ?? '곡을 저장하지 못했습니다.'
-  }
-  return '곡을 저장하지 못했습니다.'
-}
 
 const handleSubmit = async () => {
   errorMessage.value = ''
@@ -52,7 +41,7 @@ const handleSubmit = async () => {
     })
     await router.push('/songs')
   } catch (error) {
-    errorMessage.value = getErrorMessage(error)
+    errorMessage.value = extractApiError(error, '곡을 저장하지 못했습니다.')
   } finally {
     isSaving.value = false
   }
@@ -77,7 +66,7 @@ const handleSubmit = async () => {
 
       <div class="bg-card rounded-xl border border-border shadow-sm p-6">
         <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
-          <p v-if="errorMessage" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2">{{ errorMessage }}</p>
+          <p v-if="errorMessage" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 whitespace-pre-line">{{ errorMessage }}</p>
 
           <div class="flex flex-col gap-1.5">
             <Label for="title">제목 <span class="text-destructive">*</span></Label>

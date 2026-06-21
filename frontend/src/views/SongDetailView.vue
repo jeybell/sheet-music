@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, Pencil, Trash2, Plus, Upload, FileText,
   X, Eye, Download, Settings2, Music, Maximize2, ScanText,
 } from '@lucide/vue'
+import { extractApiError } from '../composables/useApiError'
 import { deleteSong, updateSong } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
@@ -20,23 +20,12 @@ import Card from '../components/ui/Card.vue'
 import { useSongStore } from '../stores/songStore'
 import type { SongSheetSummary, SongFile } from '../types/song'
 
-interface ApiErrorResponse {
-  message?: string
-}
-
 const props = defineProps<{ songId: number }>()
 const router = useRouter()
 const songStore = useSongStore()
 
 const song = computed(() => songStore.selectedSong)
 const sheets = computed(() => song.value?.sheets ?? song.value?.songSheets ?? [])
-
-const apiError = (error: unknown, fallback: string) => {
-  if (isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.message ?? fallback
-  }
-  return fallback
-}
 
 const toOpt = (v: string) => v.trim() || null
 
@@ -123,7 +112,7 @@ const handleUpdateSong = async () => {
     await songStore.fetchSong(props.songId)
     isEditing.value = false
   } catch (e) {
-    editError.value = apiError(e, '수정에 실패했습니다.')
+    editError.value = extractApiError(e, '수정에 실패했습니다.')
   } finally {
     isSavingEdit.value = false
   }
@@ -136,7 +125,7 @@ const handleDeleteSong = async () => {
     await deleteSong(props.songId)
     await router.push('/songs')
   } catch (e) {
-    alert(apiError(e, '삭제에 실패했습니다.'))
+    alert(extractApiError(e, '삭제에 실패했습니다.'))
   }
 }
 
@@ -166,7 +155,7 @@ const handleCreateSheet = async () => {
     showAddSheet.value = false
     await songStore.fetchSong(props.songId)
   } catch (e) {
-    sheetError.value = apiError(e, '악보 버전 추가에 실패했습니다.')
+    sheetError.value = extractApiError(e, '악보 버전 추가에 실패했습니다.')
   } finally {
     isCreatingSheet.value = false
   }
@@ -180,7 +169,7 @@ const handleDeleteSheet = async (sheet: SongSheetSummary) => {
     await deleteSongSheet(sheet.songSheetId)
     await songStore.fetchSong(props.songId)
   } catch (e) {
-    alert(apiError(e, '삭제에 실패했습니다.'))
+    alert(extractApiError(e, '삭제에 실패했습니다.'))
   }
 }
 
@@ -218,7 +207,7 @@ const handleUpload = async (sheetId: number) => {
     }
     await songStore.fetchSong(props.songId)
   } catch (e) {
-    uploadErrors.value[sheetId] = apiError(e, '업로드에 실패했습니다.')
+    uploadErrors.value[sheetId] = extractApiError(e, '업로드에 실패했습니다.')
   } finally {
     uploadingSheets.value[sheetId] = false
   }
@@ -238,7 +227,7 @@ const applyOcrKey = async (sheet: SongSheetSummary, key: string) => {
     delete ocrResults[sheet.songSheetId]
     await songStore.fetchSong(props.songId)
   } catch (e) {
-    alert(apiError(e, '키 적용에 실패했습니다.'))
+    alert(extractApiError(e, '키 적용에 실패했습니다.'))
   }
 }
 
@@ -253,7 +242,7 @@ const applyOcrTitle = async (title: string) => {
     })
     await songStore.fetchSong(props.songId)
   } catch (e) {
-    alert(apiError(e, '제목 적용에 실패했습니다.'))
+    alert(extractApiError(e, '제목 적용에 실패했습니다.'))
   }
 }
 
@@ -264,7 +253,7 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
     await deleteSongFile(fileId)
     await songStore.fetchSong(props.songId)
   } catch (e) {
-    alert(apiError(e, '파일 삭제에 실패했습니다.'))
+    alert(extractApiError(e, '파일 삭제에 실패했습니다.'))
   }
 }
 
@@ -456,7 +445,7 @@ watch(() => props.songId, loadSong)
               <X class="w-4 h-4" />
             </button>
           </div>
-          <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ editError }}</p>
+          <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4 whitespace-pre-line">{{ editError }}</p>
           <div class="flex flex-col gap-4">
             <div class="flex flex-col gap-1.5">
               <Label for="edit-title">제목 <span class="text-destructive">*</span></Label>

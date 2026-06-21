@@ -27,8 +27,8 @@ public class OcrService {
         this.ocrServiceUrl = ocrServiceUrl;
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5_000);
-        factory.setReadTimeout(60_000);
+        factory.setConnectTimeout(10_000);
+        factory.setReadTimeout(600_000); // OCR 최대 10분
         this.restTemplate = new RestTemplate(factory);
     }
 

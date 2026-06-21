@@ -69,7 +69,7 @@ onMounted(() => {
       <input
         v-model="songKey"
         type="text"
-        placeholder="키 (예: C, G, Am)"
+        placeholder="코드 (예: C, G, Am)"
         class="h-10 w-full sm:w-40 px-3 rounded-md border border-input bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
       />
     </div>
@@ -83,7 +83,7 @@ onMounted(() => {
         <Search class="w-6 h-6 text-muted-foreground" />
       </div>
       <p class="text-sm font-medium text-foreground">검색 결과가 없습니다</p>
-      <p class="text-sm text-muted-foreground mt-1">다른 검색어나 키로 다시 시도해보세요.</p>
+      <p class="text-sm text-muted-foreground mt-1">다른 검색어나 코드로 다시 시도해보세요.</p>
       <button
         type="button"
         class="mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"

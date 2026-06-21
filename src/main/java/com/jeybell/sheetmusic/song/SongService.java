@@ -80,8 +80,8 @@ public class SongService {
     }
 
     private void checkDuplicateTitle(String title, Long excludeId) {
-        if (songRepository.existsByTitleIgnoreCase(title, excludeId)) {
-            throw new DuplicateTitleException(title);
+        if (songRepository.existsByTitleIgnoreCase(title.trim(), excludeId)) {
+            throw new DuplicateTitleException(title.trim());
         }
     }
 

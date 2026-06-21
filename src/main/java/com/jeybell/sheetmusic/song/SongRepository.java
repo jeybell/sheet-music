@@ -40,7 +40,7 @@ public interface SongRepository extends JpaRepository<Song, Long> {
     @Query("""
             select count(s) > 0
             from Song s
-            where lower(s.title) = lower(:title)
+            where trim(lower(s.title)) = trim(lower(:title))
               and s.deletedAt is null
               and (:excludeId is null or s.songId <> :excludeId)
             """)

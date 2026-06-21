@@ -18,7 +18,6 @@ const router = useRouter()
 const form = reactive({
   title: '',
   artist: '',
-  composer: '',
   sheetKey: '',
   memo: '',
 })
@@ -67,7 +66,6 @@ const handleSubmit = async () => {
     const song = await createSong({
       title,
       artist: toOpt(form.artist),
-      composer: toOpt(form.composer),
       memo: toOpt(form.memo),
     })
 
@@ -166,11 +164,6 @@ const handleSubmit = async () => {
           <div class="flex flex-col gap-1.5">
             <Label for="artist">아티스트</Label>
             <Input id="artist" v-model="form.artist" type="text" placeholder="아티스트명" />
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label for="composer">작곡가</Label>
-            <Input id="composer" v-model="form.composer" type="text" placeholder="작곡가명" />
           </div>
 
           <div class="flex flex-col gap-1.5">

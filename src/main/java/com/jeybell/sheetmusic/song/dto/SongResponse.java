@@ -8,7 +8,6 @@ public record SongResponse(
         Long songId,
         String title,
         String artist,
-        String composer,
         String memo,
         List<SongSheetSummaryResponse> songSheets,
         LocalDateTime createdAt
@@ -19,7 +18,6 @@ public record SongResponse(
                 song.getSongId(),
                 song.getTitle(),
                 song.getArtist(),
-                song.getComposer(),
                 song.getMemo(),
                 song.getSheets()
                         .stream()

@@ -77,14 +77,13 @@ const showManage = ref(false)
 
 // ── 곡 수정
 const isEditing = ref(false)
-const editForm = reactive({ title: '', artist: '', composer: '', memo: '' })
+const editForm = reactive({ title: '', artist: '', memo: '' })
 const editError = ref('')
 const isSavingEdit = ref(false)
 
 const startEdit = () => {
   editForm.title = song.value?.title ?? ''
   editForm.artist = song.value?.artist ?? ''
-  editForm.composer = song.value?.composer ?? ''
   editForm.memo = song.value?.memo ?? ''
   editError.value = ''
   isEditing.value = true
@@ -106,7 +105,6 @@ const handleUpdateSong = async () => {
     await updateSong(props.songId, {
       title: editForm.title.trim(),
       artist: toOpt(editForm.artist),
-      composer: toOpt(editForm.composer),
       memo: toOpt(editForm.memo),
     })
     await songStore.fetchSong(props.songId)
@@ -240,7 +238,6 @@ const applyOcrTitle = async (title: string) => {
     await updateSong(props.songId, {
       title,
       artist: song.value.artist ?? null,
-      composer: song.value.composer ?? null,
       memo: song.value.memo ?? null,
     })
     await songStore.fetchSong(props.songId)
@@ -432,10 +429,6 @@ watch(() => props.songId, loadSong)
                 <dt class="text-muted-foreground shrink-0 w-12">아티스트</dt>
                 <dd class="text-foreground break-words">{{ song.artist }}</dd>
               </div>
-              <div v-if="song.composer" class="flex gap-2">
-                <dt class="text-muted-foreground shrink-0 w-12">작곡가</dt>
-                <dd class="text-foreground break-words">{{ song.composer }}</dd>
-              </div>
             </dl>
             <p v-if="song.memo" class="mt-3 text-xs text-muted-foreground whitespace-pre-line border-t border-border pt-3">
               {{ song.memo }}
@@ -488,15 +481,9 @@ watch(() => props.songId, loadSong)
               <Label for="edit-title">제목 <span class="text-destructive">*</span></Label>
               <Input id="edit-title" v-model="editForm.title" type="text" />
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1.5">
-                <Label for="edit-artist">아티스트</Label>
-                <Input id="edit-artist" v-model="editForm.artist" type="text" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <Label for="edit-composer">작곡가</Label>
-                <Input id="edit-composer" v-model="editForm.composer" type="text" />
-              </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="edit-artist">아티스트</Label>
+              <Input id="edit-artist" v-model="editForm.artist" type="text" />
             </div>
             <div class="flex flex-col gap-1.5">
               <Label for="edit-memo">메모</Label>

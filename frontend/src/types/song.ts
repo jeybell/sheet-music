@@ -29,7 +29,6 @@ export interface Song {
   songId: number;
   title: string;
   artist: string | null;
-  composer?: string | null;
   memo?: string | null;
   sheets?: SongSheetSummary[];
   songSheets?: SongSheetSummary[];
@@ -39,14 +38,12 @@ export interface Song {
 export interface SongCreateRequest {
   title: string;
   artist?: string | null;
-  composer?: string | null;
   memo?: string | null;
 }
 
 export interface SongUpdateRequest {
   title: string;
   artist?: string | null;
-  composer?: string | null;
   memo?: string | null;
 }
 

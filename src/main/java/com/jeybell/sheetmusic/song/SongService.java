@@ -40,7 +40,7 @@ public class SongService {
         Song song = new Song(
                 request.title(),
                 request.artist(),
-                request.composer(),
+                null,
                 request.memo()
         );
         toSheets(request.sheets()).forEach(song::addSheet);
@@ -60,7 +60,7 @@ public class SongService {
         song.update(
                 request.title(),
                 request.artist(),
-                request.composer(),
+                null,
                 request.memo()
         );
 

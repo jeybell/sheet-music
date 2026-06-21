@@ -36,4 +36,13 @@ public interface SongRepository extends JpaRepository<Song, Long> {
               and s.deletedAt is null
             """)
     Optional<Song> findActiveBySongIdWithSheets(@Param("songId") Long songId);
+
+    @Query("""
+            select count(s) > 0
+            from Song s
+            where lower(s.title) = lower(:title)
+              and s.deletedAt is null
+              and (:excludeId is null or s.songId <> :excludeId)
+            """)
+    boolean existsByTitleIgnoreCase(@Param("title") String title, @Param("excludeId") Long excludeId);
 }

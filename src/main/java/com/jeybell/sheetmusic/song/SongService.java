@@ -1,5 +1,6 @@
 package com.jeybell.sheetmusic.song;
 
+import com.jeybell.sheetmusic.global.exception.DuplicateTitleException;
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
@@ -34,6 +35,8 @@ public class SongService {
 
     @Transactional
     public SongResponse createSong(SongRequest request) {
+        checkDuplicateTitle(request.title(), null);
+
         Song song = new Song(
                 request.title(),
                 request.artist(),
@@ -51,6 +54,8 @@ public class SongService {
 
     @Transactional
     public SongResponse updateSong(Long songId, SongRequest request) {
+        checkDuplicateTitle(request.title(), songId);
+
         Song song = getActiveSong(songId);
         song.update(
                 request.title(),
@@ -72,6 +77,12 @@ public class SongService {
                     sheet.softDelete();
                 });
         song.softDelete();
+    }
+
+    private void checkDuplicateTitle(String title, Long excludeId) {
+        if (songRepository.existsByTitleIgnoreCase(title, excludeId)) {
+            throw new DuplicateTitleException(title);
+        }
     }
 
     private Song getActiveSong(Long songId) {

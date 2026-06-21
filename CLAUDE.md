@@ -67,9 +67,11 @@ setlists (셋리스트/콘티)
 - #22 악보 첨부파일 뷰어 파일 깨짐 현상 수정 (CORS 헤더 노출 추가, Fly 업로드 볼륨 마운트로 재배포 시 파일 유실 방지, `/view`·`/download` 엔드포인트 분리)
 - CI/CD 자동배포 구성 (GitHub Actions → Fly.io 자동배포, Vercel Git 연동 → 프론트 자동배포). `main` push만 하면 백엔드/프론트 모두 자동 반영됨
 - #24 UI 벤치마킹 기반 디자인 개선 (다크/라이트 테마, 반응형, 곡 검색, 악보 이미지 슬라이드 뷰어)
-- #26 OCR 자동 메타데이터 추출 (EasyOCR Python 마이크로서비스 → Spring Boot 연동, 제목/코드/키 자동 세팅 / Fly.io `worship-sheet-ocr` 배포 완료, 메모리 2GB)
-- #30 곡+악보 1단계 통합 등록 (이미지 첨부 → OCR → 제목/키 자동 입력 → 곡·악보·파일 한 번에 저장 / `POST /api/ocr/preview` 신규)
+- #26 OCR 자동 메타데이터 추출 (EasyOCR Python 마이크로서비스 → Spring Boot 연동, 제목/코드/키 자동 세팅 / Fly.io `worship-sheet-ocr` 배포 완료)
+- #30 곡+악보 1단계 통합 등록 (이미지 첨부 → 곡·악보·파일 한 번에 저장 → OCR 비동기 처리)
 - #29 곡 등록 유효성 검사 (제목 중복 체크 → 409 / 공백 제거 후 비교 / 프론트 에러 메시지 처리 포함)
+- OCR 비동기 처리 전환 (파일 업로드 즉시 응답, `@Async` 백그라운드 OCR 실행 → `song_files` DB 저장 / 상세 화면 15초 폴링으로 자동 반영)
+- OCR 서비스 안정화 (메모리 4GB·CPU 2코어 / `auto_stop_machines=false` / `min_machines_running=1` / readTimeout 10분)
 
 ### 🔄 남은 작업 (이슈)
 - #25 데이터 일괄 적재 (기존 악보 이미지 등록)
@@ -79,7 +81,7 @@ setlists (셋리스트/콘티)
 ### 배포 정보
 - 백엔드: https://worship-sheet.fly.dev (Fly.io, GitHub Actions로 `main` push 시 자동배포)
 - 프론트엔드: https://worship-sheet.vercel.app (Vercel, Git 연동으로 `main` push 시 자동배포, Root Directory: `frontend`)
-- OCR 서비스: https://worship-sheet-ocr.fly.dev (Fly.io, 2GB 메모리 / `OCR_SERVICE_URL` 백엔드 환경변수에 등록됨)
+- OCR 서비스: https://worship-sheet-ocr.fly.dev (Fly.io, 4GB 메모리·CPU 2코어 / `auto_stop=false` / `OCR_SERVICE_URL` 백엔드 환경변수에 등록됨)
 - DB: Supabase
 
 ## 다음 세션 시작 가이드

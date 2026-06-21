@@ -2,6 +2,7 @@ export interface OcrResult {
   title: string | null;
   key: string | null;
   chords: string[];
+  artist: string | null;
   lyrics: string | null;
   rawText: string | null;
 }

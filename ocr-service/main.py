@@ -49,6 +49,34 @@ def _parse_chords(text: str) -> list[str]:
     return result[:15]
 
 
+def _parse_artist(text: str, title: Optional[str], chords: list[str]) -> Optional[str]:
+    """제목 이후 ~ 첫 번째 코드 이전 구간에서 아티스트 정보를 추출."""
+    start = 0
+    if title:
+        idx = text.find(title)
+        if idx != -1:
+            start = idx + len(title)
+
+    end = len(text)
+    if chords:
+        m = _CHORD.search(text, start)
+        if m:
+            end = m.start()
+
+    segment = text[start:end].strip()
+    if not segment:
+        return None
+
+    # '/', '|', '\' 구분자 제거 후 정리
+    segment = re.sub(r'[/|\\]', ' ', segment)
+    # 단독 특수문자·숫자만 있는 토큰 제거
+    tokens = [t for t in segment.split() if re.search(r'[가-힣A-Za-z]', t)]
+    if not tokens:
+        return None
+
+    return ' '.join(tokens)
+
+
 def _parse_lyrics(text: str, chords: list[str]) -> Optional[str]:
     """첫 번째 코드 이후 구간의 한글 텍스트를 가사로 추출."""
     start = 0
@@ -94,12 +122,14 @@ async def ocr(file: UploadFile = File(...)):
     title = _parse_title([(b, t, c) for b, t, c in results if c > 0.5])
     chords = _parse_chords(full_text)
     key = _parse_key(full_text) or (chords[0] if chords else None)
+    artist = _parse_artist(full_text, title, chords)
     lyrics = _parse_lyrics(full_text, chords)
 
     return {
         "title": title,
         "key": key,
         "chords": chords,
+        "artist": artist,
         "lyrics": lyrics,
         "rawText": full_text,
     }

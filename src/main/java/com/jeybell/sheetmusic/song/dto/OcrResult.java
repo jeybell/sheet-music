@@ -6,6 +6,7 @@ public record OcrResult(
         String title,
         String key,
         List<String> chords,
+        String artist,
         String lyrics,
         String rawText
 ) {}

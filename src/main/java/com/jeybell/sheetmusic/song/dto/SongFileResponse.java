@@ -22,7 +22,7 @@ public record SongFileResponse(
             List<String> chords = songFile.getOcrChords() == null || songFile.getOcrChords().isBlank()
                     ? List.of()
                     : Arrays.asList(songFile.getOcrChords().split(","));
-            ocr = new OcrResult(songFile.getOcrTitle(), songFile.getOcrKey(), chords, songFile.getOcrLyrics(), songFile.getOcrRawText());
+            ocr = new OcrResult(songFile.getOcrTitle(), songFile.getOcrKey(), chords, null, songFile.getOcrLyrics(), songFile.getOcrRawText());
         }
         return new SongFileResponse(
                 songFile.getSongFileId(),

@@ -42,6 +42,7 @@ const handleImageChange = async (e: Event) => {
     const result = await previewOcr(file)
     if (result.title && !form.title) form.title = result.title
     if (result.key && !form.sheetKey) form.sheetKey = result.key
+    if (result.artist && !form.artist) form.artist = result.artist
   } catch {
     // OCR 실패해도 수동 입력으로 진행
   } finally {
@@ -144,7 +145,7 @@ const handleSubmit = async () => {
             </div>
 
             <p v-if="isOcrLoading" class="text-xs text-primary flex items-center gap-1 mt-1">
-              <ScanText class="w-3.5 h-3.5 animate-pulse" /> OCR 분석 중... 제목과 코드를 자동으로 입력합니다.
+              <ScanText class="w-3.5 h-3.5 animate-pulse" /> OCR 분석 중... 제목·코드·아티스트를 자동으로 입력합니다.
             </p>
           </div>
 

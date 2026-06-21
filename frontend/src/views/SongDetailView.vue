@@ -177,6 +177,7 @@ const handleDeleteSheet = async (sheet: SongSheetSummary) => {
 const selectedFiles = ref<Record<number, File | undefined>>({})
 const uploadInputKeys = ref<Record<number, number>>({})
 const uploadMessages = ref<Record<number, string | undefined>>({})
+const uploadOcrPending = ref<Record<number, boolean>>({})
 const uploadErrors = ref<Record<number, string | undefined>>({})
 const uploadingSheets = ref<Record<number, boolean>>({})
 const ocrResults = reactive<Record<number, OcrResult | undefined>>({})
@@ -204,6 +205,8 @@ const handleUpload = async (sheetId: number) => {
     uploadMessages.value[sheetId] = '업로드 완료'
     if (result.ocrResult && (result.ocrResult.title || result.ocrResult.key || result.ocrResult.chords?.length)) {
       ocrResults[sheetId] = result.ocrResult
+    } else if (!result.ocrDone) {
+      uploadOcrPending.value[sheetId] = true
     }
     await songStore.fetchSong(props.songId)
   } catch (e) {
@@ -595,6 +598,9 @@ watch(() => props.songId, loadSong)
               </Button>
               <span v-if="uploadMessages[sheet.songSheetId]" class="text-xs text-green-500">
                 {{ uploadMessages[sheet.songSheetId] }}
+              </span>
+              <span v-if="uploadOcrPending[sheet.songSheetId]" class="text-xs text-muted-foreground flex items-center gap-1">
+                <ScanText class="w-3 h-3 animate-pulse text-primary" /> OCR 분석 중...
               </span>
               <span v-if="uploadErrors[sheet.songSheetId]" class="text-xs text-destructive">
                 {{ uploadErrors[sheet.songSheetId] }}

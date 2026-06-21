@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Upload, X, ScanText } from '@lucide/vue'
+import { ChevronLeft, Upload, X } from '@lucide/vue'
 import { createSong } from '../apis/songApi'
 import { createSongSheet } from '../apis/songSheetApi'
 import { uploadSongSheetFile } from '../apis/songFileApi'
-import { previewOcr } from '../apis/ocrApi'
 import { extractApiError } from '../composables/useApiError'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
@@ -25,37 +24,17 @@ const form = reactive({
 
 const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
-const ocrChords = ref<string[]>([])
-const isOcrLoading = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
 
 const toOpt = (v: string) => v.trim() || null
 
-const handleImageChange = async (e: Event) => {
+const handleImageChange = (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-
   imageFile.value = file
   imagePreviewUrl.value = URL.createObjectURL(file)
-  ocrChords.value = []
-  isOcrLoading.value = true
-
-  try {
-    const result = await previewOcr(file)
-    if (result.title && !form.title.trim()) {
-      form.title = result.title
-    }
-    if (result.key && !form.sheetKey.trim()) {
-      form.sheetKey = result.key
-    }
-    ocrChords.value = result.chords ?? []
-  } catch {
-    // OCR 실패는 조용히 무시
-  } finally {
-    isOcrLoading.value = false
-  }
 }
 
 const clearImage = () => {
@@ -87,6 +66,7 @@ const handleSubmit = async () => {
         memo: null,
       })
       await uploadSongSheetFile(sheet.songSheetId, imageFile.value)
+      // 업로드 직후 상세 페이지로 이동, OCR은 백그라운드 처리 중
     }
 
     await router.push(`/songs/${song.songId}`)
@@ -151,30 +131,11 @@ const handleSubmit = async () => {
               >
                 <X class="w-3.5 h-3.5" />
               </button>
-              <div
-                v-if="isOcrLoading"
-                class="absolute inset-0 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur-sm"
-              >
-                <span class="flex items-center gap-2 text-sm text-foreground font-medium">
-                  <ScanText class="w-4 h-4 text-primary animate-pulse" />
-                  OCR 분석 중...
-                </span>
-              </div>
             </div>
 
-            <!-- OCR 추출 코드 -->
-            <div v-if="ocrChords.length" class="flex items-center gap-2 flex-wrap mt-1">
-              <span class="text-xs text-muted-foreground flex items-center gap-1">
-                <ScanText class="w-3 h-3" /> 추출된 코드
-              </span>
-              <span
-                v-for="chord in ocrChords"
-                :key="chord"
-                class="inline-flex items-center h-5 px-2 rounded-full bg-primary/10 text-primary text-xs font-medium"
-              >
-                {{ chord }}
-              </span>
-            </div>
+            <p v-if="imageFile" class="text-xs text-muted-foreground mt-1">
+              저장 후 악보 상세에서 OCR 분석 결과를 확인할 수 있습니다.
+            </p>
           </div>
 
           <div class="border-t border-border" />
@@ -206,7 +167,7 @@ const handleSubmit = async () => {
           </div>
 
           <div class="flex gap-2 pt-1">
-            <Button type="submit" :disabled="isSaving || isOcrLoading">
+            <Button type="submit" :disabled="isSaving">
               {{ isSaving ? '저장 중...' : '저장' }}
             </Button>
             <Button type="button" variant="outline" @click="$router.push('/songs')">취소</Button>

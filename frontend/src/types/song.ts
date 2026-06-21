@@ -12,6 +12,7 @@ export interface SongFile {
   filePath?: string | null;
   contentType?: string | null;
   fileSize?: number | null;
+  ocrDone?: boolean;
   ocrResult?: OcrResult | null;
 }
 

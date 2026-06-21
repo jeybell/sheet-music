@@ -260,6 +260,37 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   }
 }
 
+// ── OCR 폴링 ─────────────────────────────────────────────
+const OCR_POLL_INTERVAL = 15_000  // 15초
+const OCR_POLL_MAX = 40           // 최대 10분 (15s × 40)
+let ocrPollTimer: ReturnType<typeof setInterval> | null = null
+let ocrPollCount = 0
+
+const hasOcrPending = computed(() =>
+  sheets.value.some((sheet) =>
+    (sheet.files ?? []).some((f) => !f.ocrDone && !isPdf(f)),
+  ),
+)
+
+const startOcrPolling = () => {
+  if (ocrPollTimer) return
+  ocrPollCount = 0
+  ocrPollTimer = setInterval(async () => {
+    ocrPollCount++
+    await songStore.fetchSong(props.songId)
+    if (!hasOcrPending.value || ocrPollCount >= OCR_POLL_MAX) stopOcrPolling()
+  }, OCR_POLL_INTERVAL)
+}
+
+const stopOcrPolling = () => {
+  if (ocrPollTimer) { clearInterval(ocrPollTimer); ocrPollTimer = null }
+}
+
+watch(hasOcrPending, (pending) => {
+  if (pending) startOcrPolling()
+  else stopOcrPolling()
+})
+
 const loadSong = () => {
   if (Number.isFinite(props.songId)) void songStore.fetchSong(props.songId)
 }
@@ -268,7 +299,10 @@ onMounted(() => {
   loadSong()
   window.addEventListener('keydown', onKey)
 })
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey)
+  stopOcrPolling()
+})
 watch(() => props.songId, loadSong)
 </script>
 

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronLeft } from '@lucide/vue'
+import { ChevronLeft, Upload, X, ScanText } from '@lucide/vue'
 import { createSong } from '../apis/songApi'
+import { createSongSheet } from '../apis/songSheetApi'
+import { uploadSongSheetFile } from '../apis/songFileApi'
+import { previewOcr } from '../apis/ocrApi'
 import { extractApiError } from '../composables/useApiError'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
@@ -16,13 +19,50 @@ const form = reactive({
   title: '',
   artist: '',
   composer: '',
+  sheetKey: '',
   memo: '',
 })
 
+const imageFile = ref<File | null>(null)
+const imagePreviewUrl = ref<string | null>(null)
+const ocrChords = ref<string[]>([])
+const isOcrLoading = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
 
 const toOpt = (v: string) => v.trim() || null
+
+const handleImageChange = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  imageFile.value = file
+  imagePreviewUrl.value = URL.createObjectURL(file)
+  ocrChords.value = []
+  isOcrLoading.value = true
+
+  try {
+    const result = await previewOcr(file)
+    if (result.title && !form.title.trim()) {
+      form.title = result.title
+    }
+    if (result.key && !form.sheetKey.trim()) {
+      form.sheetKey = result.key
+    }
+    ocrChords.value = result.chords ?? []
+  } catch {
+    // OCR 실패는 조용히 무시
+  } finally {
+    isOcrLoading.value = false
+  }
+}
+
+const clearImage = () => {
+  imageFile.value = null
+  imagePreviewUrl.value = null
+  ocrChords.value = []
+}
 
 const handleSubmit = async () => {
   errorMessage.value = ''
@@ -33,13 +73,23 @@ const handleSubmit = async () => {
   }
   isSaving.value = true
   try {
-    await createSong({
+    const song = await createSong({
       title,
-      artist: toOpt(form.artist ?? ''),
-      composer: toOpt(form.composer ?? ''),
-      memo: toOpt(form.memo ?? ''),
+      artist: toOpt(form.artist),
+      composer: toOpt(form.composer),
+      memo: toOpt(form.memo),
     })
-    await router.push('/songs')
+
+    if (imageFile.value) {
+      const sheet = await createSongSheet(song.songId, {
+        sheetKey: toOpt(form.sheetKey),
+        versionName: null,
+        memo: null,
+      })
+      await uploadSongSheetFile(sheet.songSheetId, imageFile.value)
+    }
+
+    await router.push(`/songs/${song.songId}`)
   } catch (error) {
     errorMessage.value = extractApiError(error, '곡을 저장하지 못했습니다.')
   } finally {
@@ -65,12 +115,79 @@ const handleSubmit = async () => {
       <h1 class="text-xl font-bold text-foreground mb-6">곡 등록</h1>
 
       <div class="bg-card rounded-xl border border-border shadow-sm p-6">
-        <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+        <form @submit.prevent="handleSubmit" class="flex flex-col gap-5">
           <p v-if="errorMessage" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 whitespace-pre-line">{{ errorMessage }}</p>
 
+          <!-- 악보 이미지 첨부 -->
+          <div class="flex flex-col gap-1.5">
+            <Label>악보 이미지 <span class="text-muted-foreground font-normal">(선택)</span></Label>
+
+            <div v-if="!imageFile">
+              <label
+                class="flex flex-col items-center justify-center gap-2 h-32 rounded-lg border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+              >
+                <Upload class="w-6 h-6 text-muted-foreground" />
+                <span class="text-sm text-muted-foreground">이미지를 선택하세요</span>
+                <span class="text-xs text-muted-foreground">PNG, JPG, JPEG</span>
+                <input
+                  type="file"
+                  accept=".png,.jpg,.jpeg"
+                  class="hidden"
+                  @change="handleImageChange"
+                />
+              </label>
+            </div>
+
+            <div v-else class="relative">
+              <img
+                :src="imagePreviewUrl!"
+                alt="악보 미리보기"
+                class="w-full max-h-48 object-contain rounded-lg border border-border bg-muted/30"
+              />
+              <button
+                type="button"
+                class="absolute top-2 right-2 w-7 h-7 rounded-full bg-background/80 backdrop-blur border border-border flex items-center justify-center text-foreground hover:bg-background transition-colors"
+                @click="clearImage"
+              >
+                <X class="w-3.5 h-3.5" />
+              </button>
+              <div
+                v-if="isOcrLoading"
+                class="absolute inset-0 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur-sm"
+              >
+                <span class="flex items-center gap-2 text-sm text-foreground font-medium">
+                  <ScanText class="w-4 h-4 text-primary animate-pulse" />
+                  OCR 분석 중...
+                </span>
+              </div>
+            </div>
+
+            <!-- OCR 추출 코드 -->
+            <div v-if="ocrChords.length" class="flex items-center gap-2 flex-wrap mt-1">
+              <span class="text-xs text-muted-foreground flex items-center gap-1">
+                <ScanText class="w-3 h-3" /> 추출된 코드
+              </span>
+              <span
+                v-for="chord in ocrChords"
+                :key="chord"
+                class="inline-flex items-center h-5 px-2 rounded-full bg-primary/10 text-primary text-xs font-medium"
+              >
+                {{ chord }}
+              </span>
+            </div>
+          </div>
+
+          <div class="border-t border-border" />
+
+          <!-- 곡 정보 -->
           <div class="flex flex-col gap-1.5">
             <Label for="title">제목 <span class="text-destructive">*</span></Label>
-            <Input id="title" v-model="form.title" type="text" placeholder="곡 제목을 입력하세요" required />
+            <Input id="title" v-model="form.title" type="text" placeholder="곡 제목을 입력하세요" />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="sheetKey">키</Label>
+            <Input id="sheetKey" v-model="form.sheetKey" type="text" placeholder="예) C, G, Am" />
           </div>
 
           <div class="flex flex-col gap-1.5">
@@ -88,8 +205,8 @@ const handleSubmit = async () => {
             <Textarea id="memo" v-model="form.memo" rows="3" placeholder="메모를 입력하세요" />
           </div>
 
-          <div class="flex gap-2 pt-2">
-            <Button type="submit" :disabled="isSaving">
+          <div class="flex gap-2 pt-1">
+            <Button type="submit" :disabled="isSaving || isOcrLoading">
               {{ isSaving ? '저장 중...' : '저장' }}
             </Button>
             <Button type="button" variant="outline" @click="$router.push('/songs')">취소</Button>

@@ -40,7 +40,6 @@ const handleImageChange = (e: Event) => {
 const clearImage = () => {
   imageFile.value = null
   imagePreviewUrl.value = null
-  ocrChords.value = []
 }
 
 const handleSubmit = async () => {

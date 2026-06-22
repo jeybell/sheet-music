@@ -1,5 +1,6 @@
 package com.jeybell.sheetmusic.song;
 
+import com.jeybell.sheetmusic.song.dto.LyricsRequest;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -54,6 +56,14 @@ public class SongController {
             @Valid @RequestBody SongRequest request
     ) {
         return ResponseEntity.ok(songService.updateSong(songId, request));
+    }
+
+    @PatchMapping("/{songId}/lyrics")
+    public ResponseEntity<SongResponse> updateLyrics(
+            @PathVariable("songId") Long songId,
+            @RequestBody LyricsRequest request
+    ) {
+        return ResponseEntity.ok(songService.updateLyrics(songId, request.lyrics()));
     }
 
     @DeleteMapping("/{songId}")

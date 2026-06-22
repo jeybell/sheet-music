@@ -3,10 +3,10 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, ScanText,
+  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
-import { deleteSong, updateSong } from '../apis/songApi'
+import { deleteSong, updateSong, updateLyrics } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
 import type { OcrResult } from '../types/song'
@@ -257,6 +257,47 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   }
 }
 
+// ── 가사 관리 ─────────────────────────────────────────────
+const isEditingLyrics = ref(false)
+const lyricsForm = ref('')
+const isSavingLyrics = ref(false)
+const lyricsError = ref('')
+
+const startEditLyrics = () => {
+  lyricsForm.value = song.value?.lyrics ?? ''
+  lyricsError.value = ''
+  isEditingLyrics.value = true
+}
+
+const cancelEditLyrics = () => {
+  isEditingLyrics.value = false
+  lyricsError.value = ''
+}
+
+const handleSaveLyrics = async () => {
+  isSavingLyrics.value = true
+  lyricsError.value = ''
+  try {
+    await updateLyrics(props.songId, lyricsForm.value.trim() || null)
+    await songStore.fetchSong(props.songId)
+    isEditingLyrics.value = false
+  } catch (e) {
+    lyricsError.value = extractApiError(e, '가사 저장에 실패했습니다.')
+  } finally {
+    isSavingLyrics.value = false
+  }
+}
+
+const applyOcrLyrics = async (lyrics: string) => {
+  lyricsForm.value = lyrics
+  isEditingLyrics.value = true
+}
+
+// OCR 추출 가사 (현재 슬라이드 파일에서)
+const ocrLyrics = computed(() =>
+  currentSlide.value?.file.ocrResult?.lyrics ?? null
+)
+
 // ── OCR 폴링 ─────────────────────────────────────────────
 const OCR_POLL_INTERVAL = 15_000  // 15초
 const OCR_POLL_MAX = 40           // 최대 10분 (15s × 40)
@@ -448,6 +489,71 @@ watch(() => props.songId, loadSong)
           <div v-if="sheets.length" class="mt-3 text-xs text-muted-foreground px-1">
             악보 버전 {{ sheets.length }}개 · 총 {{ slides.length }}장
           </div>
+
+          <!-- 가사 섹션 -->
+          <Card class="p-4 mt-3">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <AlignLeft class="w-4 h-4" />
+                가사
+              </h2>
+              <div class="flex gap-1">
+                <button
+                  v-if="!isEditingLyrics"
+                  type="button"
+                  class="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                  @click="startEditLyrics"
+                >
+                  <Pencil class="w-3 h-3" />
+                  {{ song?.lyrics ? '편집' : '입력' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- OCR 가사 적용 배너 -->
+            <div
+              v-if="!isEditingLyrics && ocrLyrics && !song?.lyrics"
+              class="mb-3 p-2.5 rounded-md bg-primary/5 border border-primary/20 text-xs"
+            >
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <span class="flex items-center gap-1 font-medium text-foreground">
+                  <ScanText class="w-3 h-3 text-primary" />
+                  OCR 추출 가사
+                </span>
+                <button
+                  type="button"
+                  class="text-primary hover:underline font-medium"
+                  @click="applyOcrLyrics(ocrLyrics!)"
+                >
+                  가사로 사용
+                </button>
+              </div>
+              <p class="text-muted-foreground line-clamp-3 whitespace-pre-line leading-relaxed">{{ ocrLyrics }}</p>
+            </div>
+
+            <!-- 가사 편집 폼 -->
+            <div v-if="isEditingLyrics" class="flex flex-col gap-2">
+              <p v-if="lyricsError" class="text-xs text-destructive">{{ lyricsError }}</p>
+              <Textarea
+                v-model="lyricsForm"
+                rows="10"
+                placeholder="가사를 입력하세요"
+                class="text-sm font-mono leading-relaxed resize-y"
+              />
+              <div class="flex gap-2">
+                <Button size="sm" :disabled="isSavingLyrics" @click="handleSaveLyrics">
+                  {{ isSavingLyrics ? '저장 중...' : '저장' }}
+                </Button>
+                <Button size="sm" variant="outline" :disabled="isSavingLyrics" @click="cancelEditLyrics">취소</Button>
+              </div>
+            </div>
+
+            <!-- 가사 표시 -->
+            <div v-else-if="song?.lyrics">
+              <p class="text-sm whitespace-pre-line leading-relaxed text-foreground">{{ song.lyrics }}</p>
+            </div>
+            <p v-else class="text-xs text-muted-foreground">등록된 가사가 없습니다.</p>
+          </Card>
         </aside>
       </div>
 

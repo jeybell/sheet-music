@@ -68,6 +68,13 @@ public class SongService {
     }
 
     @Transactional
+    public SongResponse updateLyrics(Long songId, String lyrics) {
+        Song song = getActiveSong(songId);
+        song.updateLyrics(lyrics == null || lyrics.isBlank() ? null : lyrics);
+        return SongResponse.from(song);
+    }
+
+    @Transactional
     public void deleteSong(Long songId) {
         Song song = getActiveSong(songId);
         song.getSheets().stream()

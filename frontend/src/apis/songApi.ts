@@ -31,6 +31,11 @@ export const updateSong = async (songId: number, request: SongUpdateRequest) => 
   return data;
 };
 
+export const updateLyrics = async (songId: number, lyrics: string | null) => {
+  const { data } = await http.patch<Song>(`/api/songs/${songId}/lyrics`, { lyrics });
+  return data;
+};
+
 export const deleteSong = async (songId: number) => {
   await http.delete(`/api/songs/${songId}`);
 };

@@ -33,6 +33,9 @@ public class Song {
     @Column(columnDefinition = "TEXT")
     private String memo;
 
+    @Column(columnDefinition = "TEXT")
+    private String lyrics;
+
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)
     private List<SongSheet> sheets = new ArrayList<>();
 
@@ -50,6 +53,7 @@ public class Song {
         this.artist = artist;
         this.composer = composer;
         this.memo = memo;
+        this.lyrics = null;
     }
 
     @PrePersist
@@ -62,6 +66,10 @@ public class Song {
         this.artist = artist;
         this.composer = composer;
         this.memo = memo;
+    }
+
+    public void updateLyrics(String lyrics) {
+        this.lyrics = lyrics;
     }
 
     public void replaceSheets(List<SongSheet> newSheets) {
@@ -96,6 +104,10 @@ public class Song {
 
     public String getMemo() {
         return memo;
+    }
+
+    public String getLyrics() {
+        return lyrics;
     }
 
     public List<SongSheet> getSheets() {

@@ -31,6 +31,7 @@ export interface Song {
   title: string;
   artist: string | null;
   memo?: string | null;
+  lyrics?: string | null;
   sheets?: SongSheetSummary[];
   songSheets?: SongSheetSummary[];
   files?: SongFile[];

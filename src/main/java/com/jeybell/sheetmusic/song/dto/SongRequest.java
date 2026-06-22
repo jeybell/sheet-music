@@ -15,6 +15,8 @@ public record SongRequest(
 
         String memo,
 
+        String lyrics,
+
         @Valid
         List<SongSheetRequest> sheets
 ) {

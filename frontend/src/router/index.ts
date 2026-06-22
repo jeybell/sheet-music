@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import SongCreateView from "../views/SongCreateView.vue";
 import SongDetailView from "../views/SongDetailView.vue";
 import SongListView from "../views/SongListView.vue";
+import BulkUploadView from "../views/BulkUploadView.vue";
 import SetlistListView from "../views/SetlistListView.vue";
 import SetlistDetailView from "../views/SetlistDetailView.vue";
 
@@ -21,6 +22,11 @@ const router = createRouter({
       path: "/songs/new",
       name: "song-create",
       component: SongCreateView,
+    },
+    {
+      path: "/songs/bulk",
+      name: "song-bulk-upload",
+      component: BulkUploadView,
     },
     {
       path: "/songs/:songId",

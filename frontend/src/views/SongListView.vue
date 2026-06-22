@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { Plus, Music, Search, X } from '@lucide/vue'
+import { Plus, Music, Search, X, FolderUp } from '@lucide/vue'
 import SongList from '../components/SongList.vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import { useSongStore } from '../stores/songStore'
@@ -37,13 +37,22 @@ onMounted(() => {
   <DefaultLayout>
     <div class="flex items-center justify-between mb-5">
       <h1 class="text-xl font-bold text-foreground">곡 목록</h1>
-      <RouterLink
-        to="/songs/new"
-        class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-      >
-        <Plus class="w-4 h-4" />
-        곡 등록
-      </RouterLink>
+      <div class="flex items-center gap-2">
+        <RouterLink
+          to="/songs/bulk"
+          class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          <FolderUp class="w-4 h-4" />
+          일괄 업로드
+        </RouterLink>
+        <RouterLink
+          to="/songs/new"
+          class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <Plus class="w-4 h-4" />
+          곡 등록
+        </RouterLink>
+      </div>
     </div>
 
     <!-- 검색 영역 -->

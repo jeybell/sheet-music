@@ -16,13 +16,13 @@ public interface SongRepository extends JpaRepository<Song, Long> {
               and (:query is null
                 or lower(s.title) like :query
                 or lower(s.artist) like :query
-                or lower(s.composer) like :query)
+                or lower(s.lyrics) like :query)
               and (:songKey is null
                 or exists (
                   select 1 from SongSheet ss
                   where ss.song = s
                     and ss.deletedAt is null
-                    and ss.sheetKey = :songKey
+                    and lower(ss.sheetKey) like :songKey
                 ))
             order by s.createdAt desc
             """)

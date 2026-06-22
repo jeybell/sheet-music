@@ -25,7 +25,9 @@ public class SongService {
         String likeQuery = (query == null || query.isBlank())
                 ? null
                 : "%" + query.trim().toLowerCase() + "%";
-        String normalizedKey = (songKey == null || songKey.isBlank()) ? null : songKey.trim();
+        String normalizedKey = (songKey == null || songKey.isBlank())
+                ? null
+                : "%" + songKey.trim().toLowerCase() + "%";
 
         return songRepository.searchSongs(likeQuery, normalizedKey)
                 .stream()

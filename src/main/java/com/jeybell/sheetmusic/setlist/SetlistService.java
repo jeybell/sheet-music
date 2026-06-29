@@ -3,6 +3,7 @@ package com.jeybell.sheetmusic.setlist;
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.setlist.dto.SetlistRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistResponse;
+import com.jeybell.sheetmusic.setlist.dto.SharedSetlistResponse;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +56,27 @@ public class SetlistService {
     public void deleteSetlist(Long setlistId) {
         Setlist setlist = getActive(setlistId);
         setlist.softDelete();
+    }
+
+    @Transactional
+    public String generateShareToken(Long setlistId) {
+        Setlist setlist = getActive(setlistId);
+        if (setlist.getShareToken() != null) {
+            return setlist.getShareToken();
+        }
+        return setlist.generateShareToken();
+    }
+
+    @Transactional
+    public void revokeShareToken(Long setlistId) {
+        Setlist setlist = getActive(setlistId);
+        setlist.revokeShareToken();
+    }
+
+    public SharedSetlistResponse getByShareToken(String token) {
+        Setlist setlist = setlistRepository.findByShareToken(token)
+                .orElseThrow(() -> new ResourceNotFoundException("공유 링크를 찾을 수 없습니다."));
+        return SharedSetlistResponse.from(setlist);
     }
 
     private Setlist getActive(Long setlistId) {

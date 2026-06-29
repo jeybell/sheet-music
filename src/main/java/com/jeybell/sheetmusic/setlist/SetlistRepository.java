@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface SetlistRepository extends JpaRepository<Setlist, Long> {
 
@@ -29,4 +30,16 @@ public interface SetlistRepository extends JpaRepository<Setlist, Long> {
               and sl.deletedAt is null
             """)
     Optional<Setlist> findActiveById(@Param("setlistId") Long setlistId);
+
+    @Query("""
+            select sl
+            from Setlist sl
+            left join fetch sl.items items
+            left join fetch items.song
+            left join fetch items.songSheet ss
+            left join fetch ss.files
+            where sl.shareToken = :token
+              and sl.deletedAt is null
+            """)
+    Optional<Setlist> findByShareToken(@Param("token") String token);
 }

@@ -1,5 +1,5 @@
 import http from './http'
-import type { Setlist, SetlistCreateRequest } from '../types/setlist'
+import type { Setlist, SetlistCreateRequest, SharedSetlist } from '../types/setlist'
 
 export const getSetlists = async () => {
   const { data } = await http.get<Setlist[]>('/api/setlists')
@@ -23,4 +23,18 @@ export const updateSetlist = async (setlistId: number, request: SetlistCreateReq
 
 export const deleteSetlist = async (setlistId: number) => {
   await http.delete(`/api/setlists/${setlistId}`)
+}
+
+export const generateShareToken = async (setlistId: number): Promise<string> => {
+  const { data } = await http.post<{ shareToken: string }>(`/api/setlists/${setlistId}/share`)
+  return data.shareToken
+}
+
+export const revokeShareToken = async (setlistId: number): Promise<void> => {
+  await http.delete(`/api/setlists/${setlistId}/share`)
+}
+
+export const getSharedSetlist = async (token: string): Promise<SharedSetlist> => {
+  const { data } = await http.get<SharedSetlist>(`/api/setlists/share/${token}`)
+  return data
 }

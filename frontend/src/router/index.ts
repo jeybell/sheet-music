@@ -6,6 +6,7 @@ import BulkUploadView from "../views/BulkUploadView.vue";
 import SetlistListView from "../views/SetlistListView.vue";
 import SetlistDetailView from "../views/SetlistDetailView.vue";
 import FeatureRequestView from "../views/FeatureRequestView.vue";
+import ShareView from "../views/ShareView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -52,6 +53,11 @@ const router = createRouter({
       path: "/feature-requests",
       name: "feature-requests",
       component: FeatureRequestView,
+    },
+    {
+      path: "/share/:token",
+      name: "share",
+      component: ShareView,
     },
   ],
 });

@@ -5,6 +5,7 @@ import SongListView from "../views/SongListView.vue";
 import BulkUploadView from "../views/BulkUploadView.vue";
 import SetlistListView from "../views/SetlistListView.vue";
 import SetlistDetailView from "../views/SetlistDetailView.vue";
+import FeatureRequestView from "../views/FeatureRequestView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -46,6 +47,11 @@ const router = createRouter({
       name: "setlist-detail",
       component: SetlistDetailView,
       props: (route) => ({ setlistId: Number(route.params.setlistId) }),
+    },
+    {
+      path: "/feature-requests",
+      name: "feature-requests",
+      component: FeatureRequestView,
     },
   ],
 });

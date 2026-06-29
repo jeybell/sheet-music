@@ -27,6 +27,13 @@ const { theme, toggleTheme } = useTheme()
           >
             콘티
           </RouterLink>
+          <RouterLink
+            to="/feature-requests"
+            active-class="bg-primary-soft text-primary font-semibold"
+            class="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            기능 요청
+          </RouterLink>
         </nav>
         <button
           type="button"

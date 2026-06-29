@@ -617,7 +617,7 @@ watch(() => props.songId, loadSong)
                         ? 'bg-primary text-primary-foreground'
                         : 'text-muted-foreground hover:bg-muted'"
                       @click="lyricsFontSize = size"
-                    >{{ size === 'sm' ? '小' : size === 'base' ? '中' : '大' }}</button>
+                    >{{ size === 'sm' ? 'S' : size === 'base' ? 'M' : 'L' }}</button>
                   </div>
                 </div>
                 <p :class="[lyricsFontSizeClass, 'whitespace-pre-line leading-relaxed text-foreground']">{{ song.lyrics }}</p>

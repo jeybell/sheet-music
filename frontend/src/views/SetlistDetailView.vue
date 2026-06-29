@@ -2,8 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen } from '@lucide/vue'
-import { deleteSetlist, updateSetlist } from '../apis/setlistApi'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off } from '@lucide/vue'
+import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -196,6 +196,42 @@ const openViewer = async () => {
   }
 }
 
+// ── 공유 링크
+const isGeneratingShare = ref(false)
+const shareUrl = computed(() => {
+  const token = setlist.value?.shareToken
+  if (!token) return null
+  return `${window.location.origin}/share/${token}`
+})
+
+const handleGenerateShare = async () => {
+  isGeneratingShare.value = true
+  try {
+    await generateShareToken(props.setlistId)
+    await store.fetchSetlist(props.setlistId)
+  } catch {
+    alert('공유 링크 생성에 실패했습니다.')
+  } finally {
+    isGeneratingShare.value = false
+  }
+}
+
+const handleRevokeShare = async () => {
+  if (!confirm('공유 링크를 비활성화할까요? 기존 링크로는 접근할 수 없게 됩니다.')) return
+  try {
+    await revokeShareToken(props.setlistId)
+    await store.fetchSetlist(props.setlistId)
+  } catch {
+    alert('공유 링크 비활성화에 실패했습니다.')
+  }
+}
+
+const copyShareUrl = async () => {
+  if (!shareUrl.value) return
+  await navigator.clipboard.writeText(shareUrl.value)
+  alert('링크가 복사되었습니다.')
+}
+
 const load = () => {
   if (Number.isFinite(props.setlistId)) {
     void store.fetchSetlist(props.setlistId)
@@ -261,6 +297,30 @@ watch(() => props.setlistId, load)
                 <Trash2 class="w-3.5 h-3.5" />
                 삭제
               </Button>
+            </div>
+
+            <!-- 공유 링크 섹션 -->
+            <div class="mt-4 pt-4 border-t border-border">
+              <div v-if="!shareUrl" class="flex items-center gap-2">
+                <Button variant="outline" size="sm" :disabled="isGeneratingShare" @click="handleGenerateShare">
+                  <Share2 class="w-3.5 h-3.5" />
+                  {{ isGeneratingShare ? '생성 중...' : '공유 링크 생성' }}
+                </Button>
+              </div>
+              <div v-else class="flex flex-col gap-2">
+                <p class="text-xs text-muted-foreground font-medium">공유 링크</p>
+                <div class="flex items-center gap-2">
+                  <code class="flex-1 text-xs bg-muted px-2 py-1.5 rounded truncate text-foreground">{{ shareUrl }}</code>
+                  <Button variant="outline" size="sm" @click="copyShareUrl">
+                    <Link class="w-3.5 h-3.5" />
+                    복사
+                  </Button>
+                  <Button variant="outline" size="sm" @click="handleRevokeShare">
+                    <Link2Off class="w-3.5 h-3.5" />
+                    비활성화
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </template>

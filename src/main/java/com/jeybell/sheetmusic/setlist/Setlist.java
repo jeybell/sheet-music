@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "setlists")
@@ -40,6 +41,9 @@ public class Setlist {
     @OneToMany(mappedBy = "setlist", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderNo ASC")
     private List<SetlistItem> items = new ArrayList<>();
+
+    @Column(name = "share_token", length = 36, unique = true)
+    private String shareToken;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -67,6 +71,15 @@ public class Setlist {
         this.serviceType = serviceType;
         this.title = title;
         this.memo = memo;
+    }
+
+    public String generateShareToken() {
+        this.shareToken = UUID.randomUUID().toString();
+        return this.shareToken;
+    }
+
+    public void revokeShareToken() {
+        this.shareToken = null;
     }
 
     public void softDelete() {
@@ -100,6 +113,10 @@ public class Setlist {
 
     public List<SetlistItem> getItems() {
         return Collections.unmodifiableList(items);
+    }
+
+    public String getShareToken() {
+        return shareToken;
     }
 
     public LocalDateTime getCreatedAt() {

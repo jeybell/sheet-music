@@ -2,32 +2,27 @@ package com.jeybell.sheetmusic.setlist.dto;
 
 import com.jeybell.sheetmusic.setlist.Setlist;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
-public record SetlistResponse(
+public record SharedSetlistResponse(
         Long setlistId,
         LocalDate serviceDate,
         String serviceType,
         String title,
         String memo,
-        String shareToken,
-        List<SetlistItemResponse> items,
-        LocalDateTime createdAt
+        List<SharedSetlistItemResponse> items
 ) {
 
-    public static SetlistResponse from(Setlist setlist) {
-        return new SetlistResponse(
+    public static SharedSetlistResponse from(Setlist setlist) {
+        return new SharedSetlistResponse(
                 setlist.getSetlistId(),
                 setlist.getServiceDate(),
                 setlist.getServiceType(),
                 setlist.getTitle(),
                 setlist.getMemo(),
-                setlist.getShareToken(),
                 setlist.getItems().stream()
-                        .map(SetlistItemResponse::from)
-                        .toList(),
-                setlist.getCreatedAt()
+                        .map(SharedSetlistItemResponse::from)
+                        .toList()
         );
     }
 }

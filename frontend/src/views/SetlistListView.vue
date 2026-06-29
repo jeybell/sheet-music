@@ -62,7 +62,7 @@ const handleCreate = async () => {
 const handleDelete = async (setlist: Setlist, event: Event) => {
   event.stopPropagation()
   const label = setlist.title ?? setlist.serviceDate
-  if (!confirm(`"${label}" 셋리스트를 삭제할까요?`)) return
+  if (!confirm(`"${label}" 콘티를 삭제할까요?`)) return
   try {
     await deleteSetlist(setlist.setlistId)
     await store.fetchSetlists()
@@ -82,7 +82,7 @@ onMounted(() => store.fetchSetlists())
 <template>
   <DefaultLayout>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-xl font-bold text-foreground">셋리스트</h1>
+      <h1 class="text-xl font-bold text-foreground">콘티</h1>
       <Button @click="showCreateForm = !showCreateForm" :variant="showCreateForm ? 'outline' : 'default'">
         <template v-if="showCreateForm">
           <X class="w-4 h-4" />
@@ -90,14 +90,14 @@ onMounted(() => store.fetchSetlists())
         </template>
         <template v-else>
           <Plus class="w-4 h-4" />
-          새 셋리스트
+          새 콘티
         </template>
       </Button>
     </div>
 
     <!-- 생성 폼 -->
     <Card v-if="showCreateForm" class="p-5 mb-6 bg-muted/40">
-      <h2 class="text-sm font-semibold text-foreground mb-4">새 셋리스트 만들기</h2>
+      <h2 class="text-sm font-semibold text-foreground mb-4">새 콘티 만들기</h2>
       <p v-if="createError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ createError }}</p>
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-2 gap-3">
@@ -132,8 +132,8 @@ onMounted(() => store.fetchSetlists())
       <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
         <Plus class="w-6 h-6 text-muted-foreground" />
       </div>
-      <p class="text-sm font-medium text-foreground">셋리스트가 없습니다</p>
-      <p class="text-sm text-muted-foreground mt-1">새 셋리스트를 만들어 콘티를 구성해보세요.</p>
+      <p class="text-sm font-medium text-foreground">콘티가 없습니다</p>
+      <p class="text-sm text-muted-foreground mt-1">새 콘티를 만들어 예배 순서를 구성해보세요.</p>
     </div>
 
     <div v-else class="flex flex-col gap-2">

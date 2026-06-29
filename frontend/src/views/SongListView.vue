@@ -36,7 +36,7 @@ onMounted(() => {
 <template>
   <DefaultLayout>
     <div class="flex items-center justify-between mb-5">
-      <h1 class="text-xl font-bold text-foreground">곡 목록</h1>
+      <h1 class="text-xl font-bold text-foreground">악보</h1>
       <div class="flex items-center gap-2">
         <RouterLink
           to="/songs/bulk"

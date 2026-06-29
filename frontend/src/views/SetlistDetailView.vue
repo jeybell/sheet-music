@@ -73,7 +73,7 @@ const handleUpdate = async () => {
 
 // ── 셋리스트 삭제
 const handleDelete = async () => {
-  const label = setlist.value?.title ?? setlist.value?.serviceDate ?? '이 셋리스트'
+  const label = setlist.value?.title ?? setlist.value?.serviceDate ?? '이 콘티'
   if (!confirm(`"${label}"을 삭제할까요?`)) return
   try {
     await deleteSetlist(props.setlistId)
@@ -138,7 +138,7 @@ const handleAddItem = async () => {
 
 // ── 곡 삭제
 const handleDeleteItem = async (itemId: number, songTitle: string) => {
-  if (!confirm(`"${songTitle}"을 셋리스트에서 제거할까요?`)) return
+  if (!confirm(`"${songTitle}"을 콘티에서 제거할까요?`)) return
   try {
     await deleteSetlistItem(itemId)
     await store.fetchSetlist(props.setlistId)
@@ -267,7 +267,7 @@ watch(() => props.setlistId, load)
 
         <template v-else>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-base font-semibold text-foreground">셋리스트 수정</h2>
+            <h2 class="text-base font-semibold text-foreground">콘티 수정</h2>
             <button type="button" class="text-muted-foreground hover:text-foreground" @click="isEditing = false">
               <X class="w-4 h-4" />
             </button>

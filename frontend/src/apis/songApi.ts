@@ -1,5 +1,5 @@
 import http from "./http";
-import type { Song, SongCreateRequest, SongUpdateRequest } from "../types/song";
+import type { Song, SongCreateRequest, SongUpdateRequest, SongLink } from "../types/song";
 
 export interface SongSearchParams {
   query?: string | null;
@@ -45,4 +45,18 @@ export const deleteSong = async (songId: number) => {
 export const getAllTags = async (): Promise<string[]> => {
   const { data } = await http.get<string[]>("/api/songs/tags");
   return data;
+};
+
+export const addSongLink = async (songId: number, payload: { title: string; url: string }): Promise<SongLink> => {
+  const { data } = await http.post<SongLink>(`/api/songs/${songId}/links`, payload);
+  return data;
+};
+
+export const updateSongLink = async (linkId: number, payload: { title: string; url: string }): Promise<SongLink> => {
+  const { data } = await http.put<SongLink>(`/api/song-links/${linkId}`, payload);
+  return data;
+};
+
+export const deleteSongLink = async (linkId: number): Promise<void> => {
+  await http.delete(`/api/song-links/${linkId}`);
 };

@@ -3,10 +3,10 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type, PlayCircle, ExternalLink,
+  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type, ExternalLink,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
-import { deleteSong, updateSong, updateLyrics, getAllTags } from '../apis/songApi'
+import { deleteSong, updateSong, updateLyrics, getAllTags, addSongLink, updateSongLink, deleteSongLink } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
 import type { OcrResult } from '../types/song'
@@ -300,9 +300,7 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   }
 }
 
-// ── 유튜브 ─────────────────────────────────────────────────
-const showEmbed = ref(false)
-
+// ── 링크 관리 ─────────────────────────────────────────────
 const extractYoutubeId = (url: string): string | null => {
   try {
     const u = new URL(url)
@@ -312,10 +310,87 @@ const extractYoutubeId = (url: string): string | null => {
   return null
 }
 
-const youtubeId = computed(() => {
-  const url = song.value?.youtubeUrl
-  return url ? extractYoutubeId(url) : null
-})
+type LinkPlatform = 'youtube' | 'spotify' | 'soundcloud' | 'melon' | 'bugs' | 'genie' | 'other'
+
+const detectPlatform = (url: string): LinkPlatform => {
+  try {
+    const h = new URL(url).hostname
+    if (h.includes('youtube.com') || h.includes('youtu.be')) return 'youtube'
+    if (h.includes('spotify.com')) return 'spotify'
+    if (h.includes('soundcloud.com')) return 'soundcloud'
+    if (h.includes('melon.com')) return 'melon'
+    if (h.includes('music.bugs.co.kr')) return 'bugs'
+    if (h.includes('genie.co.kr')) return 'genie'
+  } catch { /* invalid url */ }
+  return 'other'
+}
+
+const platformLabel = (url: string): string => ({
+  youtube: 'YouTube',
+  spotify: 'Spotify',
+  soundcloud: 'SoundCloud',
+  melon: 'Melon',
+  bugs: 'Bugs',
+  genie: 'Genie',
+  other: '링크',
+}[detectPlatform(url)])
+
+const platformColor = (url: string): string => ({
+  youtube: 'text-red-500',
+  spotify: 'text-green-500',
+  soundcloud: 'text-orange-500',
+  melon: 'text-emerald-500',
+  bugs: 'text-purple-500',
+  genie: 'text-blue-500',
+  other: 'text-muted-foreground',
+}[detectPlatform(url)])
+
+const embedYoutubeId = ref<string | null>(null)
+
+const toggleEmbed = (url: string) => {
+  const id = extractYoutubeId(url)
+  embedYoutubeId.value = embedYoutubeId.value === id ? null : id
+}
+
+// 링크 편집 (인라인)
+const linkForm = reactive({ title: '', url: '' })
+const isAddingLink = ref(false)
+const editingLinkId = ref<number | null>(null)
+const editLinkForm = reactive({ title: '', url: '' })
+
+const startAddLink = () => { linkForm.title = ''; linkForm.url = ''; isAddingLink.value = true }
+const cancelAddLink = () => { isAddingLink.value = false }
+
+const handleAddLink = async () => {
+  if (!linkForm.url.trim()) return
+  try {
+    await addSongLink(song.value!.songId, { title: linkForm.title.trim(), url: linkForm.url.trim() })
+    await loadSong()
+    isAddingLink.value = false
+  } catch { /* ignore */ }
+}
+
+const startEditLink = (link: { linkId: number; title: string; url: string }) => {
+  editingLinkId.value = link.linkId
+  editLinkForm.title = link.title
+  editLinkForm.url = link.url
+}
+
+const handleUpdateLink = async (linkId: number) => {
+  try {
+    await updateSongLink(linkId, { title: editLinkForm.title.trim(), url: editLinkForm.url.trim() })
+    await loadSong()
+    editingLinkId.value = null
+  } catch { /* ignore */ }
+}
+
+const handleDeleteLink = async (linkId: number) => {
+  if (!confirm('링크를 삭제할까요?')) return
+  try {
+    await deleteSongLink(linkId)
+    await loadSong()
+  } catch { /* ignore */ }
+}
 
 // ── 가사 관리 ─────────────────────────────────────────────
 const isEditingLyrics = ref(false)
@@ -535,7 +610,7 @@ watch(() => props.songId, loadSong)
             <h1 class="text-lg font-bold text-foreground leading-snug break-words">{{ song.title }}</h1>
             <dl class="mt-3 space-y-1.5 text-sm">
               <div v-if="song.artist" class="flex gap-2">
-                <dt class="text-muted-foreground shrink-0 w-12">아티스트</dt>
+                <dt class="text-muted-foreground shrink-0 whitespace-nowrap">아티스트</dt>
                 <dd class="text-foreground break-words">{{ song.artist }}</dd>
               </div>
             </dl>
@@ -566,39 +641,130 @@ watch(() => props.songId, loadSong)
             악보 버전 {{ sheets.length }}개 · 총 {{ slides.length }}장
           </div>
 
-          <!-- 유튜브 섹션 -->
-          <Card v-if="song?.youtubeUrl" class="mt-3 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3">
-              <PlayCircle class="w-4 h-4 text-red-500 shrink-0" />
-              <span class="text-sm font-semibold text-foreground flex-1">유튜브</span>
+          <!-- 링크 섹션 -->
+          <Card class="mt-3 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-border">
+              <ExternalLink class="w-4 h-4 text-muted-foreground shrink-0" />
+              <span class="text-sm font-semibold text-foreground flex-1">링크</span>
               <button
                 type="button"
-                class="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-muted"
-                @click="showEmbed = !showEmbed"
+                class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                @click="startAddLink"
               >
-                {{ showEmbed ? '닫기' : '임베드' }}
+                <Plus class="w-3.5 h-3.5" />
+                추가
               </button>
-              <a
-                :href="song.youtubeUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="유튜브에서 열기"
-              >
-                <ExternalLink class="w-4 h-4" />
-              </a>
             </div>
-            <div v-if="showEmbed && youtubeId" class="border-t border-border">
-              <iframe
-                :src="`https://www.youtube.com/embed/${youtubeId}`"
-                class="w-full aspect-video"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
+
+            <!-- 링크 추가 폼 -->
+            <div v-if="isAddingLink" class="px-4 py-3 border-b border-border flex flex-col gap-2">
+              <input
+                v-model="linkForm.title"
+                type="text"
+                placeholder="제목 (예: 키 G 라이브, MR)"
+                class="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
+              <input
+                v-model="linkForm.url"
+                type="url"
+                placeholder="URL (YouTube, Spotify, Melon 등)"
+                class="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+                  @click="handleAddLink"
+                >저장</button>
+                <button
+                  type="button"
+                  class="h-8 px-3 rounded-md border border-border text-xs text-foreground hover:bg-muted transition-colors"
+                  @click="cancelAddLink"
+                >취소</button>
+              </div>
             </div>
-            <div v-else-if="showEmbed && !youtubeId" class="border-t border-border px-4 py-3">
-              <p class="text-xs text-muted-foreground">임베드할 수 없는 URL입니다.</p>
+
+            <!-- 링크 없음 -->
+            <p v-if="!song?.links?.length && !isAddingLink" class="px-4 py-3 text-xs text-muted-foreground">
+              등록된 링크가 없습니다.
+            </p>
+
+            <!-- 링크 목록 -->
+            <div
+              v-for="link in song?.links"
+              :key="link.linkId"
+              class="border-b border-border last:border-0"
+            >
+              <!-- 편집 모드 -->
+              <div v-if="editingLinkId === link.linkId" class="px-4 py-3 flex flex-col gap-2">
+                <input
+                  v-model="editLinkForm.title"
+                  type="text"
+                  placeholder="제목"
+                  class="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <input
+                  v-model="editLinkForm.url"
+                  type="url"
+                  placeholder="URL"
+                  class="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    class="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
+                    @click="handleUpdateLink(link.linkId)"
+                  >저장</button>
+                  <button
+                    type="button"
+                    class="h-8 px-3 rounded-md border border-border text-xs text-foreground hover:bg-muted"
+                    @click="editingLinkId = null"
+                  >취소</button>
+                </div>
+              </div>
+
+              <!-- 표시 모드 -->
+              <div v-else class="flex items-center gap-2 px-4 py-2.5">
+                <span :class="['shrink-0 text-xs font-medium w-16 truncate', platformColor(link.url)]">
+                  {{ link.title || platformLabel(link.url) }}
+                </span>
+                <a
+                  :href="link.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex-1 min-w-0 text-xs text-muted-foreground hover:text-foreground truncate transition-colors"
+                >{{ link.url }}</a>
+                <!-- YouTube 임베드 토글 -->
+                <button
+                  v-if="extractYoutubeId(link.url)"
+                  type="button"
+                  class="text-xs text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded hover:bg-muted transition-colors shrink-0"
+                  @click="toggleEmbed(link.url)"
+                >
+                  {{ embedYoutubeId === extractYoutubeId(link.url) ? '닫기' : '영상' }}
+                </button>
+                <button
+                  type="button"
+                  class="p-1 text-muted-foreground hover:text-foreground shrink-0"
+                  @click="startEditLink(link)"
+                ><Pencil class="w-3.5 h-3.5" /></button>
+                <button
+                  type="button"
+                  class="p-1 text-muted-foreground hover:text-destructive shrink-0"
+                  @click="handleDeleteLink(link.linkId)"
+                ><Trash2 class="w-3.5 h-3.5" /></button>
+              </div>
+
+              <!-- YouTube 임베드 -->
+              <div v-if="embedYoutubeId && embedYoutubeId === extractYoutubeId(link.url)" class="border-t border-border">
+                <iframe
+                  :src="`https://www.youtube.com/embed/${embedYoutubeId}`"
+                  class="w-full aspect-video"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                />
+              </div>
             </div>
           </Card>
 
@@ -743,10 +909,6 @@ watch(() => props.songId, loadSong)
                 <div class="flex flex-col gap-1.5">
                   <Label for="edit-memo">메모</Label>
                   <Textarea id="edit-memo" v-model="editForm.memo" rows="3" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <Label for="edit-youtube">유튜브 링크</Label>
-                  <Input id="edit-youtube" v-model="editForm.youtubeUrl" type="url" placeholder="https://youtu.be/..." />
                 </div>
                 <div class="flex flex-col gap-1.5">
                   <Label>태그</Label>

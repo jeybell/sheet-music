@@ -5,6 +5,7 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,6 +17,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 @Entity
 @Table(name = "songs")
@@ -42,9 +45,10 @@ public class Song {
     @Column(name = "youtube_url", length = 500)
     private String youtubeUrl;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "song_tags", joinColumns = @JoinColumn(name = "song_id"))
     @Column(name = "tag", length = 50)
+    @Fetch(FetchMode.SUBSELECT)
     private List<String> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)

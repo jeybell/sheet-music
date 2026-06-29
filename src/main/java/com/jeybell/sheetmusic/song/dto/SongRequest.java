@@ -17,6 +17,9 @@ public record SongRequest(
 
         String lyrics,
 
+        @Size(max = 500, message = "youtube_url must be 500 characters or less")
+        String youtubeUrl,
+
         @Valid
         List<SongSheetRequest> sheets
 ) {

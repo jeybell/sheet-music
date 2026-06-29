@@ -43,7 +43,8 @@ public class SongService {
                 request.title(),
                 request.artist(),
                 null,
-                request.memo()
+                request.memo(),
+                request.youtubeUrl()
         );
         toSheets(request.sheets()).forEach(song::addSheet);
 
@@ -63,7 +64,8 @@ public class SongService {
                 request.title(),
                 request.artist(),
                 null,
-                request.memo()
+                request.memo(),
+                request.youtubeUrl()
         );
 
         return SongResponse.from(song);

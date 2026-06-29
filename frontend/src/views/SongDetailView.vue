@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type,
+  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type, PlayCircle, ExternalLink,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { deleteSong, updateSong, updateLyrics } from '../apis/songApi'
@@ -77,7 +77,7 @@ const showManage = ref(false)
 
 // ── 곡 수정
 const isEditing = ref(false)
-const editForm = reactive({ title: '', artist: '', memo: '' })
+const editForm = reactive({ title: '', artist: '', memo: '', youtubeUrl: '' })
 const editError = ref('')
 const isSavingEdit = ref(false)
 
@@ -85,6 +85,7 @@ const startEdit = () => {
   editForm.title = song.value?.title ?? ''
   editForm.artist = song.value?.artist ?? ''
   editForm.memo = song.value?.memo ?? ''
+  editForm.youtubeUrl = song.value?.youtubeUrl ?? ''
   editError.value = ''
   isEditing.value = true
 }
@@ -106,6 +107,7 @@ const handleUpdateSong = async () => {
       title: editForm.title.trim(),
       artist: toOpt(editForm.artist),
       memo: toOpt(editForm.memo),
+      youtubeUrl: toOpt(editForm.youtubeUrl),
     })
     await songStore.fetchSong(props.songId)
     isEditing.value = false
@@ -293,6 +295,23 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
     alert(extractApiError(e, '파일 삭제에 실패했습니다.'))
   }
 }
+
+// ── 유튜브 ─────────────────────────────────────────────────
+const showEmbed = ref(false)
+
+const extractYoutubeId = (url: string): string | null => {
+  try {
+    const u = new URL(url)
+    if (u.hostname === 'youtu.be') return u.pathname.slice(1).split('?')[0]
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v')
+  } catch { /* invalid url */ }
+  return null
+}
+
+const youtubeId = computed(() => {
+  const url = song.value?.youtubeUrl
+  return url ? extractYoutubeId(url) : null
+})
 
 // ── 가사 관리 ─────────────────────────────────────────────
 const isEditingLyrics = ref(false)
@@ -534,6 +553,42 @@ watch(() => props.songId, loadSong)
             악보 버전 {{ sheets.length }}개 · 총 {{ slides.length }}장
           </div>
 
+          <!-- 유튜브 섹션 -->
+          <Card v-if="song?.youtubeUrl" class="mt-3 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3">
+              <PlayCircle class="w-4 h-4 text-red-500 shrink-0" />
+              <span class="text-sm font-semibold text-foreground flex-1">유튜브</span>
+              <button
+                type="button"
+                class="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-muted"
+                @click="showEmbed = !showEmbed"
+              >
+                {{ showEmbed ? '닫기' : '임베드' }}
+              </button>
+              <a
+                :href="song.youtubeUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="유튜브에서 열기"
+              >
+                <ExternalLink class="w-4 h-4" />
+              </a>
+            </div>
+            <div v-if="showEmbed && youtubeId" class="border-t border-border">
+              <iframe
+                :src="`https://www.youtube.com/embed/${youtubeId}`"
+                class="w-full aspect-video"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              />
+            </div>
+            <div v-else-if="showEmbed && !youtubeId" class="border-t border-border px-4 py-3">
+              <p class="text-xs text-muted-foreground">임베드할 수 없는 URL입니다.</p>
+            </div>
+          </Card>
+
           <!-- 가사 섹션 (아코디언) -->
           <Card class="mt-3 overflow-hidden">
             <!-- 헤더 (항상 표시) -->
@@ -675,6 +730,10 @@ watch(() => props.songId, loadSong)
                 <div class="flex flex-col gap-1.5">
                   <Label for="edit-memo">메모</Label>
                   <Textarea id="edit-memo" v-model="editForm.memo" rows="3" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label for="edit-youtube">유튜브 링크</Label>
+                  <Input id="edit-youtube" v-model="editForm.youtubeUrl" type="url" placeholder="https://youtu.be/..." />
                 </div>
                 <div class="flex gap-2">
                   <Button :disabled="isSavingEdit" @click="handleUpdateSong">

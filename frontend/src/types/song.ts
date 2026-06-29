@@ -32,6 +32,7 @@ export interface Song {
   artist: string | null;
   memo?: string | null;
   lyrics?: string | null;
+  youtubeUrl?: string | null;
   sheets?: SongSheetSummary[];
   songSheets?: SongSheetSummary[];
   files?: SongFile[];
@@ -47,6 +48,7 @@ export interface SongUpdateRequest {
   title: string;
   artist?: string | null;
   memo?: string | null;
+  youtubeUrl?: string | null;
 }
 
 export interface SongSheetCreateRequest {

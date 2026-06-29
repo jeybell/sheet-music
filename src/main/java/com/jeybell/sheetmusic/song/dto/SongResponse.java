@@ -10,6 +10,7 @@ public record SongResponse(
         String artist,
         String memo,
         String lyrics,
+        String youtubeUrl,
         List<SongSheetSummaryResponse> songSheets,
         LocalDateTime createdAt
 ) {
@@ -21,6 +22,7 @@ public record SongResponse(
                 song.getArtist(),
                 song.getMemo(),
                 song.getLyrics(),
+                song.getYoutubeUrl(),
                 song.getSheets()
                         .stream()
                         .filter(sheet -> sheet.getDeletedAt() == null)

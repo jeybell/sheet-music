@@ -36,6 +36,9 @@ public class Song {
     @Column(columnDefinition = "TEXT")
     private String lyrics;
 
+    @Column(name = "youtube_url", length = 500)
+    private String youtubeUrl;
+
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)
     private List<SongSheet> sheets = new ArrayList<>();
 
@@ -48,12 +51,13 @@ public class Song {
     protected Song() {
     }
 
-    public Song(String title, String artist, String composer, String memo) {
+    public Song(String title, String artist, String composer, String memo, String youtubeUrl) {
         this.title = title;
         this.artist = artist;
         this.composer = composer;
         this.memo = memo;
         this.lyrics = null;
+        this.youtubeUrl = youtubeUrl;
     }
 
     @PrePersist
@@ -61,11 +65,12 @@ public class Song {
         this.createdAt = LocalDateTime.now();
     }
 
-    public void update(String title, String artist, String composer, String memo) {
+    public void update(String title, String artist, String composer, String memo, String youtubeUrl) {
         this.title = title;
         this.artist = artist;
         this.composer = composer;
         this.memo = memo;
+        this.youtubeUrl = youtubeUrl;
     }
 
     public void updateLyrics(String lyrics) {
@@ -108,6 +113,10 @@ public class Song {
 
     public String getLyrics() {
         return lyrics;
+    }
+
+    public String getYoutubeUrl() {
+        return youtubeUrl;
     }
 
     public List<SongSheet> getSheets() {

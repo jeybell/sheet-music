@@ -2,12 +2,13 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music } from '@lucide/vue'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import SheetViewerModal from '../components/SheetViewerModal.vue'
+import SongPickerModal from '../components/SongPickerModal.vue'
 import type { ViewerSong } from '../components/SheetViewerModal.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
@@ -15,10 +16,8 @@ import Textarea from '../components/ui/Textarea.vue'
 import Label from '../components/ui/Label.vue'
 import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
-import Select from '../components/ui/Select.vue'
 import { useSetlistStore } from '../stores/setlistStore'
 import { useSongStore } from '../stores/songStore'
-import type { SongSheetSummary } from '../types/song'
 
 interface ApiErrorResponse { message?: string }
 
@@ -85,31 +84,27 @@ const handleDelete = async () => {
 
 // ── 곡 추가
 const showAddItem = ref(false)
-const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, memo: '' })
+const showSongPicker = ref(false)
+const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, songTitle: '', memo: '' })
 const addError = ref('')
 const isAddingItem = ref(false)
-const availableSheets = ref<SongSheetSummary[]>([])
-const isLoadingSheets = ref(false)
 
-watch(() => addForm.songId, async (songId) => {
-  addForm.songSheetId = null
-  availableSheets.value = []
-  if (!songId) return
-  isLoadingSheets.value = true
-  try {
-    const song = await getSong(songId)
-    availableSheets.value = song.sheets ?? song.songSheets ?? []
-  } finally {
-    isLoadingSheets.value = false
-  }
-})
+const openSongPicker = () => { showSongPicker.value = true }
+
+const onSongPicked = (songId: number, songSheetId: number | null) => {
+  const song = songStore.songs.find(s => s.songId === songId)
+  addForm.songId = songId
+  addForm.songSheetId = songSheetId
+  addForm.songTitle = song?.title ?? ''
+  showSongPicker.value = false
+}
 
 const resetAddForm = () => {
   addForm.songId = null
   addForm.songSheetId = null
+  addForm.songTitle = ''
   addForm.memo = ''
   addError.value = ''
-  availableSheets.value = []
 }
 
 const handleAddItem = async () => {
@@ -245,6 +240,13 @@ watch(() => props.setlistId, load)
 
 <template>
   <DefaultLayout>
+    <SongPickerModal
+      v-if="showSongPicker"
+      :songs="songStore.songs"
+      @select="onSongPicked"
+      @close="showSongPicker = false"
+    />
+
     <SheetViewerModal
       v-if="showViewer"
       :songs="viewerSongs"
@@ -371,6 +373,7 @@ watch(() => props.setlistId, load)
         <!-- 하단: 곡 목록 (내부 스크롤) -->
         <div class="flex-1 min-h-0 flex flex-col">
           <!-- 섹션 헤더 -->
+          <!-- 섹션 헤더 -->
           <div class="flex items-center justify-between mb-3 shrink-0">
             <h2 class="text-sm font-semibold text-foreground">
               곡 목록
@@ -386,61 +389,56 @@ watch(() => props.setlistId, load)
           <Card v-if="showAddItem" class="p-4 mb-3 bg-muted/40 shrink-0">
             <p v-if="addError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-3">{{ addError }}</p>
             <div class="flex flex-col gap-3">
+              <!-- 곡 선택 버튼 -->
               <div class="flex flex-col gap-1.5">
-                <Label for="add-song">곡 선택 <span class="text-destructive">*</span></Label>
-                <Select id="add-song" v-model="addForm.songId">
-                  <option :value="null" disabled>곡을 선택하세요</option>
-                  <option v-for="song in songStore.songs" :key="song.songId" :value="song.songId">
-                    {{ song.title }}{{ song.artist ? ` — ${song.artist}` : '' }}
-                  </option>
-                </Select>
+                <Label>곡 선택 <span class="text-destructive">*</span></Label>
+                <button
+                  type="button"
+                  class="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md border border-border bg-background hover:bg-muted transition-colors text-left"
+                  @click="openSongPicker"
+                >
+                  <Music class="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span v-if="addForm.songId" class="text-foreground font-medium">{{ addForm.songTitle }}</span>
+                  <span v-else class="text-muted-foreground">곡을 검색해서 선택하세요</span>
+                </button>
               </div>
-              <div v-if="addForm.songId" class="flex flex-col gap-1.5">
-                <Label for="add-sheet">악보 버전</Label>
-                <Select id="add-sheet" v-model="addForm.songSheetId" :disabled="isLoadingSheets">
-                  <option :value="null">선택 안 함</option>
-                  <option v-for="sheet in availableSheets" :key="sheet.songSheetId" :value="sheet.songSheetId">
-                    {{ sheetLabel(sheet.sheetKey, sheet.versionName) ?? '버전명 없음' }}
-                  </option>
-                </Select>
+              <!-- 메모 (여러 줄) -->
+              <div class="flex flex-col gap-1.5">
+                <Label for="add-memo">메모</Label>
+                <Textarea id="add-memo" v-model="addForm.memo" rows="3" placeholder="악보 지시사항, 전조 메모 등 자유롭게 입력" />
               </div>
-              <div class="flex gap-3">
-                <div class="flex-1 flex flex-col gap-1.5">
-                  <Label for="add-memo">메모</Label>
-                  <Input id="add-memo" v-model="addForm.memo" type="text" placeholder="선택사항" />
-                </div>
-                <div class="flex items-end">
-                  <Button :disabled="isAddingItem" @click="handleAddItem">
-                    {{ isAddingItem ? '추가 중...' : '추가' }}
-                  </Button>
-                </div>
+              <div class="flex gap-2">
+                <Button :disabled="isAddingItem || !addForm.songId" @click="handleAddItem">
+                  {{ isAddingItem ? '추가 중...' : '추가' }}
+                </Button>
+                <Button variant="outline" @click="() => { showAddItem = false; resetAddForm() }">취소</Button>
               </div>
             </div>
           </Card>
 
-          <!-- 곡 리스트 (스크롤) -->
+          <!-- 곡 리스트 (2컬럼 그리드, 내부 스크롤) -->
           <div class="flex-1 min-h-0 overflow-y-auto">
             <p v-if="items.length === 0" class="text-sm text-muted-foreground py-6 text-center">
               곡이 없습니다. 곡을 추가해보세요.
             </p>
-            <div v-else class="flex flex-col gap-2 pb-2">
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
               <Card
                 v-for="item in items"
                 :key="item.setlistItemId"
-                class="px-4 py-3 flex items-center gap-3"
+                class="px-4 py-3 flex items-start gap-3"
               >
-                <div class="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <div class="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                   <span class="text-xs font-bold text-muted-foreground">{{ item.orderNo }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
+                  <div class="flex items-center gap-2 flex-wrap mb-0.5">
                     <span class="text-sm font-semibold text-foreground">{{ item.songTitle }}</span>
                     <span v-if="item.songArtist" class="text-xs text-muted-foreground">{{ item.songArtist }}</span>
-                    <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet">
-                      {{ sheetLabel(item.sheetKey, item.versionName) }}
-                    </Badge>
                   </div>
-                  <p v-if="item.memo" class="text-xs text-muted-foreground mt-0.5">{{ item.memo }}</p>
+                  <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet" class="mb-1">
+                    {{ sheetLabel(item.sheetKey, item.versionName) }}
+                  </Badge>
+                  <p v-if="item.memo" class="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{{ item.memo }}</p>
                 </div>
                 <button
                   type="button"

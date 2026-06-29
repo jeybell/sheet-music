@@ -73,6 +73,7 @@ public class SetlistService {
         setlist.revokeShareToken();
     }
 
+    @Transactional(readOnly = true)
     public SharedSetlistResponse getByShareToken(String token) {
         Setlist setlist = setlistRepository.findByShareToken(token)
                 .orElseThrow(() -> new ResourceNotFoundException("공유 링크를 찾을 수 없습니다."));

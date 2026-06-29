@@ -32,9 +32,15 @@ public class SongController {
     @GetMapping
     public ResponseEntity<List<SongResponse>> getSongs(
             @RequestParam(name = "query", required = false) String query,
-            @RequestParam(name = "songKey", required = false) String songKey
+            @RequestParam(name = "songKey", required = false) String songKey,
+            @RequestParam(name = "tag", required = false) String tag
     ) {
-        return ResponseEntity.ok(songService.getSongs(query, songKey));
+        return ResponseEntity.ok(songService.getSongs(query, songKey, tag));
+    }
+
+    @GetMapping("/tags")
+    public ResponseEntity<List<String>> getAllTags() {
+        return ResponseEntity.ok(songService.getAllTags());
     }
 
     @PostMapping

@@ -24,9 +24,13 @@ public interface SongRepository extends JpaRepository<Song, Long> {
                     and ss.deletedAt is null
                     and lower(ss.sheetKey) like :songKey
                 ))
+              and (:tag is null or :tag member of s.tags)
             order by s.createdAt desc
             """)
-    List<Song> searchSongs(@Param("query") String query, @Param("songKey") String songKey);
+    List<Song> searchSongs(@Param("query") String query, @Param("songKey") String songKey, @Param("tag") String tag);
+
+    @Query("select distinct t from Song s join s.tags t where s.deletedAt is null order by t")
+    List<String> findAllTags();
 
     @Query("""
             select distinct s

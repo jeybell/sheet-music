@@ -4,6 +4,7 @@ import type { Song, SongCreateRequest, SongUpdateRequest } from "../types/song";
 export interface SongSearchParams {
   query?: string | null;
   songKey?: string | null;
+  tag?: string | null;
 }
 
 export const getSongs = async (params?: SongSearchParams) => {
@@ -11,6 +12,7 @@ export const getSongs = async (params?: SongSearchParams) => {
     params: {
       query: params?.query?.trim() || undefined,
       songKey: params?.songKey?.trim() || undefined,
+      tag: params?.tag?.trim() || undefined,
     },
   });
   return data;
@@ -38,4 +40,9 @@ export const updateLyrics = async (songId: number, lyrics: string | null) => {
 
 export const deleteSong = async (songId: number) => {
   await http.delete(`/api/songs/${songId}`);
+};
+
+export const getAllTags = async (): Promise<string[]> => {
+  const { data } = await http.get<string[]>("/api/songs/tags");
+  return data;
 };

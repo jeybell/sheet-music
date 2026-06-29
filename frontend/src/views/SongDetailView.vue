@@ -159,6 +159,43 @@ const handleCreateSheet = async () => {
   }
 }
 
+// ── 악보 버전 수정
+const editingSheetId = ref<number | null>(null)
+const sheetEditForm = reactive({ sheetKey: '', versionName: '', memo: '' })
+const isUpdatingSheet = ref(false)
+const sheetUpdateError = ref('')
+
+const startEditSheet = (sheet: SongSheetSummary) => {
+  editingSheetId.value = sheet.songSheetId
+  sheetEditForm.sheetKey = sheet.sheetKey ?? ''
+  sheetEditForm.versionName = sheet.versionName ?? ''
+  sheetEditForm.memo = sheet.memo ?? ''
+  sheetUpdateError.value = ''
+}
+
+const cancelEditSheet = () => {
+  editingSheetId.value = null
+  sheetUpdateError.value = ''
+}
+
+const handleUpdateSheet = async (sheetId: number) => {
+  isUpdatingSheet.value = true
+  sheetUpdateError.value = ''
+  try {
+    await updateSongSheet(sheetId, {
+      sheetKey: toOpt(sheetEditForm.sheetKey),
+      versionName: toOpt(sheetEditForm.versionName),
+      memo: toOpt(sheetEditForm.memo),
+    })
+    await songStore.fetchSong(props.songId)
+    editingSheetId.value = null
+  } catch (e) {
+    sheetUpdateError.value = extractApiError(e, '수정에 실패했습니다.')
+  } finally {
+    isUpdatingSheet.value = false
+  }
+}
+
 // ── 악보 버전 삭제
 const handleDeleteSheet = async (sheet: SongSheetSummary) => {
   const label = sheet.versionName || sheet.sheetKey || '이 버전'
@@ -640,19 +677,59 @@ watch(() => props.songId, loadSong)
 
         <div v-else class="flex flex-col gap-3">
           <Card v-for="sheet in sheets" :key="sheet.songSheetId" class="p-5">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2 flex-wrap">
-                <Badge v-if="sheet.sheetKey" variant="violet">{{ sheet.sheetKey }}</Badge>
-                <span v-if="sheet.versionName" class="text-sm font-medium text-foreground">{{ sheet.versionName }}</span>
-                <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-sm text-muted-foreground">버전명 없음</span>
+            <!-- 인라인 수정 폼 -->
+            <template v-if="editingSheetId === sheet.songSheetId">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-semibold text-foreground">악보 버전 수정</h4>
+                <button type="button" class="text-muted-foreground hover:text-foreground" @click="cancelEditSheet">
+                  <X class="w-4 h-4" />
+                </button>
               </div>
-              <Button variant="destructive" size="sm" @click="handleDeleteSheet(sheet)">
-                <Trash2 class="w-3.5 h-3.5" />
-                삭제
-              </Button>
-            </div>
+              <p v-if="sheetUpdateError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-3">{{ sheetUpdateError }}</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div class="flex flex-col gap-1.5">
+                  <Label>코드</Label>
+                  <Input v-model="sheetEditForm.sheetKey" type="text" placeholder="예) C, G, Am" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label>버전명</Label>
+                  <Input v-model="sheetEditForm.versionName" type="text" placeholder="예) 원본, 남성용" />
+                </div>
+              </div>
+              <div class="flex flex-col gap-1.5 mb-4">
+                <Label>메모</Label>
+                <Textarea v-model="sheetEditForm.memo" rows="2" />
+              </div>
+              <div class="flex gap-2">
+                <Button :disabled="isUpdatingSheet" @click="handleUpdateSheet(sheet.songSheetId)">
+                  {{ isUpdatingSheet ? '저장 중...' : '저장' }}
+                </Button>
+                <Button variant="outline" :disabled="isUpdatingSheet" @click="cancelEditSheet">취소</Button>
+              </div>
+            </template>
 
-            <p v-if="sheet.memo" class="text-xs text-muted-foreground mb-3">{{ sheet.memo }}</p>
+            <!-- 기본 뷰 -->
+            <template v-else>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <Badge v-if="sheet.sheetKey" variant="violet">{{ sheet.sheetKey }}</Badge>
+                  <span v-if="sheet.versionName" class="text-sm font-medium text-foreground">{{ sheet.versionName }}</span>
+                  <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-sm text-muted-foreground">버전명 없음</span>
+                </div>
+                <div class="flex gap-2">
+                  <Button variant="outline" size="sm" @click="startEditSheet(sheet)">
+                    <Pencil class="w-3.5 h-3.5" />
+                    수정
+                  </Button>
+                  <Button variant="destructive" size="sm" @click="handleDeleteSheet(sheet)">
+                    <Trash2 class="w-3.5 h-3.5" />
+                    삭제
+                  </Button>
+                </div>
+              </div>
+
+              <p v-if="sheet.memo" class="text-xs text-muted-foreground mb-3">{{ sheet.memo }}</p>
+            </template>
 
             <!-- 파일 목록 -->
             <div v-if="sheet.files?.length" class="flex flex-col gap-2 mb-3">

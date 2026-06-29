@@ -92,3 +92,13 @@
     border-color: var(--border);
   }
 }
+
+@keyframes loading-bar {
+  0%   { width: 0%;   opacity: 1; }
+  60%  { width: 80%;  opacity: 1; }
+  100% { width: 95%;  opacity: 1; }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 2s ease-out forwards;
+}

@@ -1,13 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Sun, Moon } from '@lucide/vue'
 import { useTheme } from '../composables/useTheme'
+import { isLoading } from '../composables/useHttpLoading'
 
 const { theme, toggleTheme } = useTheme()
+const loading = isLoading()
+const busy = computed(() => loading.value > 0)
 </script>
 
 <template>
   <div class="min-h-screen bg-background text-foreground flex flex-col">
     <header class="sticky top-0 z-50 bg-background/80 backdrop-blur border-b border-border">
+      <!-- 상단 로딩 바 -->
+      <div class="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
+        <div
+          class="h-full bg-primary origin-left transition-all duration-300"
+          :class="busy ? 'opacity-100 animate-loading-bar' : 'opacity-0 w-full'"
+        />
+      </div>
+
       <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4 sm:gap-8">
         <RouterLink to="/" class="text-base font-bold text-primary tracking-tight shrink-0">
           Worship Sheet
@@ -47,7 +59,10 @@ const { theme, toggleTheme } = useTheme()
       </div>
     </header>
 
-    <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <main
+      class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 transition-opacity duration-200"
+      :class="busy ? 'opacity-60 pointer-events-none' : 'opacity-100'"
+    >
       <slot />
     </main>
   </div>

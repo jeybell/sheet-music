@@ -2,8 +2,8 @@
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  ChevronLeft, ChevronRight, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft,
+  ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
+  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { deleteSong, updateSong, updateLyrics } from '../apis/songApi'
@@ -299,6 +299,13 @@ const isEditingLyrics = ref(false)
 const lyricsForm = ref('')
 const isSavingLyrics = ref(false)
 const lyricsError = ref('')
+const lyricsOpen = ref(false)
+const lyricsFontSize = ref<'sm' | 'base' | 'lg'>('base')
+const lyricsFontSizeClass = computed(() => ({
+  sm: 'text-xs',
+  base: 'text-sm',
+  lg: 'text-base',
+}[lyricsFontSize.value]))
 
 const startEditLyrics = () => {
   lyricsForm.value = song.value?.lyrics ?? ''
@@ -527,69 +534,108 @@ watch(() => props.songId, loadSong)
             악보 버전 {{ sheets.length }}개 · 총 {{ slides.length }}장
           </div>
 
-          <!-- 가사 섹션 -->
-          <Card class="p-4 mt-3">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <!-- 가사 섹션 (아코디언) -->
+          <Card class="mt-3 overflow-hidden">
+            <!-- 헤더 (항상 표시) -->
+            <button
+              type="button"
+              class="w-full flex items-center justify-between p-4 hover:bg-muted/40 transition-colors"
+              @click="lyricsOpen = !lyricsOpen"
+            >
+              <span class="text-sm font-semibold text-foreground flex items-center gap-1.5">
                 <AlignLeft class="w-4 h-4" />
                 가사
-              </h2>
-              <div class="flex gap-1">
+                <span v-if="song?.lyrics" class="text-xs font-normal text-muted-foreground ml-1">
+                  ({{ song.lyrics.length }}자)
+                </span>
+                <span v-else-if="ocrLyrics" class="text-xs font-normal text-primary ml-1 flex items-center gap-0.5">
+                  <ScanText class="w-3 h-3" /> OCR
+                </span>
+              </span>
+              <ChevronDown
+                class="w-4 h-4 text-muted-foreground transition-transform duration-200"
+                :class="{ 'rotate-180': lyricsOpen }"
+              />
+            </button>
+
+            <!-- 펼쳐진 내용 -->
+            <div v-if="lyricsOpen" class="px-4 pb-4 border-t border-border">
+              <!-- OCR 가사 적용 배너 -->
+              <div
+                v-if="!isEditingLyrics && ocrLyrics && !song?.lyrics"
+                class="mt-3 p-2.5 rounded-md bg-primary/5 border border-primary/20 text-xs"
+              >
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                  <span class="flex items-center gap-1 font-medium text-foreground">
+                    <ScanText class="w-3 h-3 text-primary" />
+                    OCR 추출 가사
+                  </span>
+                  <button type="button" class="text-primary hover:underline font-medium" @click="applyOcrLyrics(ocrLyrics!)">
+                    가사로 사용
+                  </button>
+                </div>
+                <p class="text-muted-foreground line-clamp-3 whitespace-pre-line leading-relaxed">{{ ocrLyrics }}</p>
+              </div>
+
+              <!-- 가사 편집 폼 -->
+              <div v-if="isEditingLyrics" class="flex flex-col gap-2 mt-3">
+                <p v-if="lyricsError" class="text-xs text-destructive">{{ lyricsError }}</p>
+                <Textarea
+                  v-model="lyricsForm"
+                  rows="10"
+                  placeholder="가사를 입력하세요"
+                  class="text-sm font-mono leading-relaxed resize-y"
+                />
+                <div class="flex gap-2">
+                  <Button size="sm" :disabled="isSavingLyrics" @click="handleSaveLyrics">
+                    {{ isSavingLyrics ? '저장 중...' : '저장' }}
+                  </Button>
+                  <Button size="sm" variant="outline" :disabled="isSavingLyrics" @click="cancelEditLyrics">취소</Button>
+                </div>
+              </div>
+
+              <!-- 가사 표시 -->
+              <template v-else-if="song?.lyrics">
+                <!-- 툴바: 편집 + 글자 크기 -->
+                <div class="flex items-center justify-between mt-3 mb-2">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    @click="startEditLyrics"
+                  >
+                    <Pencil class="w-3 h-3" />
+                    편집
+                  </button>
+                  <div class="flex items-center gap-1">
+                    <Type class="w-3.5 h-3.5 text-muted-foreground" />
+                    <button
+                      v-for="size in (['sm', 'base', 'lg'] as const)"
+                      :key="size"
+                      type="button"
+                      class="h-6 px-1.5 rounded text-xs font-medium transition-colors"
+                      :class="lyricsFontSize === size
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted'"
+                      @click="lyricsFontSize = size"
+                    >{{ size === 'sm' ? '小' : size === 'base' ? '中' : '大' }}</button>
+                  </div>
+                </div>
+                <p :class="[lyricsFontSizeClass, 'whitespace-pre-line leading-relaxed text-foreground']">{{ song.lyrics }}</p>
+              </template>
+
+              <!-- 가사 없음 -->
+              <div v-else class="mt-3 flex items-center justify-between">
+                <p class="text-xs text-muted-foreground">등록된 가사가 없습니다.</p>
                 <button
-                  v-if="!isEditingLyrics"
                   type="button"
                   class="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
                   @click="startEditLyrics"
                 >
                   <Pencil class="w-3 h-3" />
-                  {{ song?.lyrics ? '편집' : '입력' }}
+                  입력
                 </button>
               </div>
             </div>
-
-            <!-- OCR 가사 적용 배너 -->
-            <div
-              v-if="!isEditingLyrics && ocrLyrics && !song?.lyrics"
-              class="mb-3 p-2.5 rounded-md bg-primary/5 border border-primary/20 text-xs"
-            >
-              <div class="flex items-center justify-between gap-2 mb-1.5">
-                <span class="flex items-center gap-1 font-medium text-foreground">
-                  <ScanText class="w-3 h-3 text-primary" />
-                  OCR 추출 가사
-                </span>
-                <button
-                  type="button"
-                  class="text-primary hover:underline font-medium"
-                  @click="applyOcrLyrics(ocrLyrics!)"
-                >
-                  가사로 사용
-                </button>
-              </div>
-              <p class="text-muted-foreground line-clamp-3 whitespace-pre-line leading-relaxed">{{ ocrLyrics }}</p>
-            </div>
-
-            <!-- 가사 편집 폼 -->
-            <div v-if="isEditingLyrics" class="flex flex-col gap-2">
-              <p v-if="lyricsError" class="text-xs text-destructive">{{ lyricsError }}</p>
-              <Textarea
-                v-model="lyricsForm"
-                rows="10"
-                placeholder="가사를 입력하세요"
-                class="text-sm font-mono leading-relaxed resize-y"
-              />
-              <div class="flex gap-2">
-                <Button size="sm" :disabled="isSavingLyrics" @click="handleSaveLyrics">
-                  {{ isSavingLyrics ? '저장 중...' : '저장' }}
-                </Button>
-                <Button size="sm" variant="outline" :disabled="isSavingLyrics" @click="cancelEditLyrics">취소</Button>
-              </div>
-            </div>
-
-            <!-- 가사 표시 -->
-            <div v-else-if="song?.lyrics">
-              <p class="text-sm whitespace-pre-line leading-relaxed text-foreground">{{ song.lyrics }}</p>
-            </div>
-            <p v-else class="text-xs text-muted-foreground">등록된 가사가 없습니다.</p>
           </Card>
 
           <!-- ── 관리 패널 (접이식) ─────────────────────── -->

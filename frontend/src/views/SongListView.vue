@@ -4,18 +4,21 @@ import { Plus, Music, Search, X, FolderUp } from '@lucide/vue'
 import SongList from '../components/SongList.vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import { useSongStore } from '../stores/songStore'
+import { getAllTags } from '../apis/songApi'
 
 const songStore = useSongStore()
 
 const query = ref('')
 const songKey = ref('')
+const selectedTag = ref<string | null>(null)
+const allTags = ref<string[]>([])
 const hasFilter = ref(false)
 
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
 const runSearch = () => {
-  hasFilter.value = Boolean(query.value.trim() || songKey.value.trim())
-  void songStore.fetchSongs({ query: query.value, songKey: songKey.value })
+  hasFilter.value = Boolean(query.value.trim() || songKey.value.trim() || selectedTag.value)
+  void songStore.fetchSongs({ query: query.value, songKey: songKey.value, tag: selectedTag.value })
 }
 
 watch([query, songKey], () => {
@@ -23,13 +26,23 @@ watch([query, songKey], () => {
   debounceTimer = setTimeout(runSearch, 300)
 })
 
+watch(selectedTag, () => {
+  runSearch()
+})
+
+const toggleTag = (tag: string) => {
+  selectedTag.value = selectedTag.value === tag ? null : tag
+}
+
 const clearFilters = () => {
   query.value = ''
   songKey.value = ''
+  selectedTag.value = null
 }
 
-onMounted(() => {
+onMounted(async () => {
   void songStore.fetchSongs()
+  allTags.value = await getAllTags()
 })
 </script>
 
@@ -81,6 +94,22 @@ onMounted(() => {
         placeholder="코드 (예: C, G, Am)"
         class="h-10 w-full sm:w-40 px-3 rounded-md border border-input bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
       />
+    </div>
+
+    <!-- 태그 필터 -->
+    <div v-if="allTags.length > 0" class="flex flex-wrap gap-1.5 mb-5">
+      <button
+        v-for="tag in allTags"
+        :key="tag"
+        type="button"
+        class="inline-flex items-center h-7 px-2.5 rounded-full text-xs font-medium border transition-colors"
+        :class="selectedTag === tag
+          ? 'bg-primary text-primary-foreground border-primary'
+          : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-primary'"
+        @click="toggleTag(tag)"
+      >
+        {{ tag }}
+      </button>
     </div>
 
     <p v-if="songStore.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>

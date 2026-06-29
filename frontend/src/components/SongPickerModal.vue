@@ -13,17 +13,24 @@ const emit = defineEmits<{
 }>()
 
 const query = ref('')
+const selectedTag = ref<string | null>(null)
 const selectedSong = ref<Song | null>(null)
 const selectedSheetId = ref<number | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
 
+const allTags = computed(() => {
+  const set = new Set<string>()
+  props.songs.forEach(s => s.tags?.forEach(t => set.add(t)))
+  return [...set].sort()
+})
+
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
-  if (!q) return props.songs
-  return props.songs.filter(s =>
-    s.title.toLowerCase().includes(q) ||
-    (s.artist ?? '').toLowerCase().includes(q)
-  )
+  return props.songs.filter(s => {
+    const matchQuery = !q || s.title.toLowerCase().includes(q) || (s.artist ?? '').toLowerCase().includes(q)
+    const matchTag = !selectedTag.value || (s.tags ?? []).includes(selectedTag.value)
+    return matchQuery && matchTag
+  })
 })
 
 const sheets = computed<SongSheetSummary[]>(() => {
@@ -74,7 +81,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
       <template v-if="!selectedSong">
         <!-- 검색 -->
-        <div class="px-4 py-3 border-b border-border shrink-0">
+        <div class="px-4 py-3 border-b border-border shrink-0 flex flex-col gap-2">
           <div class="relative">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -84,6 +91,20 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
               placeholder="제목 또는 아티스트 검색"
               class="w-full pl-9 pr-3 py-2 text-sm bg-muted rounded-md text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50"
             />
+          </div>
+          <div v-if="allTags.length > 0" class="flex flex-wrap gap-1.5">
+            <button
+              v-for="tag in allTags"
+              :key="tag"
+              type="button"
+              class="inline-flex items-center h-6 px-2 rounded-full text-xs font-medium border transition-colors"
+              :class="selectedTag === tag
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-muted text-muted-foreground border-border hover:border-primary hover:text-primary'"
+              @click="selectedTag = selectedTag === tag ? null : tag"
+            >
+              {{ tag }}
+            </button>
           </div>
         </div>
 

@@ -6,7 +6,7 @@ import {
   X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type, PlayCircle, ExternalLink,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
-import { deleteSong, updateSong, updateLyrics } from '../apis/songApi'
+import { deleteSong, updateSong, updateLyrics, getAllTags } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
 import type { OcrResult } from '../types/song'
@@ -17,6 +17,7 @@ import Textarea from '../components/ui/Textarea.vue'
 import Label from '../components/ui/Label.vue'
 import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
+import TagInput from '../components/ui/TagInput.vue'
 import { useSongStore } from '../stores/songStore'
 import type { SongSheetSummary, SongFile } from '../types/song'
 
@@ -77,7 +78,8 @@ const showManage = ref(false)
 
 // ── 곡 수정
 const isEditing = ref(false)
-const editForm = reactive({ title: '', artist: '', memo: '', youtubeUrl: '' })
+const editForm = reactive({ title: '', artist: '', memo: '', youtubeUrl: '', tags: [] as string[] })
+const allTags = ref<string[]>([])
 const editError = ref('')
 const isSavingEdit = ref(false)
 
@@ -86,6 +88,7 @@ const startEdit = () => {
   editForm.artist = song.value?.artist ?? ''
   editForm.memo = song.value?.memo ?? ''
   editForm.youtubeUrl = song.value?.youtubeUrl ?? ''
+  editForm.tags = [...(song.value?.tags ?? [])]
   editError.value = ''
   isEditing.value = true
 }
@@ -108,6 +111,7 @@ const handleUpdateSong = async () => {
       artist: toOpt(editForm.artist),
       memo: toOpt(editForm.memo),
       youtubeUrl: toOpt(editForm.youtubeUrl),
+      tags: editForm.tags,
     })
     await songStore.fetchSong(props.songId)
     isEditing.value = false
@@ -396,9 +400,10 @@ const loadSong = () => {
   if (Number.isFinite(props.songId)) void songStore.fetchSong(props.songId)
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadSong()
   window.addEventListener('keydown', onKey)
+  allTags.value = await getAllTags()
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
@@ -537,6 +542,14 @@ watch(() => props.songId, loadSong)
             <p v-if="song.memo" class="mt-3 text-xs text-muted-foreground whitespace-pre-line border-t border-border pt-3">
               {{ song.memo }}
             </p>
+
+            <div v-if="song.tags?.length" class="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
+              <span
+                v-for="tag in song.tags"
+                :key="tag"
+                class="inline-flex items-center h-6 px-2 rounded-full bg-primary/15 text-primary text-xs font-medium"
+              >{{ tag }}</span>
+            </div>
 
             <button
               type="button"
@@ -734,6 +747,10 @@ watch(() => props.songId, loadSong)
                 <div class="flex flex-col gap-1.5">
                   <Label for="edit-youtube">유튜브 링크</Label>
                   <Input id="edit-youtube" v-model="editForm.youtubeUrl" type="url" placeholder="https://youtu.be/..." />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label>태그</Label>
+                  <TagInput v-model="editForm.tags" :suggestions="allTags" />
                 </div>
                 <div class="flex gap-2">
                   <Button :disabled="isSavingEdit" @click="handleUpdateSong">

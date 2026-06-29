@@ -21,18 +21,23 @@ public class SongService {
         this.songFileService = songFileService;
     }
 
-    public List<SongResponse> getSongs(String query, String songKey) {
+    public List<SongResponse> getSongs(String query, String songKey, String tag) {
         String likeQuery = (query == null || query.isBlank())
                 ? null
                 : "%" + query.trim().toLowerCase() + "%";
         String normalizedKey = (songKey == null || songKey.isBlank())
                 ? null
                 : "%" + songKey.trim().toLowerCase() + "%";
+        String normalizedTag = (tag == null || tag.isBlank()) ? null : tag.trim();
 
-        return songRepository.searchSongs(likeQuery, normalizedKey)
+        return songRepository.searchSongs(likeQuery, normalizedKey, normalizedTag)
                 .stream()
                 .map(SongResponse::from)
                 .toList();
+    }
+
+    public List<String> getAllTags() {
+        return songRepository.findAllTags();
     }
 
     @Transactional
@@ -46,6 +51,7 @@ public class SongService {
                 request.memo(),
                 request.youtubeUrl()
         );
+        song.updateTags(request.tags());
         toSheets(request.sheets()).forEach(song::addSheet);
 
         return SongResponse.from(songRepository.save(song));
@@ -67,6 +73,7 @@ public class SongService {
                 request.memo(),
                 request.youtubeUrl()
         );
+        song.updateTags(request.tags());
 
         return SongResponse.from(song);
     }

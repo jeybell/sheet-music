@@ -20,6 +20,8 @@ public record SongRequest(
         @Size(max = 500, message = "youtube_url must be 500 characters or less")
         String youtubeUrl,
 
+        List<String> tags,
+
         @Valid
         List<SongSheetRequest> sheets
 ) {

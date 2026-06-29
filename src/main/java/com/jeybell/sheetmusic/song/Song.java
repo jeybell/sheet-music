@@ -1,11 +1,14 @@
 package com.jeybell.sheetmusic.song;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -39,6 +42,11 @@ public class Song {
     @Column(name = "youtube_url", length = 500)
     private String youtubeUrl;
 
+    @ElementCollection
+    @CollectionTable(name = "song_tags", joinColumns = @JoinColumn(name = "song_id"))
+    @Column(name = "tag", length = 50)
+    private List<String> tags = new ArrayList<>();
+
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)
     private List<SongSheet> sheets = new ArrayList<>();
 
@@ -58,6 +66,7 @@ public class Song {
         this.memo = memo;
         this.lyrics = null;
         this.youtubeUrl = youtubeUrl;
+        this.tags = new ArrayList<>();
     }
 
     @PrePersist
@@ -71,6 +80,17 @@ public class Song {
         this.composer = composer;
         this.memo = memo;
         this.youtubeUrl = youtubeUrl;
+    }
+
+    public void updateTags(List<String> tags) {
+        this.tags.clear();
+        if (tags != null) {
+            tags.stream()
+                .map(String::trim)
+                .filter(t -> !t.isBlank())
+                .distinct()
+                .forEach(this.tags::add);
+        }
     }
 
     public void updateLyrics(String lyrics) {
@@ -117,6 +137,10 @@ public class Song {
 
     public String getYoutubeUrl() {
         return youtubeUrl;
+    }
+
+    public List<String> getTags() {
+        return Collections.unmodifiableList(tags);
     }
 
     public List<SongSheet> getSheets() {

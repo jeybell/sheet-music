@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music } from '@lucide/vue'
-import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken } from '../apis/setlistApi'
+import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -27,7 +27,55 @@ const store = useSetlistStore()
 const songStore = useSongStore()
 
 const setlist = computed(() => store.selectedSetlist)
-const items = computed(() => [...(setlist.value?.items ?? [])].sort((a, b) => a.orderNo - b.orderNo))
+const items = ref<NonNullable<typeof store.selectedSetlist>['items']>([])
+
+watch(
+  () => store.selectedSetlist?.items,
+  (raw) => {
+    items.value = [...(raw ?? [])].sort((a, b) => a.orderNo - b.orderNo)
+  },
+  { immediate: true, deep: true }
+)
+
+// ── 드래그앤드롭 순서 변경
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+const onDragStart = (index: number) => {
+  dragIndex.value = index
+}
+
+const onDragOver = (e: DragEvent, index: number) => {
+  e.preventDefault()
+  dragOverIndex.value = index
+}
+
+const onDrop = async (dropIndex: number) => {
+  const from = dragIndex.value
+  if (from === null || from === dropIndex) {
+    dragIndex.value = null
+    dragOverIndex.value = null
+    return
+  }
+  const reordered = [...items.value]
+  const [moved] = reordered.splice(from, 1)
+  reordered.splice(dropIndex, 0, moved)
+  items.value = reordered
+  dragIndex.value = null
+  dragOverIndex.value = null
+
+  try {
+    await reorderSetlistItems(props.setlistId, reordered.map(i => i.setlistItemId))
+    await store.fetchSetlist(props.setlistId)
+  } catch {
+    await store.fetchSetlist(props.setlistId)
+  }
+}
+
+const onDragEnd = () => {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
 
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
@@ -423,12 +471,21 @@ watch(() => props.setlistId, load)
             </p>
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
               <Card
-                v-for="item in items"
+                v-for="(item, idx) in items"
                 :key="item.setlistItemId"
-                class="px-4 py-3 flex items-start gap-3"
+                draggable="true"
+                class="px-4 py-3 flex items-start gap-3 cursor-grab active:cursor-grabbing transition-opacity select-none"
+                :class="{
+                  'opacity-40': dragIndex === idx,
+                  'ring-2 ring-primary ring-offset-1 ring-offset-background': dragOverIndex === idx && dragIndex !== idx,
+                }"
+                @dragstart="onDragStart(idx)"
+                @dragover="onDragOver($event, idx)"
+                @drop="onDrop(idx)"
+                @dragend="onDragEnd"
               >
                 <div class="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                  <span class="text-xs font-bold text-muted-foreground">{{ item.orderNo }}</span>
+                  <span class="text-xs font-bold text-muted-foreground">{{ idx + 1 }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap mb-0.5">
@@ -443,7 +500,7 @@ watch(() => props.setlistId, load)
                 <button
                   type="button"
                   class="p-1.5 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                  @click="handleDeleteItem(item.setlistItemId, item.songTitle)"
+                  @click.stop="handleDeleteItem(item.setlistItemId, item.songTitle)"
                 >
                   <Trash2 class="w-3.5 h-3.5" />
                 </button>

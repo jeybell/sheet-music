@@ -3,11 +3,13 @@ package com.jeybell.sheetmusic.setlist;
 import com.jeybell.sheetmusic.setlist.dto.SetlistItemRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistItemResponse;
 import com.jeybell.sheetmusic.setlist.dto.SetlistItemUpdateRequest;
+import com.jeybell.sheetmusic.setlist.dto.SetlistReorderRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -45,6 +47,15 @@ public class SetlistItemController {
     @DeleteMapping("/api/setlist-items/{itemId}")
     public ResponseEntity<Void> deleteItem(@PathVariable("itemId") Long itemId) {
         setlistItemService.deleteItem(itemId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/api/setlists/{setlistId}/items/reorder")
+    public ResponseEntity<Void> reorderItems(
+            @PathVariable("setlistId") Long setlistId,
+            @RequestBody SetlistReorderRequest request
+    ) {
+        setlistItemService.reorderItems(setlistId, request);
         return ResponseEntity.noContent().build();
     }
 }

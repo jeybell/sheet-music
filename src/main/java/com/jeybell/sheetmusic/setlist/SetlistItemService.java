@@ -4,6 +4,10 @@ import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.setlist.dto.SetlistItemRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistItemResponse;
 import com.jeybell.sheetmusic.setlist.dto.SetlistItemUpdateRequest;
+import com.jeybell.sheetmusic.setlist.dto.SetlistReorderRequest;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import com.jeybell.sheetmusic.song.Song;
 import com.jeybell.sheetmusic.song.SongRepository;
 import com.jeybell.sheetmusic.song.SongSheet;
@@ -58,6 +62,22 @@ public class SetlistItemService {
     public void deleteItem(Long itemId) {
         SetlistItem item = getActiveItem(itemId);
         setlistItemRepository.delete(item);
+    }
+
+    @Transactional
+    public void reorderItems(Long setlistId, SetlistReorderRequest request) {
+        List<Long> itemIds = request.itemIds();
+        List<SetlistItem> items = setlistItemRepository.findAllByIdsAndSetlistActive(itemIds);
+
+        Map<Long, SetlistItem> itemMap = items.stream()
+                .collect(Collectors.toMap(SetlistItem::getSetlistItemId, i -> i));
+
+        for (int i = 0; i < itemIds.size(); i++) {
+            SetlistItem item = itemMap.get(itemIds.get(i));
+            if (item != null && item.getSetlist().getSetlistId().equals(setlistId)) {
+                item.update(item.getSongSheet(), i + 1, item.getMemo());
+            }
+        }
     }
 
     private Setlist getActiveSetlist(Long setlistId) {

@@ -38,3 +38,7 @@ export const getSharedSetlist = async (token: string): Promise<SharedSetlist> =>
   const { data } = await http.get<SharedSetlist>(`/api/setlists/share/${token}`)
   return data
 }
+
+export const reorderSetlistItems = async (setlistId: number, itemIds: number[]): Promise<void> => {
+  await http.patch(`/api/setlists/${setlistId}/items/reorder`, { itemIds })
+}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { Plus, X, Trash2, ChevronDown, ChevronUp } from '@lucide/vue'
+import { Plus, X, Trash2, ChevronDown } from '@lucide/vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Card from '../components/ui/Card.vue'
 import Button from '../components/ui/Button.vue'

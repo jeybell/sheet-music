@@ -36,8 +36,7 @@ public interface SetlistRepository extends JpaRepository<Setlist, Long> {
             from Setlist sl
             left join fetch sl.items items
             left join fetch items.song
-            left join fetch items.songSheet ss
-            left join fetch ss.files
+            left join fetch items.songSheet
             where sl.shareToken = :token
               and sl.deletedAt is null
             """)

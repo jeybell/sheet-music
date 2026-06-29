@@ -18,14 +18,14 @@ const { theme, toggleTheme } = useTheme()
             active-class="bg-primary-soft text-primary font-semibold"
             class="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
-            곡 목록
+            악보
           </RouterLink>
           <RouterLink
             to="/setlists"
             active-class="bg-primary-soft text-primary font-semibold"
             class="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
-            셋리스트
+            콘티
           </RouterLink>
         </nav>
         <button

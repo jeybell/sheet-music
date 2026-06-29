@@ -54,6 +54,10 @@ public class Song {
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)
     private List<SongSheet> sheets = new ArrayList<>();
 
+    @OneToMany(mappedBy = "song", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @Fetch(FetchMode.SUBSELECT)
+    private List<SongLink> links = new ArrayList<>();
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -109,6 +113,14 @@ public class Song {
     public void addSheet(SongSheet sheet) {
         sheet.assignSong(this);
         this.sheets.add(sheet);
+    }
+
+    public void addLink(SongLink link) {
+        this.links.add(link);
+    }
+
+    public List<SongLink> getLinks() {
+        return Collections.unmodifiableList(links);
     }
 
     public void softDelete() {

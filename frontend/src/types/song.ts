@@ -26,6 +26,12 @@ export interface SongSheetSummary {
   files?: SongFile[];
 }
 
+export interface SongLink {
+  linkId: number;
+  title: string;
+  url: string;
+}
+
 export interface Song {
   songId: number;
   title: string;
@@ -34,6 +40,7 @@ export interface Song {
   lyrics?: string | null;
   youtubeUrl?: string | null;
   tags?: string[];
+  links?: SongLink[];
   sheets?: SongSheetSummary[];
   songSheets?: SongSheetSummary[];
   files?: SongFile[];

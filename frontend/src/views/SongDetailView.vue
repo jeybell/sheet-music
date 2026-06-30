@@ -942,23 +942,14 @@ watch(() => props.songId, loadSong)
 
             <Card v-if="showAddSheet" class="p-5 mb-4 bg-muted/40">
               <p v-if="sheetError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ sheetError }}</p>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                <div class="flex flex-col gap-1.5">
-                  <Label for="sheet-key">코드</Label>
-                  <Input id="sheet-key" v-model="sheetForm.sheetKey" type="text" placeholder="예) C, G, Am" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <Label for="version-name">버전명</Label>
-                  <Input id="version-name" v-model="sheetForm.versionName" type="text" placeholder="예) 원본, 남성용" />
-                </div>
+              <div class="flex gap-2 mb-3">
+                <Input v-model="sheetForm.sheetKey" type="text" placeholder="키 (예: C, G)" class="flex-1" />
+                <Input v-model="sheetForm.versionName" type="text" placeholder="버전명 (예: 원본)" class="flex-1" />
+                <Button :disabled="isCreatingSheet" @click="handleCreateSheet" class="shrink-0">
+                  {{ isCreatingSheet ? '...' : '추가' }}
+                </Button>
               </div>
-              <div class="flex flex-col gap-1.5 mb-4">
-                <Label for="sheet-memo">메모</Label>
-                <Textarea id="sheet-memo" v-model="sheetForm.memo" rows="2" />
-              </div>
-              <Button :disabled="isCreatingSheet" @click="handleCreateSheet">
-                {{ isCreatingSheet ? '추가 중...' : '추가' }}
-              </Button>
+              <Textarea v-model="sheetForm.memo" rows="2" placeholder="메모 (선택)" class="text-xs" />
             </Card>
 
             <p v-if="sheets.length === 0" class="text-sm text-muted-foreground py-6 text-center">

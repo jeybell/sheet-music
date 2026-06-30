@@ -8,7 +8,6 @@ import { addSetlistItem } from '../apis/setlistItemApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
-import Textarea from '../components/ui/Textarea.vue'
 import Label from '../components/ui/Label.vue'
 import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
@@ -26,8 +25,10 @@ const songStore = useSongStore()
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
 
+const today = () => new Date().toISOString().slice(0, 10)
+
 const showCreateForm = ref(false)
-const createForm = reactive({ serviceDate: '', serviceType: '', title: '', memo: '' })
+const createForm = reactive({ serviceDate: today(), serviceType: '', title: '', memo: '' })
 const createError = ref('')
 const isCreating = ref(false)
 
@@ -46,7 +47,7 @@ const onSongPicked = (songId: number, songSheetId: number | null) => {
 const removePendingSong = (idx: number) => { pendingSongs.value.splice(idx, 1) }
 
 const resetCreateForm = () => {
-  createForm.serviceDate = ''
+  createForm.serviceDate = today()
   createForm.serviceType = ''
   createForm.title = ''
   createForm.memo = ''
@@ -143,10 +144,6 @@ onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
         <div class="flex flex-col gap-1.5">
           <Label for="setlist-title">제목</Label>
           <Input id="setlist-title" v-model="createForm.title" type="text" placeholder="선택사항" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <Label for="setlist-memo">메모</Label>
-          <Textarea id="setlist-memo" v-model="createForm.memo" rows="2" />
         </div>
         <!-- 곡 목록 -->
         <div class="flex flex-col gap-1.5">

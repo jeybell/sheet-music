@@ -6,7 +6,9 @@ defineProps<{
   songs: Song[]
 }>()
 
-const getSheetCount = (song: Song) => (song.sheets ?? song.songSheets ?? []).length
+const getSheets = (song: Song) => song.sheets ?? song.songSheets ?? []
+const getSheetCount = (song: Song) => getSheets(song).length
+const getFirstKey = (song: Song) => getSheets(song).find(s => s.sheetKey)?.sheetKey ?? null
 </script>
 
 <template>
@@ -18,7 +20,11 @@ const getSheetCount = (song: Song) => (song.sheets ?? song.songSheets ?? []).len
       class="bg-card rounded-xl border border-border p-4 flex items-center gap-4 hover:border-primary/50 hover:shadow-md transition-all group"
     >
       <div class="shrink-0 w-12 h-12 rounded-lg bg-primary-soft flex items-center justify-center">
-        <Music class="w-5 h-5 text-primary" />
+        <span
+          v-if="getFirstKey(song)"
+          class="text-sm font-bold text-primary leading-none"
+        >{{ getFirstKey(song) }}</span>
+        <Music v-else class="w-5 h-5 text-primary" />
       </div>
       <div class="flex-1 min-w-0">
         <p class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">

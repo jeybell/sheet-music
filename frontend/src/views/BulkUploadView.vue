@@ -249,7 +249,7 @@ const statusLabel: Record<ItemStatus, string> = {
 
           <div class="flex gap-2">
             <div class="flex flex-col gap-1 flex-1">
-              <Label class="text-xs">코드</Label>
+              <Label class="text-xs">키</Label>
               <Input
                 v-model="item.sheetKey"
                 type="text"

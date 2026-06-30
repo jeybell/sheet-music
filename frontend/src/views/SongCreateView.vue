@@ -146,7 +146,7 @@ const handleSubmit = async () => {
             </div>
 
             <p v-if="isOcrLoading" class="text-xs text-primary flex items-center gap-1 mt-1">
-              <ScanText class="w-3.5 h-3.5 animate-pulse" /> OCR 분석 중... 제목·코드·아티스트를 자동으로 입력합니다.
+              <ScanText class="w-3.5 h-3.5 animate-pulse" /> OCR 분석 중... 제목·키·아티스트를 자동으로 입력합니다.
             </p>
           </div>
 
@@ -159,7 +159,7 @@ const handleSubmit = async () => {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <Label for="sheetKey">코드</Label>
+            <Label for="sheetKey">키</Label>
             <Input id="sheetKey" v-model="form.sheetKey" type="text" placeholder="예) C, G, Am" />
           </div>
 

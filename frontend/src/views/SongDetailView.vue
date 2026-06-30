@@ -271,7 +271,7 @@ const applyOcrKey = async (sheet: SongSheetSummary, key: string) => {
     delete ocrResults[sheet.songSheetId]
     await songStore.fetchSong(props.songId)
   } catch (e) {
-    alert(extractApiError(e, '코드 적용에 실패했습니다.'))
+    alert(extractApiError(e, '키 적용에 실패했습니다.'))
   }
 }
 
@@ -969,7 +969,7 @@ watch(() => props.songId, loadSong)
                   <p v-if="sheetUpdateError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-3">{{ sheetUpdateError }}</p>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                     <div class="flex flex-col gap-1.5">
-                      <Label>코드</Label>
+                      <Label>키</Label>
                       <Input v-model="sheetEditForm.sheetKey" type="text" placeholder="예) C, G, Am" />
                     </div>
                     <div class="flex flex-col gap-1.5">
@@ -1122,18 +1122,18 @@ watch(() => props.songId, loadSong)
                       </button>
                     </div>
                     <div v-if="ocrResults[sheet.songSheetId]?.key" class="flex items-center gap-2 flex-wrap">
-                      <span class="text-xs text-muted-foreground w-8">코드</span>
+                      <span class="text-xs text-muted-foreground w-8">키</span>
                       <Badge variant="violet">{{ ocrResults[sheet.songSheetId]?.key }}</Badge>
                       <button
                         type="button"
                         class="text-xs text-primary hover:underline"
                         @click="applyOcrKey(sheet, ocrResults[sheet.songSheetId]!.key!)"
                       >
-                        악보 코드에 적용
+                        악보 키에 적용
                       </button>
                     </div>
                     <div v-if="ocrResults[sheet.songSheetId]?.chords?.length" class="flex items-center gap-2 flex-wrap">
-                      <span class="text-xs text-muted-foreground w-8">코드</span>
+                      <span class="text-xs text-muted-foreground w-8">코드진행</span>
                       <span class="text-xs text-foreground">{{ ocrResults[sheet.songSheetId]?.chords?.join(', ') }}</span>
                     </div>
                   </div>

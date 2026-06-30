@@ -39,10 +39,11 @@ public class SongFileService {
         }
 
         SongSheet songSheet = getActiveSongSheet(songSheetId);
+        Long songId = songSheet.getSong().getSongId();
         String contentType = multipartFile.getContentType();
         String originalFileName = cleanOriginalFileName(multipartFile.getOriginalFilename());
         String storedFileName = UUID.randomUUID() + getExtension(originalFileName);
-        String key = "sheets/" + songSheetId + "/" + storedFileName;
+        String key = "songs/" + songId + "/" + storedFileName;
 
         byte[] fileBytes;
         try {

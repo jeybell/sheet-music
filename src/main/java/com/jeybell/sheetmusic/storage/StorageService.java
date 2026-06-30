@@ -10,4 +10,6 @@ public interface StorageService {
     Resource load(String key);
 
     void delete(String key);
+
+    void copy(String sourceKey, String destKey);
 }

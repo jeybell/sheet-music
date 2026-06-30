@@ -65,6 +65,18 @@ public class LocalStorageService implements StorageService {
         }
     }
 
+    @Override
+    public void copy(String sourceKey, String destKey) {
+        Path src = resolve(sourceKey);
+        Path dst = resolve(destKey);
+        try {
+            Files.createDirectories(dst.getParent());
+            Files.copy(src, dst, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to copy file: " + sourceKey + " → " + destKey, e);
+        }
+    }
+
     private Path resolve(String key) {
         Path resolved = basePath.resolve(key).normalize();
         if (!resolved.startsWith(basePath)) {

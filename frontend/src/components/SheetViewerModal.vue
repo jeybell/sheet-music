@@ -9,6 +9,7 @@ export interface ViewerSong {
   sheetKey: string | null
   versionName: string | null
   files: { songFileId: number; originalFileName: string | null; contentType: string | null }[]
+  sheetDeleted?: boolean
 }
 
 const props = defineProps<{
@@ -143,7 +144,19 @@ const downloadPdf = async () => {
 
       <!-- 콘텐츠 -->
       <div class="flex flex-col items-center gap-3 w-full h-full overflow-y-auto py-4">
-        <template v-if="imageFiles.length > 0">
+        <!-- 삭제된 악보 버전 참조 안내 -->
+        <div
+          v-if="currentSong?.sheetDeleted"
+          class="flex flex-col items-center gap-2 text-center px-6"
+        >
+          <div class="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+            <span class="text-yellow-400 text-xl">!</span>
+          </div>
+          <p class="text-yellow-300 text-sm font-medium">악보 버전이 삭제되었습니다</p>
+          <p class="text-zinc-400 text-xs">이 곡에 연결된 악보 버전이 삭제되어 표시할 수 없습니다.<br>셋리스트에서 악보 버전을 다시 선택해주세요.</p>
+        </div>
+
+        <template v-else-if="imageFiles.length > 0">
           <img
             v-for="file in imageFiles"
             :key="file.songFileId"
@@ -155,6 +168,7 @@ const downloadPdf = async () => {
         </template>
         <div
           v-for="file in pdfFiles"
+          v-show="!currentSong?.sheetDeleted"
           :key="file.songFileId"
           class="text-white text-sm"
         >
@@ -168,7 +182,7 @@ const downloadPdf = async () => {
           </a>
         </div>
         <p
-          v-if="imageFiles.length === 0 && pdfFiles.length === 0"
+          v-if="!currentSong?.sheetDeleted && imageFiles.length === 0 && pdfFiles.length === 0"
           class="text-zinc-400 text-sm"
         >
           등록된 악보 파일이 없습니다.

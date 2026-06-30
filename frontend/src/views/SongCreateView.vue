@@ -31,19 +31,22 @@ const showExtra = ref(false)
 
 const toOpt = (v: string) => v.trim() || null
 
-const handleImageChange = async (e: Event) => {
+const handleImageChange = (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
   imageFile.value = file
   imagePreviewUrl.value = URL.createObjectURL(file)
+}
 
+const runOcr = async () => {
+  if (!imageFile.value) return
   isOcrLoading.value = true
   try {
-    const result = await previewOcr(file)
-    if (result.title && !form.title) form.title = result.title
-    if (result.key && !form.sheetKey) form.sheetKey = result.key
-    if (result.artist && !form.artist) form.artist = result.artist
+    const result = await previewOcr(imageFile.value)
+    if (result.title) form.title = result.title
+    if (result.key) form.sheetKey = result.key
+    if (result.artist) form.artist = result.artist
   } catch {
     // OCR 실패해도 수동 입력으로 진행
   } finally {
@@ -145,9 +148,17 @@ const handleSubmit = async () => {
               </button>
             </div>
 
-            <p v-if="isOcrLoading" class="text-xs text-primary flex items-center gap-1 mt-1">
-              <ScanText class="w-3.5 h-3.5 animate-pulse" /> OCR 분석 중... 제목·키·아티스트를 자동으로 입력합니다.
-            </p>
+            <div v-if="imageFile" class="flex items-center gap-2 mt-1">
+              <button
+                type="button"
+                :disabled="isOcrLoading"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-muted hover:bg-muted/70 text-foreground disabled:opacity-50 transition-colors"
+                @click="runOcr"
+              >
+                <ScanText class="w-3.5 h-3.5" :class="{ 'animate-pulse': isOcrLoading }" />
+                {{ isOcrLoading ? 'OCR 분석 중...' : 'OCR로 정보 채우기' }}
+              </button>
+            </div>
           </div>
 
           <div class="border-t border-border" />

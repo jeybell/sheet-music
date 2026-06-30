@@ -9,3 +9,9 @@ export const previewOcr = async (file: File): Promise<OcrResult> => {
   });
   return data;
 };
+
+export const runOcrOnFile = async (songFileId: number): Promise<OcrResult | null> => {
+  const { data, status } = await http.post<OcrResult>(`/api/song-files/${songFileId}/ocr`);
+  if (status === 204) return null;
+  return data;
+};

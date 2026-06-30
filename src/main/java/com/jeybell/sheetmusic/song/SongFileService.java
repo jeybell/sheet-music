@@ -1,7 +1,6 @@
 package com.jeybell.sheetmusic.song;
 
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
-import com.jeybell.sheetmusic.ocr.AsyncOcrService;
 import com.jeybell.sheetmusic.song.dto.SongFileDownloadResponse;
 import com.jeybell.sheetmusic.song.dto.SongFileResponse;
 import com.jeybell.sheetmusic.storage.StorageService;
@@ -22,18 +21,15 @@ public class SongFileService {
     private final SongSheetRepository songSheetRepository;
     private final SongFileRepository songFileRepository;
     private final StorageService storageService;
-    private final AsyncOcrService asyncOcrService;
 
     public SongFileService(
             SongSheetRepository songSheetRepository,
             SongFileRepository songFileRepository,
-            StorageService storageService,
-            AsyncOcrService asyncOcrService
+            StorageService storageService
     ) {
         this.songSheetRepository = songSheetRepository;
         this.songFileRepository = songFileRepository;
         this.storageService = storageService;
-        this.asyncOcrService = asyncOcrService;
     }
 
     @Transactional
@@ -73,10 +69,6 @@ public class SongFileService {
             throw e;
         }
 
-        if (isImageContentType(contentType)) {
-            asyncOcrService.analyzeAndSave(songFile.getSongFileId(), fileBytes, originalFileName);
-        }
-
         return SongFileResponse.from(songFile);
     }
 
@@ -106,10 +98,6 @@ public class SongFileService {
             file.softDelete();
             storageService.delete(file.getFilePath());
         }
-    }
-
-    private boolean isImageContentType(String contentType) {
-        return contentType != null && contentType.startsWith("image/");
     }
 
     private SongSheet getActiveSongSheet(Long songSheetId) {

@@ -9,7 +9,7 @@ import { extractApiError } from '../composables/useApiError'
 import { deleteSong, updateSong, updateLyrics, getAllTags, addSongLink, updateSongLink, deleteSongLink } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
-import type { OcrResult } from '../types/song'
+import { runOcrOnFile } from '../apis/ocrApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
@@ -218,10 +218,54 @@ const handleDeleteSheet = async (sheet: SongSheetSummary) => {
 const selectedFiles = ref<Record<number, File | undefined>>({})
 const uploadInputKeys = ref<Record<number, number>>({})
 const uploadMessages = ref<Record<number, string | undefined>>({})
-const uploadOcrPending = ref<Record<number, boolean>>({})
 const uploadErrors = ref<Record<number, string | undefined>>({})
 const uploadingSheets = ref<Record<number, boolean>>({})
-const ocrResults = reactive<Record<number, OcrResult | undefined>>({})
+
+// ── 수동 OCR ──────────────────────────────────────────────
+const isOcrRunning = ref(false)
+const ocrError = ref('')
+
+const firstImageFileId = computed((): number | null => {
+  for (const sheet of sheets.value) {
+    for (const f of sheet.files ?? []) {
+      if (f.contentType?.startsWith('image/')) return f.songFileId
+    }
+  }
+  return null
+})
+
+const runOcrForInfo = async () => {
+  const fileId = firstImageFileId.value
+  if (!fileId) return
+  isOcrRunning.value = true
+  ocrError.value = ''
+  try {
+    const result = await runOcrOnFile(fileId)
+    if (!result) { ocrError.value = 'OCR 결과가 없습니다.'; return }
+    if (result.title) await updateSong(props.songId, { title: result.title, artist: result.artist ?? song.value?.artist ?? null, memo: song.value?.memo ?? null })
+    await songStore.fetchSong(props.songId)
+  } catch (e) {
+    ocrError.value = extractApiError(e, 'OCR 실행에 실패했습니다.')
+  } finally {
+    isOcrRunning.value = false
+  }
+}
+
+const runOcrForLyrics = async () => {
+  const fileId = firstImageFileId.value
+  if (!fileId) return
+  isOcrRunning.value = true
+  ocrError.value = ''
+  try {
+    const result = await runOcrOnFile(fileId)
+    if (!result?.lyrics) { ocrError.value = 'OCR에서 가사를 추출하지 못했습니다.'; return }
+    lyricsForm.value = result.lyrics
+  } catch (e) {
+    ocrError.value = extractApiError(e, 'OCR 실행에 실패했습니다.')
+  } finally {
+    isOcrRunning.value = false
+  }
+}
 
 const handleFileChange = (event: Event, sheetId: number) => {
   const input = event.target as HTMLInputElement
@@ -240,52 +284,15 @@ const handleUpload = async (sheetId: number) => {
   uploadErrors.value[sheetId] = undefined
   uploadMessages.value[sheetId] = undefined
   try {
-    const result = await uploadSongSheetFile(sheetId, file)
+    await uploadSongSheetFile(sheetId, file)
     selectedFiles.value[sheetId] = undefined
     uploadInputKeys.value[sheetId] = (uploadInputKeys.value[sheetId] ?? 0) + 1
     uploadMessages.value[sheetId] = '업로드 완료'
-    if (result.ocrResult && (result.ocrResult.title || result.ocrResult.key || result.ocrResult.chords?.length)) {
-      ocrResults[sheetId] = result.ocrResult
-    } else if (!result.ocrDone) {
-      uploadOcrPending.value[sheetId] = true
-    }
     await songStore.fetchSong(props.songId)
   } catch (e) {
     uploadErrors.value[sheetId] = extractApiError(e, '업로드에 실패했습니다.')
   } finally {
     uploadingSheets.value[sheetId] = false
-  }
-}
-
-const dismissOcr = (sheetId: number) => {
-  delete ocrResults[sheetId]
-}
-
-const applyOcrKey = async (sheet: SongSheetSummary, key: string) => {
-  try {
-    await updateSongSheet(sheet.songSheetId, {
-      sheetKey: key,
-      versionName: sheet.versionName,
-      memo: sheet.memo,
-    })
-    delete ocrResults[sheet.songSheetId]
-    await songStore.fetchSong(props.songId)
-  } catch (e) {
-    alert(extractApiError(e, '키 적용에 실패했습니다.'))
-  }
-}
-
-const applyOcrTitle = async (title: string) => {
-  if (!song.value) return
-  try {
-    await updateSong(props.songId, {
-      title,
-      artist: song.value.artist ?? null,
-      memo: song.value.memo ?? null,
-    })
-    await songStore.fetchSong(props.songId)
-  } catch (e) {
-    alert(extractApiError(e, '제목 적용에 실패했습니다.'))
   }
 }
 
@@ -433,47 +440,6 @@ const handleSaveLyrics = async () => {
   }
 }
 
-const applyOcrLyrics = async (lyrics: string) => {
-  lyricsForm.value = lyrics
-  isEditingLyrics.value = true
-}
-
-// OCR 추출 가사 (현재 슬라이드 파일에서)
-const ocrLyrics = computed(() =>
-  currentSlide.value?.file.ocrResult?.lyrics ?? null
-)
-
-// ── OCR 폴링 ─────────────────────────────────────────────
-const OCR_POLL_INTERVAL = 15_000  // 15초
-const OCR_POLL_MAX = 40           // 최대 10분 (15s × 40)
-let ocrPollTimer: ReturnType<typeof setInterval> | null = null
-let ocrPollCount = 0
-
-const hasOcrPending = computed(() =>
-  sheets.value.some((sheet) =>
-    (sheet.files ?? []).some((f) => !f.ocrDone && !isPdf(f)),
-  ),
-)
-
-const startOcrPolling = () => {
-  if (ocrPollTimer) return
-  ocrPollCount = 0
-  ocrPollTimer = setInterval(async () => {
-    ocrPollCount++
-    await songStore.fetchSong(props.songId)
-    if (!hasOcrPending.value || ocrPollCount >= OCR_POLL_MAX) stopOcrPolling()
-  }, OCR_POLL_INTERVAL)
-}
-
-const stopOcrPolling = () => {
-  if (ocrPollTimer) { clearInterval(ocrPollTimer); ocrPollTimer = null }
-}
-
-watch(hasOcrPending, (pending) => {
-  if (pending) startOcrPolling()
-  else stopOcrPolling()
-})
-
 const loadSong = () => {
   if (Number.isFinite(props.songId)) void songStore.fetchSong(props.songId)
 }
@@ -485,7 +451,6 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
-  stopOcrPolling()
 })
 watch(() => props.songId, loadSong)
 </script>
@@ -790,9 +755,6 @@ watch(() => props.songId, loadSong)
                 <span v-if="song?.lyrics" class="text-xs font-normal text-muted-foreground ml-1">
                   ({{ song.lyrics.length }}자)
                 </span>
-                <span v-else-if="ocrLyrics" class="text-xs font-normal text-primary ml-1 flex items-center gap-0.5">
-                  <ScanText class="w-3 h-3" /> OCR
-                </span>
               </span>
               <ChevronDown
                 class="w-4 h-4 text-muted-foreground transition-transform duration-200"
@@ -802,25 +764,20 @@ watch(() => props.songId, loadSong)
 
             <!-- 펼쳐진 내용 -->
             <div v-if="lyricsOpen" class="px-4 pb-4 border-t border-border">
-              <!-- OCR 가사 적용 배너 -->
-              <div
-                v-if="!isEditingLyrics && ocrLyrics && !song?.lyrics"
-                class="mt-3 p-2.5 rounded-md bg-primary/5 border border-primary/20 text-xs"
-              >
-                <div class="flex items-center justify-between gap-2 mb-1.5">
-                  <span class="flex items-center gap-1 font-medium text-foreground">
-                    <ScanText class="w-3 h-3 text-primary" />
-                    OCR 추출 가사
-                  </span>
-                  <button type="button" class="text-primary hover:underline font-medium" @click="applyOcrLyrics(ocrLyrics!)">
-                    가사로 사용
-                  </button>
-                </div>
-                <p class="text-muted-foreground line-clamp-3 whitespace-pre-line leading-relaxed">{{ ocrLyrics }}</p>
-              </div>
-
               <!-- 가사 편집 폼 -->
               <div v-if="isEditingLyrics" class="flex flex-col gap-2 mt-3">
+                <div v-if="firstImageFileId" class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    :disabled="isOcrRunning"
+                    class="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border border-border text-xs text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+                    @click="runOcrForLyrics"
+                  >
+                    <ScanText class="w-3 h-3" :class="{ 'animate-pulse text-primary': isOcrRunning }" />
+                    {{ isOcrRunning ? 'OCR 분석 중...' : 'OCR로 가사 추출' }}
+                  </button>
+                  <span v-if="ocrError" class="text-xs text-destructive">{{ ocrError }}</span>
+                </div>
                 <p v-if="lyricsError" class="text-xs text-destructive">{{ lyricsError }}</p>
                 <Textarea
                   v-model="lyricsForm"
@@ -885,7 +842,17 @@ watch(() => props.songId, loadSong)
             <!-- 곡 정보 수정 -->
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-base font-semibold text-foreground">곡 관리</h2>
-              <div v-if="!isEditing" class="flex gap-2">
+              <div v-if="!isEditing" class="flex gap-2 flex-wrap">
+                <Button
+                  v-if="firstImageFileId"
+                  variant="outline"
+                  size="sm"
+                  :disabled="isOcrRunning"
+                  @click="runOcrForInfo"
+                >
+                  <ScanText class="w-3.5 h-3.5" :class="{ 'animate-pulse text-primary': isOcrRunning }" />
+                  {{ isOcrRunning ? 'OCR 분석 중...' : 'OCR로 정보 채우기' }}
+                </Button>
                 <Button variant="outline" size="sm" @click="startEdit">
                   <Pencil class="w-3.5 h-3.5" />
                   곡 정보 수정
@@ -1083,60 +1050,9 @@ watch(() => props.songId, loadSong)
                   <span v-if="uploadMessages[sheet.songSheetId]" class="text-xs text-green-500">
                     {{ uploadMessages[sheet.songSheetId] }}
                   </span>
-                  <span v-if="uploadOcrPending[sheet.songSheetId]" class="text-xs text-muted-foreground flex items-center gap-1">
-                    <ScanText class="w-3 h-3 animate-pulse text-primary" /> OCR 분석 중...
-                  </span>
                   <span v-if="uploadErrors[sheet.songSheetId]" class="text-xs text-destructive">
                     {{ uploadErrors[sheet.songSheetId] }}
                   </span>
-                </div>
-
-                <!-- OCR 결과 배너 -->
-                <div
-                  v-if="ocrResults[sheet.songSheetId]"
-                  class="mt-3 p-3 rounded-md bg-muted border border-border text-sm"
-                >
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                      <ScanText class="w-3.5 h-3.5 text-primary" />
-                      OCR 감지 결과
-                    </span>
-                    <button
-                      type="button"
-                      class="text-muted-foreground hover:text-foreground transition-colors"
-                      @click="dismissOcr(sheet.songSheetId)"
-                    >
-                      <X class="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div class="flex flex-col gap-1.5">
-                    <div v-if="ocrResults[sheet.songSheetId]?.title" class="flex items-center gap-2 flex-wrap">
-                      <span class="text-xs text-muted-foreground w-8">제목</span>
-                      <span class="text-xs text-foreground">{{ ocrResults[sheet.songSheetId]?.title }}</span>
-                      <button
-                        type="button"
-                        class="text-xs text-primary hover:underline"
-                        @click="applyOcrTitle(ocrResults[sheet.songSheetId]!.title!)"
-                      >
-                        곡 제목에 적용
-                      </button>
-                    </div>
-                    <div v-if="ocrResults[sheet.songSheetId]?.key" class="flex items-center gap-2 flex-wrap">
-                      <span class="text-xs text-muted-foreground w-8">키</span>
-                      <Badge variant="violet">{{ ocrResults[sheet.songSheetId]?.key }}</Badge>
-                      <button
-                        type="button"
-                        class="text-xs text-primary hover:underline"
-                        @click="applyOcrKey(sheet, ocrResults[sheet.songSheetId]!.key!)"
-                      >
-                        악보 키에 적용
-                      </button>
-                    </div>
-                    <div v-if="ocrResults[sheet.songSheetId]?.chords?.length" class="flex items-center gap-2 flex-wrap">
-                      <span class="text-xs text-muted-foreground w-8">코드진행</span>
-                      <span class="text-xs text-foreground">{{ ocrResults[sheet.songSheetId]?.chords?.join(', ') }}</span>
-                    </div>
-                  </div>
                 </div>
               </Card>
             </div>

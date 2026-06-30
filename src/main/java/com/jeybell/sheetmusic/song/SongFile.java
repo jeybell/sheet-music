@@ -128,6 +128,10 @@ public class SongFile {
         return deletedAt;
     }
 
+    public void updateFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
     public void applyOcrResult(String title, String key, String chords, String lyrics, String rawText) {
         this.ocrTitle = title;
         this.ocrKey = key;

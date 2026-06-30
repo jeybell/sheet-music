@@ -221,11 +221,13 @@ const openViewer = async () => {
       const sheet = item.songSheetId
         ? sheets.find(s => s.songSheetId === item.songSheetId)
         : sheets[0]
+      const sheetDeleted = !!item.songSheetId && !sheet
       return {
         title: item.songTitle,
         artist: item.songArtist,
         sheetKey: item.sheetKey,
         versionName: item.versionName,
+        sheetDeleted,
         files: (sheet?.files ?? []).map(f => ({
           songFileId: f.songFileId,
           originalFileName: f.originalFileName ?? null,
@@ -494,6 +496,9 @@ watch(() => props.setlistId, load)
                   </div>
                   <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet" class="mb-1">
                     {{ sheetLabel(item.sheetKey, item.versionName) }}
+                  </Badge>
+                  <Badge v-else-if="item.songSheetId" variant="destructive" class="mb-1 text-xs">
+                    악보 버전 삭제됨
                   </Badge>
                   <p v-if="item.memo" class="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{{ item.memo }}</p>
                 </div>

@@ -2,8 +2,9 @@
 import { onMounted, reactive, ref } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { Plus, Trash2, ChevronRight, X } from '@lucide/vue'
+import { Plus, Trash2, ChevronRight, X, Music } from '@lucide/vue'
 import { createSetlist, deleteSetlist } from '../apis/setlistApi'
+import { addSetlistItem } from '../apis/setlistItemApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
@@ -11,13 +12,16 @@ import Textarea from '../components/ui/Textarea.vue'
 import Label from '../components/ui/Label.vue'
 import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
+import SongPickerModal from '../components/SongPickerModal.vue'
 import { useSetlistStore } from '../stores/setlistStore'
+import { useSongStore } from '../stores/songStore'
 import type { Setlist } from '../types/setlist'
 
 interface ApiErrorResponse { message?: string }
 
 const router = useRouter()
 const store = useSetlistStore()
+const songStore = useSongStore()
 
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
@@ -27,12 +31,27 @@ const createForm = reactive({ serviceDate: '', serviceType: '', title: '', memo:
 const createError = ref('')
 const isCreating = ref(false)
 
+// 곡 추가 (폼 내)
+interface PendingSong { songId: number; songSheetId: number | null; title: string }
+const pendingSongs = ref<PendingSong[]>([])
+const showSongPicker = ref(false)
+
+const onSongPicked = (songId: number, songSheetId: number | null) => {
+  const song = songStore.songs.find(s => s.songId === songId)
+  if (!song) return
+  pendingSongs.value.push({ songId, songSheetId, title: song.title })
+  showSongPicker.value = false
+}
+
+const removePendingSong = (idx: number) => { pendingSongs.value.splice(idx, 1) }
+
 const resetCreateForm = () => {
   createForm.serviceDate = ''
   createForm.serviceType = ''
   createForm.title = ''
   createForm.memo = ''
   createError.value = ''
+  pendingSongs.value = []
 }
 
 const handleCreate = async () => {
@@ -49,6 +68,10 @@ const handleCreate = async () => {
       title: createForm.title.trim() || null,
       memo: createForm.memo.trim() || null,
     })
+    for (let i = 0; i < pendingSongs.value.length; i++) {
+      const s = pendingSongs.value[i]
+      await addSetlistItem(created.setlistId, { songId: s.songId, songSheetId: s.songSheetId ?? undefined, orderNo: i + 1, memo: null })
+    }
     resetCreateForm()
     showCreateForm.value = false
     await router.push(`/setlists/${created.setlistId}`)
@@ -76,11 +99,18 @@ const formatDate = (dateStr: string) => {
   return `${y}.${m}.${d}`
 }
 
-onMounted(() => store.fetchSetlists())
+onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
 </script>
 
 <template>
   <DefaultLayout>
+    <SongPickerModal
+      v-if="showSongPicker"
+      :songs="songStore.songs"
+      @select="onSongPicked"
+      @close="showSongPicker = false"
+    />
+
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-xl font-bold text-foreground">콘티</h1>
       <Button @click="showCreateForm = !showCreateForm" :variant="showCreateForm ? 'outline' : 'default'">
@@ -118,6 +148,38 @@ onMounted(() => store.fetchSetlists())
           <Label for="setlist-memo">메모</Label>
           <Textarea id="setlist-memo" v-model="createForm.memo" rows="2" />
         </div>
+        <!-- 곡 목록 -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <Label>곡 목록</Label>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              @click="showSongPicker = true"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              곡 추가
+            </button>
+          </div>
+          <div v-if="pendingSongs.length === 0" class="text-xs text-muted-foreground py-2">
+            추가된 곡이 없습니다.
+          </div>
+          <div v-else class="flex flex-col gap-1">
+            <div
+              v-for="(s, i) in pendingSongs"
+              :key="i"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50"
+            >
+              <span class="text-xs text-muted-foreground w-5 shrink-0">{{ i + 1 }}</span>
+              <Music class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span class="text-xs text-foreground flex-1 truncate">{{ s.title }}</span>
+              <button type="button" class="p-0.5 text-muted-foreground hover:text-destructive" @click="removePendingSong(i)">
+                <X class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="flex gap-2">
           <Button :disabled="isCreating" @click="handleCreate">
             {{ isCreating ? '생성 중...' : '생성' }}

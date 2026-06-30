@@ -353,20 +353,23 @@ const toggleEmbed = (url: string) => {
 }
 
 // 링크 편집 (인라인)
-const linkForm = reactive({ title: '', url: '' })
+const linkForm = reactive({ url: '' })
 const isAddingLink = ref(false)
 const editingLinkId = ref<number | null>(null)
 const editLinkForm = reactive({ title: '', url: '' })
+const linksExpanded = ref(false)
 
-const startAddLink = () => { linkForm.title = ''; linkForm.url = ''; isAddingLink.value = true }
+const startAddLink = () => { linkForm.url = ''; isAddingLink.value = true }
 const cancelAddLink = () => { isAddingLink.value = false }
 
 const handleAddLink = async () => {
-  if (!linkForm.url.trim()) return
+  const url = linkForm.url.trim()
+  if (!url) return
   try {
-    await addSongLink(song.value!.songId, { title: linkForm.title.trim(), url: linkForm.url.trim() })
+    await addSongLink(song.value!.songId, { title: platformLabel(url), url })
     await loadSong()
     isAddingLink.value = false
+    linksExpanded.value = true
   } catch { /* ignore */ }
 }
 
@@ -657,31 +660,24 @@ watch(() => props.songId, loadSong)
             </div>
 
             <!-- 링크 추가 폼 -->
-            <div v-if="isAddingLink" class="px-4 py-3 border-b border-border flex flex-col gap-2">
-              <input
-                v-model="linkForm.title"
-                type="text"
-                placeholder="제목 (예: 키 G 라이브, MR)"
-                class="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+            <div v-if="isAddingLink" class="px-4 py-3 border-b border-border flex gap-2">
               <input
                 v-model="linkForm.url"
                 type="url"
                 placeholder="URL (YouTube, Spotify, Melon 등)"
-                class="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                class="flex-1 h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                @keydown.enter="handleAddLink"
               />
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  class="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
-                  @click="handleAddLink"
-                >저장</button>
-                <button
-                  type="button"
-                  class="h-8 px-3 rounded-md border border-border text-xs text-foreground hover:bg-muted transition-colors"
-                  @click="cancelAddLink"
-                >취소</button>
-              </div>
+              <button
+                type="button"
+                class="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity shrink-0"
+                @click="handleAddLink"
+              >저장</button>
+              <button
+                type="button"
+                class="h-8 px-3 rounded-md border border-border text-xs text-foreground hover:bg-muted transition-colors shrink-0"
+                @click="cancelAddLink"
+              >취소</button>
             </div>
 
             <!-- 링크 없음 -->
@@ -691,7 +687,8 @@ watch(() => props.songId, loadSong)
 
             <!-- 링크 목록 -->
             <div
-              v-for="link in song?.links"
+              v-for="(link, idx) in song?.links"
+              v-show="idx === 0 || linksExpanded"
               :key="link.linkId"
               class="border-b border-border last:border-0"
             >
@@ -766,6 +763,17 @@ watch(() => props.songId, loadSong)
                 />
               </div>
             </div>
+
+            <!-- 더보기 / 접기 -->
+            <button
+              v-if="(song?.links?.length ?? 0) > 1"
+              type="button"
+              class="w-full px-4 py-2 text-xs text-muted-foreground hover:bg-muted transition-colors flex items-center gap-1 justify-center border-t border-border"
+              @click="linksExpanded = !linksExpanded"
+            >
+              <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': linksExpanded }" />
+              {{ linksExpanded ? '접기' : `더보기 ${(song?.links?.length ?? 0) - 1}개` }}
+            </button>
           </Card>
 
           <!-- 가사 섹션 (아코디언) -->

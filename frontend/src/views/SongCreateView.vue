@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Upload, X, ScanText } from '@lucide/vue'
+import { ChevronLeft, Upload, X, ScanText, ChevronDown } from '@lucide/vue'
 import { createSong } from '../apis/songApi'
 import { createSongSheet } from '../apis/songSheetApi'
 import { uploadSongSheetFile } from '../apis/songFileApi'
@@ -27,6 +27,7 @@ const imagePreviewUrl = ref<string | null>(null)
 const isOcrLoading = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
+const showExtra = ref(false)
 
 const toOpt = (v: string) => v.trim() || null
 
@@ -167,7 +168,17 @@ const handleSubmit = async () => {
             <Input id="artist" v-model="form.artist" type="text" placeholder="아티스트명" />
           </div>
 
-          <div class="flex flex-col gap-1.5">
+          <!-- 추가 정보 토글 -->
+          <button
+            type="button"
+            class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
+            @click="showExtra = !showExtra"
+          >
+            <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': showExtra }" />
+            추가 정보 (메모)
+          </button>
+
+          <div v-if="showExtra" class="flex flex-col gap-1.5">
             <Label for="memo">메모</Label>
             <Textarea id="memo" v-model="form.memo" rows="3" placeholder="메모를 입력하세요" />
           </div>

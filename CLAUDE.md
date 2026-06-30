@@ -44,13 +44,39 @@ setlists (셋리스트/콘티)
 
 ## 구현된 주요 기능
 - **곡/악보/파일**: songs·song_sheets·song_files CRUD, 곡 검색, soft delete
-- **셋리스트**: setlists·setlist_items CRUD, 콘티 화면, 셋리스트 PDF 다운로드(jsPDF)
+- **셋리스트**: setlists·setlist_items CRUD, 콘티 화면, 드래그앤드롭 순서 변경, 셋리스트 PDF 다운로드(jsPDF)
+- **공유 링크**: UUID 토큰 기반 콘티 공유 (`/share/:token`), 공개 뷰
 - **OCR 자동 추출**: EasyOCR Python 마이크로서비스 → Spring Boot 연동. 제목/코드/아티스트/가사/rawText 추출, `@Async` 비동기 처리 후 상세 화면 15초 폴링 반영
 - **통합 등록/업로드**: 곡+악보 1단계 통합 등록(OCR 자동입력), 일괄 업로드 화면(`/songs/bulk`, 드래그앤드롭 + 카드별 편집)
 - **가사 관리**: songs.lyrics 컬럼, `PATCH /lyrics`, 곡 상세 가사 섹션(OCR 적용 + 직접 편집)
-- **통합 검색**: 제목·아티스트·가사 LIKE + 코드 대소문자 무관 LIKE 필터
+- **태그**: song_tags 테이블(`@ElementCollection EAGER+SUBSELECT`), 태그 칩 입력/필터
+- **링크**: song_links 테이블, 멀티 플랫폼(YouTube/Spotify/Melon 등) 자동 감지, YouTube 임베드 토글
+- **통합 검색**: 제목·아티스트·가사 LIKE + 키 대소문자 무관 LIKE 필터 + 태그 필터
+- **로딩 UX**: axios 인터셉터 전역 로딩 바 + 콘텐츠 딤 처리 (`useHttpLoading`)
 - **UI**: shadcn-vue 스타일 + Tailwind v4 + 다크/라이트 테마 + 반응형, 악보 이미지 슬라이드 뷰어
 - **인프라**: CI/CD 자동배포(GitHub Actions → Fly.io, Vercel Git 연동), Cloudflare R2 연동(STORAGE_TYPE 전환, 현재 local 모드)
+
+## DB 마이그레이션 현황
+| 버전 | 내용 |
+|------|------|
+| V1 | 초기 스키마 (songs, song_sheets, song_files, setlists, setlist_items) |
+| V2 | feature_requests 테이블 |
+| V3 | OCR 관련 컬럼 |
+| V4 | songs.lyrics 컬럼 |
+| V5 | feature_requests 추가 |
+| V6 | songs.youtube_url 컬럼 |
+| V7 | setlists.share_token 컬럼 |
+| V8 | song_tags 테이블 |
+| V9 | song_links 테이블 (기존 youtube_url 데이터 이전) |
+
+## 다음 작업 예정 이슈
+| 번호 | 제목 |
+|------|------|
+| #59 | 링크 UX 개선 (추가 시 URL만, 더보기 아코디언) |
+| #60 | 콘티 등록 시 곡 추가까지 1단계로 |
+| #61 | 등록 기능 간소화 및 기본값 설정 |
+| #62 | 악보 목록 카드에서 키 있으면 음표 대신 키 배지 표시 |
+| #63 | 용어 변경: 코드 → 키 (UI 전체) |
 
 ### 배포 정보
 - 백엔드: https://worship-sheet.fly.dev (Fly.io, GitHub Actions로 `main` push 시 자동배포)

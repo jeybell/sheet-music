@@ -42,3 +42,8 @@ export const getSharedSetlist = async (token: string): Promise<SharedSetlist> =>
 export const reorderSetlistItems = async (setlistId: number, itemIds: number[]): Promise<void> => {
   await http.patch(`/api/setlists/${setlistId}/items/reorder`, { itemIds })
 }
+
+export const duplicateSetlist = async (setlistId: number, serviceDate: string): Promise<Setlist> => {
+  const { data } = await http.post<Setlist>(`/api/setlists/${setlistId}/duplicate`, { serviceDate })
+  return data
+}

@@ -2,8 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical } from '@lucide/vue'
-import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, Copy } from '@lucide/vue'
+import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems, duplicateSetlist } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import { useToast } from '../composables/useToast'
@@ -139,6 +139,37 @@ const handleDelete = async () => {
     await router.push('/setlists')
   } catch (e) {
     alert(apiError(e, '삭제에 실패했습니다.'))
+  }
+}
+
+// ── 셋리스트 복사 (템플릿으로 재사용)
+const showDuplicateModal = ref(false)
+const duplicateDate = ref('')
+const duplicateError = ref('')
+const isDuplicating = ref(false)
+
+const openDuplicateModal = () => {
+  duplicateDate.value = setlist.value?.serviceDate ?? ''
+  duplicateError.value = ''
+  showDuplicateModal.value = true
+}
+
+const handleDuplicate = async () => {
+  if (!duplicateDate.value) {
+    duplicateError.value = '날짜는 필수입니다.'
+    return
+  }
+  isDuplicating.value = true
+  duplicateError.value = ''
+  try {
+    const created = await duplicateSetlist(props.setlistId, duplicateDate.value)
+    showDuplicateModal.value = false
+    toast.success('콘티를 복사했어요')
+    await router.push(`/setlists/${created.setlistId}`)
+  } catch (e) {
+    duplicateError.value = apiError(e, '복사에 실패했습니다.')
+  } finally {
+    isDuplicating.value = false
   }
 }
 
@@ -320,6 +351,25 @@ watch(() => props.setlistId, load)
       @close="showViewer = false"
     />
 
+    <!-- 콘티 복사 모달 -->
+    <div v-if="showDuplicateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60" @click="showDuplicateModal = false" />
+      <div class="relative w-full max-w-xs bg-card border border-border rounded-xl shadow-xl p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-foreground">콘티 복사</h2>
+          <button type="button" class="text-muted-foreground hover:text-foreground" @click="showDuplicateModal = false">
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        <p class="text-xs text-muted-foreground -mt-2">곡 순서·악보 버전을 그대로 복사합니다. 새 날짜만 지정해주세요.</p>
+        <p v-if="duplicateError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2">{{ duplicateError }}</p>
+        <DatePicker v-model="duplicateDate" inline />
+        <Button :disabled="isDuplicating" @click="handleDuplicate">
+          {{ isDuplicating ? '복사 중...' : '복사하기' }}
+        </Button>
+      </div>
+    </div>
+
     <!-- 뒤로가기 -->
     <button
       type="button"
@@ -359,6 +409,10 @@ watch(() => props.setlistId, load)
                   >
                     <BookOpen class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">{{ isLoadingViewer ? '로딩 중...' : '악보 보기' }}</span>
+                  </Button>
+                  <Button variant="outline" size="sm" @click="openDuplicateModal">
+                    <Copy class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline">복사</span>
                   </Button>
                   <Button variant="outline" size="sm" @click="startEdit">
                     <Pencil class="w-3.5 h-3.5" />

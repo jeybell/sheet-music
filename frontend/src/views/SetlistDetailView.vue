@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, Presentation } from '@lucide/vue'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
@@ -359,6 +359,15 @@ watch(() => props.setlistId, load)
                   >
                     <BookOpen class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">{{ isLoadingViewer ? '로딩 중...' : '악보 보기' }}</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    :disabled="items.length === 0"
+                    @click="$router.push(`/setlists/${setlistId}/present`)"
+                  >
+                    <Presentation class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline">진행 모드</span>
                   </Button>
                   <Button variant="outline" size="sm" @click="startEdit">
                     <Pencil class="w-3.5 h-3.5" />

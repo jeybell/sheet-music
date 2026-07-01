@@ -6,6 +6,7 @@ import SongListView from "../views/SongListView.vue";
 import BulkUploadView from "../views/BulkUploadView.vue";
 import SetlistListView from "../views/SetlistListView.vue";
 import SetlistDetailView from "../views/SetlistDetailView.vue";
+import SetlistPresentView from "../views/SetlistPresentView.vue";
 import FeatureRequestView from "../views/FeatureRequestView.vue";
 import ShareView from "../views/ShareView.vue";
 
@@ -49,6 +50,12 @@ const router = createRouter({
       path: "/setlists/:setlistId",
       name: "setlist-detail",
       component: SetlistDetailView,
+      props: (route) => ({ setlistId: Number(route.params.setlistId) }),
+    },
+    {
+      path: "/setlists/:setlistId/present",
+      name: "setlist-present",
+      component: SetlistPresentView,
       props: (route) => ({ setlistId: Number(route.params.setlistId) }),
     },
     {

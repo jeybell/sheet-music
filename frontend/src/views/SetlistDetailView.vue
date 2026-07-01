@@ -6,6 +6,7 @@ import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off,
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
+import { useToast } from '../composables/useToast'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import SheetViewerModal from '../components/SheetViewerModal.vue'
 import SongPickerModal from '../components/SongPickerModal.vue'
@@ -27,6 +28,7 @@ const router = useRouter()
 const store = useSetlistStore()
 const songStore = useSongStore()
 
+const toast = useToast()
 const setlist = computed(() => store.selectedSetlist)
 const items = ref<NonNullable<typeof store.selectedSetlist>['items']>([])
 
@@ -110,6 +112,7 @@ const handleUpdate = async () => {
     })
     await store.fetchSetlist(props.setlistId)
     isEditing.value = false
+    toast.success('콘티를 저장했어요')
   } catch (e) {
     editError.value = apiError(e, '수정에 실패했습니다.')
   } finally {
@@ -174,6 +177,7 @@ const handleAddItem = async () => {
     resetAddForm()
     showAddItem.value = false
     await store.fetchSetlist(props.setlistId)
+    toast.success('곡을 추가했어요')
   } catch (e) {
     addError.value = apiError(e, '곡 추가에 실패했습니다.')
   } finally {
@@ -187,6 +191,7 @@ const handleDeleteItem = async (itemId: number, songTitle: string) => {
   try {
     await deleteSetlistItem(itemId)
     await store.fetchSetlist(props.setlistId)
+    toast.success('곡을 제거했어요')
   } catch (e) {
     alert(apiError(e, '삭제에 실패했습니다.'))
   }

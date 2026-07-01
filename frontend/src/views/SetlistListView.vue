@@ -14,6 +14,7 @@ import Card from '../components/ui/Card.vue'
 import SongPickerModal from '../components/SongPickerModal.vue'
 import { useSetlistStore } from '../stores/setlistStore'
 import { useSongStore } from '../stores/songStore'
+import { useToast } from '../composables/useToast'
 import type { Setlist } from '../types/setlist'
 
 interface ApiErrorResponse { message?: string }
@@ -21,6 +22,7 @@ interface ApiErrorResponse { message?: string }
 const router = useRouter()
 const store = useSetlistStore()
 const songStore = useSongStore()
+const toast = useToast()
 
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
@@ -90,6 +92,7 @@ const handleCreate = async () => {
     }
     resetCreateForm()
     showCreateForm.value = false
+    toast.success('콘티를 만들었어요')
     await router.push(`/setlists/${created.setlistId}`)
   } catch (e) {
     createError.value = apiError(e, '생성에 실패했습니다.')

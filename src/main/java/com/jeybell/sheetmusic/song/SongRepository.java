@@ -1,5 +1,6 @@
 package com.jeybell.sheetmusic.song;
 
+import com.jeybell.sheetmusic.song.dto.PopularSongResponse;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -75,6 +76,21 @@ public interface SongRepository extends JpaRepository<Song, Long> {
 
     @Query("select distinct t from Song s join s.tags t where s.deletedAt is null order by t")
     List<String> findAllTags();
+
+    /**
+     * 자주 쓰는 곡: 활성 콘티(setlist)에 담긴 setlist_items 참조 횟수 기준 내림차순.
+     */
+    @Query("""
+            select new com.jeybell.sheetmusic.song.dto.PopularSongResponse(
+                s.songId, s.title, s.artist, count(i))
+            from SetlistItem i
+              join i.song s
+              join i.setlist sl
+            where s.deletedAt is null and sl.deletedAt is null
+            group by s.songId, s.title, s.artist
+            order by count(i) desc
+            """)
+    List<PopularSongResponse> findPopularSongs(Pageable pageable);
 
     @Query("""
             select distinct s

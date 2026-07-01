@@ -1,6 +1,7 @@
 package com.jeybell.sheetmusic.song;
 
 import com.jeybell.sheetmusic.global.dto.PageResponse;
+import com.jeybell.sheetmusic.song.dto.PopularSongResponse;
 import com.jeybell.sheetmusic.global.exception.DuplicateTitleException;
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
@@ -50,6 +51,10 @@ public class SongService {
 
     public List<String> getAllTags() {
         return songRepository.findAllTags();
+    }
+
+    public List<PopularSongResponse> getPopularSongs(int limit) {
+        return songRepository.findPopularSongs(PageRequest.of(0, limit));
     }
 
     @Transactional

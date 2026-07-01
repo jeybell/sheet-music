@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { Plus, Trash2, ChevronRight, X, Music } from '@lucide/vue'
@@ -27,8 +27,18 @@ const apiError = (e: unknown, fallback: string) =>
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-// 콘티 화면 진입 시 등록 폼을 바로 펼쳐 보여준다
-const showCreateForm = ref(true)
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+// 선택한 날짜를 'YYYY.MM.DD (요일)' 형태로 표기
+const formattedServiceDate = computed(() => {
+  const v = createForm.serviceDate
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return ''
+  const [y, m, d] = v.split('-').map(Number)
+  const dow = WEEKDAYS[new Date(y, m - 1, d).getDay()]
+  return `${y}.${String(m).padStart(2, '0')}.${String(d).padStart(2, '0')} (${dow})`
+})
+
+// 기본은 목록만. '새 콘티' 버튼을 눌러야 등록 폼이 열린다.
+const showCreateForm = ref(false)
 const createForm = reactive({ serviceDate: today(), title: '', memo: '' })
 const createError = ref('')
 const isCreating = ref(false)
@@ -133,13 +143,13 @@ onMounted(() => { void store.fetchSetlists() })
 
     <!-- 생성 폼 -->
     <Card v-if="showCreateForm" class="p-5 mb-6 bg-muted/40">
-      <h2 class="text-sm font-semibold text-foreground mb-4">새 콘티 만들기</h2>
+      <div class="flex items-center gap-2 mb-4">
+        <h2 class="text-sm font-semibold text-foreground">새 콘티 만들기</h2>
+        <span v-if="formattedServiceDate" class="text-sm font-medium text-primary">{{ formattedServiceDate }}</span>
+      </div>
       <p v-if="createError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ createError }}</p>
       <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-1.5">
-          <Label>날짜 <span class="text-destructive">*</span></Label>
-          <DatePicker v-model="createForm.serviceDate" inline />
-        </div>
+        <DatePicker v-model="createForm.serviceDate" inline />
         <div class="flex flex-col gap-1.5">
           <Label for="setlist-title">제목</Label>
           <Input id="setlist-title" v-model="createForm.title" type="text" placeholder="선택사항" />

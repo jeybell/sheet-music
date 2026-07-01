@@ -25,18 +25,20 @@ public class SongService {
         this.songFileService = songFileService;
     }
 
-    public PageResponse<SongResponse> getSongs(String query, String songKey, String tag, int page, int size) {
+    public PageResponse<SongResponse> getSongs(String query, String songKey, List<String> tags, int page, int size) {
         String likeQuery = (query == null || query.isBlank())
                 ? null
                 : "%" + query.trim().toLowerCase() + "%";
         String normalizedKey = (songKey == null || songKey.isBlank())
                 ? null
                 : "%" + songKey.trim().toLowerCase() + "%";
-        String normalizedTag = (tag == null || tag.isBlank()) ? null : tag.trim();
+        List<String> normalizedTags = (tags == null)
+                ? List.of()
+                : tags.stream().map(String::trim).filter(t -> !t.isBlank()).distinct().toList();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return PageResponse.from(
-                songRepository.searchSongs(likeQuery, normalizedKey, normalizedTag, pageable)
+                songRepository.searchSongs(likeQuery, normalizedKey, normalizedTags, normalizedTags.size(), pageable)
                         .map(SongResponse::from)
         );
     }

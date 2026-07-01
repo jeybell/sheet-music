@@ -34,11 +34,11 @@ public class SongController {
     public ResponseEntity<PageResponse<SongResponse>> getSongs(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "songKey", required = false) String songKey,
-            @RequestParam(name = "tag", required = false) String tag,
+            @RequestParam(name = "tags", required = false) List<String> tags,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(songService.getSongs(query, songKey, tag, page, size));
+        return ResponseEntity.ok(songService.getSongs(query, songKey, tags, page, size));
     }
 
     @GetMapping("/tags")

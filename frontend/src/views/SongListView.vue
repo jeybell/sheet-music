@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Plus, Music, Search, X, FolderUp, Loader2 } from '@lucide/vue'
 import SongList from '../components/SongList.vue'
+import Select from '../components/ui/Select.vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import { useSongStore } from '../stores/songStore'
 import { getAllTags } from '../apis/songApi'
@@ -14,6 +15,15 @@ const selectedTags = ref<string[]>([])
 const allTags = ref<string[]>([])
 const hasFilter = ref(false)
 
+const SORT_OPTIONS = [
+  { value: 'TITLE', label: '이름순' },
+  { value: 'ARTIST', label: '아티스트순' },
+  { value: 'KEY', label: '키순' },
+  { value: 'LATEST', label: '최신순' },
+] as const
+const SORT_STORAGE_KEY = 'song-list-sort'
+const sortBy = ref<string>(localStorage.getItem(SORT_STORAGE_KEY) ?? 'TITLE')
+
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | undefined
 
@@ -21,8 +31,18 @@ let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
 const runSearch = () => {
   hasFilter.value = Boolean(query.value.trim() || songKey.value.trim() || selectedTags.value.length)
-  void songStore.fetchFirstPage({ query: query.value, songKey: songKey.value, tags: selectedTags.value })
+  void songStore.fetchFirstPage({
+    query: query.value,
+    songKey: songKey.value,
+    tags: selectedTags.value,
+    sort: sortBy.value,
+  })
 }
+
+watch(sortBy, (value) => {
+  localStorage.setItem(SORT_STORAGE_KEY, value)
+  runSearch()
+})
 
 watch([query, songKey], () => {
   clearTimeout(debounceTimer)
@@ -62,7 +82,7 @@ watch(sentinel, (el, prev) => {
 })
 
 onMounted(async () => {
-  void songStore.fetchFirstPage()
+  runSearch()
   allTags.value = await getAllTags()
 })
 
@@ -144,6 +164,21 @@ onBeforeUnmount(() => observer?.disconnect())
       </button>
     </div>
 
+    <!-- 결과 건수 + 정렬 -->
+    <div class="flex items-center justify-between gap-2 mb-3">
+      <p class="text-xs text-muted-foreground">
+        <template v-if="songStore.hasListSongs">
+          {{ hasFilter ? '검색 결과' : '전체' }} 총 <span class="font-medium text-foreground">{{ songStore.listTotal }}</span>곡
+        </template>
+      </p>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <span class="text-xs text-muted-foreground">정렬</span>
+        <Select v-model="sortBy" class="!h-8 !w-28 text-xs">
+          <option v-for="opt in SORT_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+        </Select>
+      </div>
+    </div>
+
     <p v-if="songStore.isLoadingList" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
     <p v-else-if="songStore.errorMessage" class="text-sm text-destructive py-4">{{ songStore.errorMessage }}</p>
 
@@ -181,9 +216,6 @@ onBeforeUnmount(() => observer?.disconnect())
     </div>
 
     <template v-else>
-      <p class="text-xs text-muted-foreground mb-3">
-        {{ hasFilter ? '검색 결과' : '전체' }} 총 <span class="font-medium text-foreground">{{ songStore.listTotal }}</span>곡
-      </p>
       <SongList :songs="songStore.listSongs" />
 
       <!-- 무한 스크롤 감지 지점 -->

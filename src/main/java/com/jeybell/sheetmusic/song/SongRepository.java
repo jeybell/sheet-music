@@ -39,6 +39,40 @@ public interface SongRepository extends JpaRepository<Song, Long> {
                            @Param("tags") List<String> tags, @Param("tagCount") long tagCount,
                            Pageable pageable);
 
+    /**
+     * 키순 정렬 전용. 곡의 대표 키(활성 악보 중 최소 sheetKey)로 오름차순 정렬한다.
+     * 키가 없는 곡은 마지막에 온다. 필터 조건은 searchSongs 와 동일.
+     * 정렬을 쿼리에 고정하므로 Pageable 의 Sort 는 무시(unsorted)로 전달할 것.
+     */
+    @Query("""
+            select s
+            from Song s
+            where s.deletedAt is null
+              and (:query is null
+                or lower(s.title) like :query
+                or lower(s.artist) like :query
+                or lower(s.lyrics) like :query)
+              and (:songKey is null
+                or exists (
+                  select 1 from SongSheet ss
+                  where ss.song = s
+                    and ss.deletedAt is null
+                    and lower(ss.sheetKey) like :songKey
+                ))
+              and (:tagCount = 0
+                or (
+                  select count(distinct t) from Song sx join sx.tags t
+                  where sx = s and t in :tags
+                ) = :tagCount)
+            order by (
+              select min(ss2.sheetKey) from SongSheet ss2
+              where ss2.song = s and ss2.deletedAt is null
+            ) asc nulls last
+            """)
+    Page<Song> searchSongsOrderByKey(@Param("query") String query, @Param("songKey") String songKey,
+                                     @Param("tags") List<String> tags, @Param("tagCount") long tagCount,
+                                     Pageable pageable);
+
     @Query("select distinct t from Song s join s.tags t where s.deletedAt is null order by t")
     List<String> findAllTags();
 

@@ -7,9 +7,8 @@ import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
 import com.jeybell.sheetmusic.song.dto.SongSheetRequest;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +24,8 @@ public class SongService {
         this.songFileService = songFileService;
     }
 
-    public PageResponse<SongResponse> getSongs(String query, String songKey, List<String> tags, int page, int size) {
+    public PageResponse<SongResponse> getSongs(String query, String songKey, List<String> tags,
+                                               String sort, int page, int size) {
         String likeQuery = (query == null || query.isBlank())
                 ? null
                 : "%" + query.trim().toLowerCase() + "%";
@@ -35,12 +35,17 @@ public class SongService {
         List<String> normalizedTags = (tags == null)
                 ? List.of()
                 : tags.stream().map(String::trim).filter(t -> !t.isBlank()).distinct().toList();
+        long tagCount = normalizedTags.size();
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return PageResponse.from(
-                songRepository.searchSongs(likeQuery, normalizedKey, normalizedTags, normalizedTags.size(), pageable)
-                        .map(SongResponse::from)
-        );
+        SongSort songSort = SongSort.from(sort);
+        Page<Song> result = (songSort == SongSort.KEY)
+                ? songRepository.searchSongsOrderByKey(
+                        likeQuery, normalizedKey, normalizedTags, tagCount, PageRequest.of(page, size))
+                : songRepository.searchSongs(
+                        likeQuery, normalizedKey, normalizedTags, tagCount,
+                        PageRequest.of(page, size, songSort.toSort()));
+
+        return PageResponse.from(result.map(SongResponse::from));
     }
 
     public List<String> getAllTags() {

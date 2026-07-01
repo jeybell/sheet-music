@@ -66,6 +66,33 @@ class SongSearchPaginationTest {
     }
 
     @Test
+    void 이름순_정렬이_동작한다() {
+        persist("다곡", "A", null, null);
+        persist("가곡", "B", null, null);
+        persist("나곡", "C", null, null);
+
+        var page = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "title"));
+        var titles = songRepository.searchSongs(null, null, List.of(), 0, page)
+                .getContent().stream().map(Song::getTitle).toList();
+
+        assertThat(titles).containsExactly("가곡", "나곡", "다곡");
+    }
+
+    @Test
+    void 키순_정렬은_대표키_오름차순_키없음은_마지막이다() {
+        persist("곡C", "A", null, "C");
+        persist("곡A", "A", null, "A");
+        persist("곡키없음", "A", null, null);
+        persist("곡G", "A", null, "G");
+
+        var page = PageRequest.of(0, 10);
+        var titles = songRepository.searchSongsOrderByKey(null, null, List.of(), 0, page)
+                .getContent().stream().map(Song::getTitle).toList();
+
+        assertThat(titles).containsExactly("곡A", "곡C", "곡G", "곡키없음");
+    }
+
+    @Test
     void 다중_태그는_AND로_필터링된다() {
         persist("곡1", "A", List.of("찬양", "빠른곡"), null);
         persist("곡2", "B", List.of("찬양"), null);

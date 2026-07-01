@@ -6,6 +6,7 @@ export interface SongSearchParams {
   query?: string | null;
   songKey?: string | null;
   tags?: string[] | null;
+  sort?: string | null;
 }
 
 // 곡 목록 화면 무한 스크롤용 페이지 단위 조회
@@ -20,6 +21,7 @@ export const getSongsPage = async (
       songKey: params?.songKey?.trim() || undefined,
       // Spring 이 콤마 구분 문자열을 List<String> 으로 바인딩하므로 join 하여 전달
       tags: params?.tags?.length ? params.tags.join(',') : undefined,
+      sort: params?.sort || undefined,
       page,
       size,
     },

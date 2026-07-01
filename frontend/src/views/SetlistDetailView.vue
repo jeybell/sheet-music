@@ -14,6 +14,7 @@ import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Textarea from '../components/ui/Textarea.vue'
 import Label from '../components/ui/Label.vue'
+import DatePicker from '../components/ui/DatePicker.vue'
 import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
 import { useSetlistStore } from '../stores/setlistStore'
@@ -389,8 +390,8 @@ watch(() => props.setlistId, load)
               <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ editError }}</p>
               <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1.5">
-                  <Label for="edit-date">날짜 <span class="text-destructive">*</span></Label>
-                  <Input id="edit-date" v-model="editForm.serviceDate" type="date" />
+                  <Label>날짜 <span class="text-destructive">*</span></Label>
+                  <DatePicker v-model="editForm.serviceDate" />
                 </div>
                 <div class="flex flex-col gap-1.5">
                   <Label for="edit-title">제목</Label>

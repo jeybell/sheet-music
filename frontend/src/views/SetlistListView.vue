@@ -9,6 +9,7 @@ import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Label from '../components/ui/Label.vue'
+import DatePicker from '../components/ui/DatePicker.vue'
 import Card from '../components/ui/Card.vue'
 import SongPickerModal from '../components/SongPickerModal.vue'
 import { useSetlistStore } from '../stores/setlistStore'
@@ -129,8 +130,8 @@ onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
       <p v-if="createError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ createError }}</p>
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1.5">
-          <Label for="service-date">날짜 <span class="text-destructive">*</span></Label>
-          <Input id="service-date" v-model="createForm.serviceDate" type="date" />
+          <Label>날짜 <span class="text-destructive">*</span></Label>
+          <DatePicker v-model="createForm.serviceDate" />
         </div>
         <div class="flex flex-col gap-1.5">
           <Label for="setlist-title">제목</Label>

@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical } from '@lucide/vue'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
@@ -40,32 +40,37 @@ watch(
   { immediate: true, deep: true }
 )
 
-// ── 드래그앤드롭 순서 변경
+// ── 드래그앤드롭 순서 변경 (Pointer Events 기반: 마우스/터치/펜 공통 지원)
 const dragIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
 
-const onDragStart = (index: number) => {
+const onHandlePointerDown = (e: PointerEvent, index: number) => {
   dragIndex.value = index
-}
-
-const onDragOver = (e: DragEvent, index: number) => {
-  e.preventDefault()
   dragOverIndex.value = index
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
 
-const onDrop = async (dropIndex: number) => {
-  const from = dragIndex.value
-  if (from === null || from === dropIndex) {
-    dragIndex.value = null
-    dragOverIndex.value = null
-    return
+const onHandlePointerMove = (e: PointerEvent) => {
+  if (dragIndex.value === null) return
+  e.preventDefault()
+  const target = document.elementFromPoint(e.clientX, e.clientY)
+  const card = target?.closest<HTMLElement>('[data-drag-index]')
+  if (card) {
+    dragOverIndex.value = Number(card.dataset.dragIndex)
   }
-  const reordered = [...items.value]
-  const [moved] = reordered.splice(from, 1)
-  reordered.splice(dropIndex, 0, moved)
-  items.value = reordered
+}
+
+const finishDrag = async () => {
+  const from = dragIndex.value
+  const to = dragOverIndex.value
   dragIndex.value = null
   dragOverIndex.value = null
+  if (from === null || to === null || from === to) return
+
+  const reordered = [...items.value]
+  const [moved] = reordered.splice(from, 1)
+  reordered.splice(to, 0, moved)
+  items.value = reordered
 
   try {
     await reorderSetlistItems(props.setlistId, reordered.map(i => i.setlistItemId))
@@ -75,7 +80,12 @@ const onDrop = async (dropIndex: number) => {
   }
 }
 
-const onDragEnd = () => {
+const onHandlePointerUp = (e: PointerEvent) => {
+  ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+  void finishDrag()
+}
+
+const onHandlePointerCancel = () => {
   dragIndex.value = null
   dragOverIndex.value = null
 }
@@ -472,17 +482,23 @@ watch(() => props.setlistId, load)
               <Card
                 v-for="(item, idx) in items"
                 :key="item.setlistItemId"
-                draggable="true"
-                class="px-4 py-3 flex items-start gap-3 cursor-grab active:cursor-grabbing transition-opacity select-none"
+                :data-drag-index="idx"
+                class="px-4 py-3 flex items-start gap-3 transition-opacity select-none"
                 :class="{
                   'opacity-40': dragIndex === idx,
                   'ring-2 ring-primary ring-offset-1 ring-offset-background': dragOverIndex === idx && dragIndex !== idx,
                 }"
-                @dragstart="onDragStart(idx)"
-                @dragover="onDragOver($event, idx)"
-                @drop="onDrop(idx)"
-                @dragend="onDragEnd"
               >
+                <button
+                  type="button"
+                  class="p-1 -m-1 text-muted-foreground hover:text-foreground shrink-0 mt-0.5 cursor-grab active:cursor-grabbing touch-none"
+                  @pointerdown="onHandlePointerDown($event, idx)"
+                  @pointermove="onHandlePointerMove"
+                  @pointerup="onHandlePointerUp"
+                  @pointercancel="onHandlePointerCancel"
+                >
+                  <GripVertical class="w-4 h-4" />
+                </button>
                 <div class="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                   <span class="text-xs font-bold text-muted-foreground">{{ idx + 1 }}</span>
                 </div>

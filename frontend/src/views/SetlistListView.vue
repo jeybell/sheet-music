@@ -194,6 +194,8 @@ onMounted(() => { void store.fetchSetlists() })
       </div>
     </Card>
 
+    <!-- 등록 폼이 열려있으면 하단 목록은 숨김 (특히 모바일 화면 정리) -->
+    <template v-if="!showCreateForm">
     <p v-if="store.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
     <p v-else-if="store.errorMessage" class="text-sm text-destructive py-4">{{ store.errorMessage }}</p>
     <div v-else-if="store.setlists.length === 0" class="py-16 flex flex-col items-center text-center">
@@ -228,5 +230,6 @@ onMounted(() => { void store.fetchSetlists() })
         </div>
       </div>
     </div>
+    </template>
   </DefaultLayout>
 </template>

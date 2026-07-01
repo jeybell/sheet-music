@@ -2,8 +2,11 @@ package com.jeybell.sheetmusic.song;
 
 import com.jeybell.sheetmusic.ocr.OcrService;
 import com.jeybell.sheetmusic.song.dto.OcrResult;
+import com.jeybell.sheetmusic.song.dto.SongFileAnnotationRequest;
+import com.jeybell.sheetmusic.song.dto.SongFileAnnotationResponse;
 import com.jeybell.sheetmusic.song.dto.SongFileDownloadResponse;
 import com.jeybell.sheetmusic.song.dto.SongFileResponse;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +20,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,10 +31,16 @@ public class SongFileController {
 
     private final SongFileService songFileService;
     private final OcrService ocrService;
+    private final SongFileAnnotationService songFileAnnotationService;
 
-    public SongFileController(SongFileService songFileService, OcrService ocrService) {
+    public SongFileController(
+            SongFileService songFileService,
+            OcrService ocrService,
+            SongFileAnnotationService songFileAnnotationService
+    ) {
         this.songFileService = songFileService;
         this.ocrService = ocrService;
+        this.songFileAnnotationService = songFileAnnotationService;
     }
 
     @PostMapping(path = "/api/song-sheets/{songSheetId}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -91,6 +102,25 @@ public class SongFileController {
     @DeleteMapping("/api/song-files/{songFileId}")
     public ResponseEntity<Void> deleteFile(@PathVariable("songFileId") Long songFileId) {
         songFileService.deleteFile(songFileId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/api/song-files/{songFileId}/annotation")
+    public ResponseEntity<SongFileAnnotationResponse> getAnnotation(@PathVariable("songFileId") Long songFileId) {
+        return ResponseEntity.ok(songFileAnnotationService.getAnnotation(songFileId));
+    }
+
+    @PutMapping("/api/song-files/{songFileId}/annotation")
+    public ResponseEntity<SongFileAnnotationResponse> saveAnnotation(
+            @PathVariable("songFileId") Long songFileId,
+            @Valid @RequestBody SongFileAnnotationRequest request
+    ) {
+        return ResponseEntity.ok(songFileAnnotationService.saveAnnotation(songFileId, request));
+    }
+
+    @DeleteMapping("/api/song-files/{songFileId}/annotation")
+    public ResponseEntity<Void> deleteAnnotation(@PathVariable("songFileId") Long songFileId) {
+        songFileAnnotationService.deleteAnnotation(songFileId);
         return ResponseEntity.noContent().build();
     }
 }

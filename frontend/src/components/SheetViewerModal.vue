@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { ChevronLeft, ChevronRight, X, Download } from '@lucide/vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { ChevronLeft, ChevronRight, X, Download, Pencil, Eraser, Undo2, Trash2 } from '@lucide/vue'
 import { jsPDF } from 'jspdf'
+import { getSongFileAnnotation, saveSongFileAnnotation } from '../apis/songFileApi'
+import type { AnnotationStroke } from '../apis/songFileApi'
 
 export interface ViewerSong {
   title: string
@@ -92,6 +94,169 @@ const downloadPdf = async () => {
     isDownloading.value = false
   }
 }
+
+// ── 악보 필기(스타일러스 지원, 벡터 저장) ──────────────────
+const PEN_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#facc15']
+
+const penMode = ref(false)
+const penColor = ref(PEN_COLORS[0])
+const penWidth = ref(3)
+const isEraser = ref(false)
+const strokesByFile = reactive<Record<number, AnnotationStroke[]>>({})
+const loadedFileIds = new Set<number>()
+const canvasEls = new Map<number, HTMLCanvasElement>()
+
+const setCanvasRef = (fileId: number, el: Element | null) => {
+  if (el) canvasEls.set(fileId, el as HTMLCanvasElement)
+  else canvasEls.delete(fileId)
+}
+
+const syncCanvasSize = (fileId: number) => {
+  const canvas = canvasEls.get(fileId)
+  if (!canvas) return
+  const rect = canvas.getBoundingClientRect()
+  if (rect.width === 0 || rect.height === 0) return
+  canvas.width = rect.width
+  canvas.height = rect.height
+  redraw(fileId)
+}
+
+const drawStroke = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, stroke: AnnotationStroke) => {
+  const pts = stroke.points
+  if (pts.length === 0) return
+  ctx.globalCompositeOperation = stroke.eraser ? 'destination-out' : 'source-over'
+  ctx.strokeStyle = stroke.color
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  if (pts.length === 1) {
+    const x = pts[0].x * canvas.width
+    const y = pts[0].y * canvas.height
+    ctx.lineWidth = stroke.width * (0.5 + pts[0].pressure)
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x + 0.01, y)
+    ctx.stroke()
+    return
+  }
+  for (let i = 1; i < pts.length; i++) {
+    const p0 = pts[i - 1]
+    const p1 = pts[i]
+    ctx.lineWidth = stroke.width * (0.5 + p1.pressure)
+    ctx.beginPath()
+    ctx.moveTo(p0.x * canvas.width, p0.y * canvas.height)
+    ctx.lineTo(p1.x * canvas.width, p1.y * canvas.height)
+    ctx.stroke()
+  }
+}
+
+const redraw = (fileId: number) => {
+  const canvas = canvasEls.get(fileId)
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  for (const stroke of strokesByFile[fileId] ?? []) {
+    drawStroke(ctx, canvas, stroke)
+  }
+}
+
+const ensureAnnotationLoaded = async (fileId: number) => {
+  if (loadedFileIds.has(fileId)) return
+  loadedFileIds.add(fileId)
+  try {
+    const res = await getSongFileAnnotation(fileId)
+    strokesByFile[fileId] = res.strokes ?? []
+  } catch {
+    strokesByFile[fileId] = []
+  }
+  await nextTick()
+  syncCanvasSize(fileId)
+}
+
+const loadAnnotationsForCurrentSong = async () => {
+  for (const file of imageFiles.value) {
+    await ensureAnnotationLoaded(file.songFileId)
+  }
+}
+
+watch(currentSong, () => { void loadAnnotationsForCurrentSong() })
+
+let activeStroke: AnnotationStroke | null = null
+let activeFileId: number | null = null
+let activePointerId: number | null = null
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+const lastActiveFileId = ref<number | null>(null)
+
+const onCanvasPointerDown = (e: PointerEvent, fileId: number) => {
+  if (!penMode.value) return
+  const canvas = canvasEls.get(fileId)
+  if (!canvas) return
+  canvas.setPointerCapture(e.pointerId)
+  activePointerId = e.pointerId
+  activeFileId = fileId
+  lastActiveFileId.value = fileId
+  const rect = canvas.getBoundingClientRect()
+  activeStroke = {
+    points: [{ x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height, pressure: e.pressure || 0.5 }],
+    color: penColor.value,
+    width: penWidth.value,
+    eraser: isEraser.value,
+  }
+  strokesByFile[fileId] = [...(strokesByFile[fileId] ?? []), activeStroke]
+}
+
+const onCanvasPointerMove = (e: PointerEvent, fileId: number) => {
+  if (!activeStroke || activePointerId !== e.pointerId || activeFileId !== fileId) return
+  const canvas = canvasEls.get(fileId)
+  if (!canvas) return
+  const rect = canvas.getBoundingClientRect()
+  activeStroke.points.push({
+    x: (e.clientX - rect.left) / rect.width,
+    y: (e.clientY - rect.top) / rect.height,
+    pressure: e.pressure || 0.5,
+  })
+  redraw(fileId)
+}
+
+const scheduleSave = (fileId: number) => {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    void saveSongFileAnnotation(fileId, strokesByFile[fileId] ?? [])
+  }, 400)
+}
+
+const onCanvasPointerUp = (e: PointerEvent, fileId: number) => {
+  if (activePointerId !== e.pointerId || activeFileId !== fileId) return
+  activeStroke = null
+  activePointerId = null
+  activeFileId = null
+  scheduleSave(fileId)
+}
+
+const undoStroke = (fileId: number) => {
+  const strokes = strokesByFile[fileId] ?? []
+  if (strokes.length === 0) return
+  strokesByFile[fileId] = strokes.slice(0, -1)
+  redraw(fileId)
+  scheduleSave(fileId)
+}
+
+const clearStrokes = (fileId: number) => {
+  if (!confirm('이 악보의 필기를 모두 지울까요?')) return
+  strokesByFile[fileId] = []
+  redraw(fileId)
+  scheduleSave(fileId)
+}
+
+const onWindowResize = () => {
+  for (const fileId of canvasEls.keys()) syncCanvasSize(fileId)
+}
+
+onMounted(() => {
+  window.addEventListener('resize', onWindowResize)
+  void loadAnnotationsForCurrentSong()
+})
+onUnmounted(() => window.removeEventListener('resize', onWindowResize))
 </script>
 
 <template>
@@ -112,6 +277,16 @@ const downloadPdf = async () => {
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
         <button
+          v-if="imageFiles.length > 0"
+          type="button"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors"
+          :class="penMode ? 'bg-primary text-primary-foreground' : 'bg-zinc-700 hover:bg-zinc-600'"
+          @click="penMode = !penMode"
+        >
+          <Pencil class="w-3.5 h-3.5" />
+          필기{{ penMode ? ' 종료' : '' }}
+        </button>
+        <button
           type="button"
           :disabled="isDownloading"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 transition-colors"
@@ -128,6 +303,49 @@ const downloadPdf = async () => {
           <X class="w-5 h-5" />
         </button>
       </div>
+    </div>
+
+    <!-- 필기 도구 모음 -->
+    <div v-if="penMode" class="flex items-center gap-3 px-4 py-2 bg-black/60 flex-shrink-0 flex-wrap">
+      <div class="flex items-center gap-1.5">
+        <button
+          v-for="c in PEN_COLORS"
+          :key="c"
+          type="button"
+          class="w-5 h-5 rounded-full border-2 transition-transform"
+          :class="!isEraser && penColor === c ? 'scale-110 border-white' : 'border-transparent'"
+          :style="{ backgroundColor: c }"
+          @click="isEraser = false; penColor = c"
+        />
+      </div>
+      <input v-model.number="penWidth" type="range" min="1" max="12" class="w-20" />
+      <button
+        type="button"
+        class="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors"
+        :class="isEraser ? 'bg-primary text-primary-foreground' : 'bg-zinc-700 hover:bg-zinc-600 text-white'"
+        @click="isEraser = !isEraser"
+      >
+        <Eraser class="w-3.5 h-3.5" />
+        지우개
+      </button>
+      <button
+        v-if="imageFiles.length > 0"
+        type="button"
+        class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-zinc-700 hover:bg-zinc-600 text-white transition-colors"
+        @click="undoStroke(lastActiveFileId ?? imageFiles[0].songFileId)"
+      >
+        <Undo2 class="w-3.5 h-3.5" />
+        실행취소
+      </button>
+      <button
+        v-if="imageFiles.length > 0"
+        type="button"
+        class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-zinc-700 hover:bg-zinc-600 text-white transition-colors"
+        @click="clearStrokes(lastActiveFileId ?? imageFiles[0].songFileId)"
+      >
+        <Trash2 class="w-3.5 h-3.5" />
+        전체 지우기
+      </button>
     </div>
 
     <!-- 본문 -->
@@ -157,14 +375,28 @@ const downloadPdf = async () => {
         </div>
 
         <template v-else-if="imageFiles.length > 0">
-          <img
+          <div
             v-for="file in imageFiles"
             :key="file.songFileId"
-            :src="fileUrl(file.songFileId)"
-            :alt="file.originalFileName ?? '악보'"
-            class="max-w-full max-h-[80vh] object-contain rounded shadow-lg"
-            @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')"
-          />
+            class="relative max-w-full max-h-[80vh]"
+          >
+            <img
+              :src="fileUrl(file.songFileId)"
+              :alt="file.originalFileName ?? '악보'"
+              class="max-w-full max-h-[80vh] object-contain rounded shadow-lg block"
+              @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')"
+              @load="() => { void ensureAnnotationLoaded(file.songFileId); syncCanvasSize(file.songFileId) }"
+            />
+            <canvas
+              :ref="(el) => setCanvasRef(file.songFileId, el as Element | null)"
+              class="absolute inset-0 w-full h-full rounded"
+              :class="penMode ? 'touch-none' : 'pointer-events-none'"
+              @pointerdown="onCanvasPointerDown($event, file.songFileId)"
+              @pointermove="onCanvasPointerMove($event, file.songFileId)"
+              @pointerup="onCanvasPointerUp($event, file.songFileId)"
+              @pointercancel="onCanvasPointerUp($event, file.songFileId)"
+            />
+          </div>
         </template>
         <div
           v-for="file in pdfFiles"

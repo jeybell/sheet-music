@@ -8,7 +8,6 @@ import java.util.List;
 public record SetlistResponse(
         Long setlistId,
         LocalDate serviceDate,
-        String serviceType,
         String title,
         String memo,
         String shareToken,
@@ -20,7 +19,6 @@ public record SetlistResponse(
         return new SetlistResponse(
                 setlist.getSetlistId(),
                 setlist.getServiceDate(),
-                setlist.getServiceType(),
                 setlist.getTitle(),
                 setlist.getMemo(),
                 setlist.getShareToken(),
@@ -54,7 +52,6 @@ public record SetlistResponse(
         return new SetlistResponse(
                 head.setlistId(),
                 head.serviceDate(),
-                head.serviceType(),
                 head.title(),
                 head.memo(),
                 head.shareToken(),

@@ -9,7 +9,6 @@ import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Label from '../components/ui/Label.vue'
-import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
 import SongPickerModal from '../components/SongPickerModal.vue'
 import { useSetlistStore } from '../stores/setlistStore'
@@ -28,7 +27,7 @@ const apiError = (e: unknown, fallback: string) =>
 const today = () => new Date().toISOString().slice(0, 10)
 
 const showCreateForm = ref(false)
-const createForm = reactive({ serviceDate: today(), serviceType: '', title: '', memo: '' })
+const createForm = reactive({ serviceDate: today(), title: '', memo: '' })
 const createError = ref('')
 const isCreating = ref(false)
 
@@ -48,7 +47,6 @@ const removePendingSong = (idx: number) => { pendingSongs.value.splice(idx, 1) }
 
 const resetCreateForm = () => {
   createForm.serviceDate = today()
-  createForm.serviceType = ''
   createForm.title = ''
   createForm.memo = ''
   createError.value = ''
@@ -65,7 +63,6 @@ const handleCreate = async () => {
   try {
     const created = await createSetlist({
       serviceDate: createForm.serviceDate,
-      serviceType: createForm.serviceType.trim() || null,
       title: createForm.title.trim() || null,
       memo: createForm.memo.trim() || null,
     })
@@ -131,15 +128,9 @@ onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
       <h2 class="text-sm font-semibold text-foreground mb-4">새 콘티 만들기</h2>
       <p v-if="createError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ createError }}</p>
       <div class="flex flex-col gap-4">
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1.5">
-            <Label for="service-date">날짜 <span class="text-destructive">*</span></Label>
-            <Input id="service-date" v-model="createForm.serviceDate" type="date" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="service-type">예배 종류</Label>
-            <Input id="service-type" v-model="createForm.serviceType" type="text" placeholder="예) 주일 1부" />
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="service-date">날짜 <span class="text-destructive">*</span></Label>
+          <Input id="service-date" v-model="createForm.serviceDate" type="date" />
         </div>
         <div class="flex flex-col gap-1.5">
           <Label for="setlist-title">제목</Label>
@@ -204,7 +195,6 @@ onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
       >
         <div class="flex items-center gap-3 min-w-0">
           <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
-          <Badge v-if="setlist.serviceType" variant="blue">{{ setlist.serviceType }}</Badge>
           <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
         </div>
         <div class="flex items-center gap-3 flex-shrink-0">

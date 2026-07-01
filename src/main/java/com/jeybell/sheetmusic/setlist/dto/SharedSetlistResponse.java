@@ -7,7 +7,6 @@ import java.util.List;
 public record SharedSetlistResponse(
         Long setlistId,
         LocalDate serviceDate,
-        String serviceType,
         String title,
         String memo,
         List<SharedSetlistItemResponse> items
@@ -17,7 +16,6 @@ public record SharedSetlistResponse(
         return new SharedSetlistResponse(
                 setlist.getSetlistId(),
                 setlist.getServiceDate(),
-                setlist.getServiceType(),
                 setlist.getTitle(),
                 setlist.getMemo(),
                 setlist.getItems().stream()

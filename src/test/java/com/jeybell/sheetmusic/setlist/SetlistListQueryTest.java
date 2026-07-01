@@ -55,13 +55,13 @@ class SetlistListQueryTest {
         entityManager.persist(songB);
 
         // 콘티1(오늘): 아이템 2개 (순서 역순으로 추가해도 orderNo asc 로 정렬되어야 함)
-        Setlist today = new Setlist(LocalDate.of(2026, 7, 1), "주일예배", "주일 콘티", null);
+        Setlist today = new Setlist(LocalDate.of(2026, 7, 1), "주일 콘티", null);
         today.addItem(new SetlistItem(songB, null, 2, "2번곡"));
         today.addItem(new SetlistItem(songA, sheetA, 1, "1번곡"));
         entityManager.persist(today);
 
         // 콘티2(어제): 아이템 없음 → 빈 items 로 조회되어야 함
-        Setlist yesterday = new Setlist(LocalDate.of(2026, 6, 30), "새벽예배", "새벽 콘티", null);
+        Setlist yesterday = new Setlist(LocalDate.of(2026, 6, 30), "새벽 콘티", null);
         entityManager.persist(yesterday);
 
         entityManager.flush();

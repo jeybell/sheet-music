@@ -29,9 +29,6 @@ public class Setlist {
     @Column(name = "service_date", nullable = false)
     private LocalDate serviceDate;
 
-    @Column(name = "service_type", length = 50)
-    private String serviceType;
-
     @Column(length = 255)
     private String title;
 
@@ -54,9 +51,8 @@ public class Setlist {
     protected Setlist() {
     }
 
-    public Setlist(LocalDate serviceDate, String serviceType, String title, String memo) {
+    public Setlist(LocalDate serviceDate, String title, String memo) {
         this.serviceDate = serviceDate;
-        this.serviceType = serviceType;
         this.title = title;
         this.memo = memo;
     }
@@ -66,9 +62,8 @@ public class Setlist {
         this.createdAt = LocalDateTime.now();
     }
 
-    public void update(LocalDate serviceDate, String serviceType, String title, String memo) {
+    public void update(LocalDate serviceDate, String title, String memo) {
         this.serviceDate = serviceDate;
-        this.serviceType = serviceType;
         this.title = title;
         this.memo = memo;
     }
@@ -97,10 +92,6 @@ public class Setlist {
 
     public LocalDate getServiceDate() {
         return serviceDate;
-    }
-
-    public String getServiceType() {
-        return serviceType;
     }
 
     public String getTitle() {

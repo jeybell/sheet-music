@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Music, ChevronLeft, ChevronRight } from '@lucide/vue'
+import { Music, ChevronLeft, ChevronRight, Home } from '@lucide/vue'
 import { getSharedSetlist } from '../apis/setlistApi'
 import type { SharedSetlist, SharedSetlistItem, SharedFile } from '../types/setlist'
 
@@ -61,6 +61,13 @@ onMounted(async () => {
     <header class="border-b border-border px-4 py-3 flex items-center gap-2">
       <Music class="w-5 h-5 text-primary" />
       <span class="font-semibold text-sm text-foreground">악보 공유</span>
+      <RouterLink
+        to="/"
+        class="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Home class="w-3.5 h-3.5" />
+        앱 홈으로
+      </RouterLink>
     </header>
 
     <main class="max-w-3xl mx-auto px-4 py-6">

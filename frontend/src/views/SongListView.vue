@@ -166,6 +166,9 @@ onBeforeUnmount(() => observer?.disconnect())
     </div>
 
     <template v-else>
+      <p class="text-xs text-muted-foreground mb-3">
+        {{ hasFilter ? '검색 결과' : '전체' }} 총 <span class="font-medium text-foreground">{{ songStore.listTotal }}</span>곡
+      </p>
       <SongList :songs="songStore.listSongs" />
 
       <!-- 무한 스크롤 감지 지점 -->

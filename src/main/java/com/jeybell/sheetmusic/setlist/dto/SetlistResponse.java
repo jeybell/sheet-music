@@ -46,7 +46,8 @@ public record SetlistResponse(
                         row.songSheetId(),
                         row.sheetKey(),
                         row.versionName(),
-                        row.itemMemo()
+                        row.itemMemo(),
+                        row.performanceKey()
                 ))
                 .toList();
         return new SetlistResponse(

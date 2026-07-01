@@ -2,9 +2,9 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, KeyRound, Check } from '@lucide/vue'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
-import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
+import { addSetlistItem, deleteSetlistItem, updateSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import { useToast } from '../composables/useToast'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -145,7 +145,7 @@ const handleDelete = async () => {
 // ── 곡 추가
 const showAddItem = ref(false)
 const showSongPicker = ref(false)
-const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, songTitle: '', memo: '' })
+const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, songTitle: '', memo: '', performanceKey: '' })
 const addError = ref('')
 const isAddingItem = ref(false)
 
@@ -167,6 +167,7 @@ const resetAddForm = () => {
   addForm.songSheetId = null
   addForm.songTitle = ''
   addForm.memo = ''
+  addForm.performanceKey = ''
   addError.value = ''
 }
 
@@ -183,6 +184,7 @@ const handleAddItem = async () => {
       songSheetId: addForm.songSheetId ?? undefined,
       orderNo: items.value.length + 1,
       memo: addForm.memo.trim() || null,
+      performanceKey: addForm.performanceKey.trim() || null,
     })
     resetAddForm()
     showAddItem.value = false
@@ -192,6 +194,38 @@ const handleAddItem = async () => {
     addError.value = apiError(e, '곡 추가에 실패했습니다.')
   } finally {
     isAddingItem.value = false
+  }
+}
+
+// ── 연주 키(이번 예배 키) 인라인 수정
+const editingKeyItemId = ref<number | null>(null)
+const keyEditValue = ref('')
+const isSavingKey = ref(false)
+
+const startEditKey = (item: (typeof items.value)[number]) => {
+  editingKeyItemId.value = item.setlistItemId
+  keyEditValue.value = item.performanceKey ?? ''
+}
+
+const cancelEditKey = () => {
+  editingKeyItemId.value = null
+}
+
+const saveKey = async (item: (typeof items.value)[number]) => {
+  isSavingKey.value = true
+  try {
+    await updateSetlistItem(item.setlistItemId, {
+      songSheetId: item.songSheetId,
+      orderNo: item.orderNo,
+      memo: item.memo,
+      performanceKey: keyEditValue.value.trim() || null,
+    })
+    editingKeyItemId.value = null
+    await store.fetchSetlist(props.setlistId)
+  } catch (e) {
+    alert(apiError(e, '연주 키 저장에 실패했습니다.'))
+  } finally {
+    isSavingKey.value = false
   }
 }
 
@@ -459,6 +493,11 @@ watch(() => props.setlistId, load)
                   <span v-else class="text-muted-foreground">곡을 검색해서 선택하세요</span>
                 </button>
               </div>
+              <!-- 연주 키(이번 예배 키) -->
+              <div class="flex flex-col gap-1.5">
+                <Label for="add-performance-key">연주 키 <span class="text-muted-foreground font-normal">(악보 원래 키와 다를 경우)</span></Label>
+                <Input id="add-performance-key" v-model="addForm.performanceKey" type="text" placeholder="예: G" class="max-w-[8rem]" />
+              </div>
               <!-- 메모 (여러 줄) -->
               <div class="flex flex-col gap-1.5">
                 <Label for="add-memo">메모</Label>
@@ -507,12 +546,46 @@ watch(() => props.setlistId, load)
                     <span class="text-sm font-semibold text-foreground">{{ item.songTitle }}</span>
                     <span v-if="item.songArtist" class="text-xs text-muted-foreground">{{ item.songArtist }}</span>
                   </div>
-                  <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet" class="mb-1">
-                    {{ sheetLabel(item.sheetKey, item.versionName) }}
-                  </Badge>
-                  <Badge v-else-if="item.songSheetId" variant="destructive" class="mb-1 text-xs">
-                    악보 버전 삭제됨
-                  </Badge>
+                  <div class="flex items-center gap-1 flex-wrap mb-1">
+                    <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet">
+                      {{ sheetLabel(item.sheetKey, item.versionName) }}
+                    </Badge>
+                    <Badge v-else-if="item.songSheetId" variant="destructive" class="text-xs">
+                      악보 버전 삭제됨
+                    </Badge>
+
+                    <!-- 연주 키(이번 예배 키) 배지 + 인라인 수정 -->
+                    <template v-if="editingKeyItemId === item.setlistItemId">
+                      <input
+                        v-model="keyEditValue"
+                        type="text"
+                        placeholder="예: G"
+                        class="w-16 h-5 px-1.5 text-xs rounded border border-primary bg-background text-foreground"
+                        @click.stop
+                        @keydown.enter.stop="saveKey(item)"
+                        @keydown.esc.stop="cancelEditKey"
+                      />
+                      <button type="button" class="text-primary" :disabled="isSavingKey" @click.stop="saveKey(item)">
+                        <Check class="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" class="text-muted-foreground" @click.stop="cancelEditKey">
+                        <X class="w-3.5 h-3.5" />
+                      </button>
+                    </template>
+                    <button
+                      v-else
+                      type="button"
+                      class="inline-flex items-center gap-1"
+                      @click.stop="startEditKey(item)"
+                    >
+                      <Badge v-if="item.performanceKey" variant="default">
+                        <KeyRound class="w-3 h-3 mr-0.5" />연주 키 {{ item.performanceKey }}
+                      </Badge>
+                      <span v-else class="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                        <KeyRound class="w-3 h-3" />연주 키 설정
+                      </span>
+                    </button>
+                  </div>
                   <p v-if="item.memo" class="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{{ item.memo }}</p>
                 </div>
                 <button

@@ -39,24 +39,33 @@ public class SetlistItem {
     @Column(columnDefinition = "TEXT")
     private String memo;
 
+    @Column(name = "performance_key", length = 20)
+    private String performanceKey;
+
     protected SetlistItem() {
     }
 
     public SetlistItem(Song song, SongSheet songSheet, Integer orderNo, String memo) {
+        this(song, songSheet, orderNo, memo, null);
+    }
+
+    public SetlistItem(Song song, SongSheet songSheet, Integer orderNo, String memo, String performanceKey) {
         this.song = song;
         this.songSheet = songSheet;
         this.orderNo = orderNo;
         this.memo = memo;
+        this.performanceKey = performanceKey;
     }
 
     void assignSetlist(Setlist setlist) {
         this.setlist = setlist;
     }
 
-    public void update(SongSheet songSheet, Integer orderNo, String memo) {
+    public void update(SongSheet songSheet, Integer orderNo, String memo, String performanceKey) {
         this.songSheet = songSheet;
         this.orderNo = orderNo;
         this.memo = memo;
+        this.performanceKey = performanceKey;
     }
 
     public Long getSetlistItemId() {
@@ -81,5 +90,9 @@ public class SetlistItem {
 
     public String getMemo() {
         return memo;
+    }
+
+    public String getPerformanceKey() {
+        return performanceKey;
     }
 }

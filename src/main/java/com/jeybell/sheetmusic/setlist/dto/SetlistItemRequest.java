@@ -11,6 +11,8 @@ public record SetlistItemRequest(
         @NotNull(message = "orderNo is required")
         Integer orderNo,
 
-        String memo
+        String memo,
+
+        String performanceKey
 ) {
 }

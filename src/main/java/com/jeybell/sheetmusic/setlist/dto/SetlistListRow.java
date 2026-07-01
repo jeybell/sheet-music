@@ -23,6 +23,7 @@ public record SetlistListRow(
         Long songSheetId,
         String sheetKey,
         String versionName,
-        String itemMemo
+        String itemMemo,
+        String performanceKey
 ) {
 }

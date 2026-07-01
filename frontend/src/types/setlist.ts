@@ -8,6 +8,7 @@ export interface SetlistItem {
   sheetKey: string | null
   versionName: string | null
   memo: string | null
+  performanceKey: string | null
 }
 
 export interface Setlist {
@@ -58,4 +59,5 @@ export interface SetlistItemCreateRequest {
   songSheetId?: number | null
   orderNo: number
   memo?: string | null
+  performanceKey?: string | null
 }

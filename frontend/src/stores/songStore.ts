@@ -78,11 +78,19 @@ export const useSongStore = defineStore('song', () => {
 
     try {
       songs.value = await getSongs(params)
+      songsLoaded.value = true
     } catch (error) {
       errorMessage.value = getErrorMessage(error, '곡 목록을 불러오지 못했습니다.')
     } finally {
       isLoading.value = false
     }
+  }
+
+  // 곡 선택 모달용 전체 목록을 최초 1회만 로드 (콘티 화면 진입 시가 아니라 모달 열 때 호출)
+  const songsLoaded = ref(false)
+  const ensureSongsLoaded = async () => {
+    if (songsLoaded.value || isLoading.value) return
+    await fetchSongs()
   }
 
   const fetchSong = async (songId: number) => {
@@ -106,6 +114,7 @@ export const useSongStore = defineStore('song', () => {
     errorMessage,
     hasSongs,
     fetchSongs,
+    ensureSongsLoaded,
     fetchSong,
     // 무한 스크롤 목록
     listSongs,

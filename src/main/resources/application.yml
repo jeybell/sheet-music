@@ -21,6 +21,8 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # 지연 로딩 컬렉션(sheets, files 등)을 IN 절로 배치 로딩해 N+1 완화
+        default_batch_fetch_size: 100
     open-in-view: false
 
 server:

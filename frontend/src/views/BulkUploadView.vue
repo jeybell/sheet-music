@@ -44,7 +44,7 @@ const addFiles = (files: FileList | File[]) => {
       id: crypto.randomUUID(),
       file,
       previewUrl: URL.createObjectURL(file),
-      status: 'ocr-loading',
+      status: 'ready',
       title: '',
       sheetKey: '',
       artist: '',
@@ -52,22 +52,22 @@ const addFiles = (files: FileList | File[]) => {
       songId: null,
     }
     items.value.push(item)
-    runOcr(item)
   })
 }
 
+// 카드별 수동 OCR: 버튼으로만 실행. 결과가 있으면 해당 필드만 채운다.
 const runOcr = async (item: BulkItem) => {
+  item.status = 'ocr-loading'
+  item.errorMessage = ''
   try {
     const result = await previewOcr(item.file)
-    const target = items.value.find(i => i.id === item.id)
-    if (!target) return
-    if (result.title) target.title = result.title
-    if (result.key) target.sheetKey = result.key
-    if (result.artist) target.artist = result.artist
-    target.status = 'ready'
+    if (result.title) item.title = result.title
+    if (result.key) item.sheetKey = result.key
+    if (result.artist) item.artist = result.artist
   } catch {
-    const target = items.value.find(i => i.id === item.id)
-    if (target) target.status = 'ready'
+    item.errorMessage = 'OCR 분석에 실패했습니다. 직접 입력해 주세요.'
+  } finally {
+    item.status = 'ready'
   }
 }
 
@@ -269,6 +269,19 @@ const statusLabel: Record<ItemStatus, string> = {
               />
             </div>
           </div>
+
+          <!-- 수동 OCR 버튼 -->
+          <button
+            v-if="item.status === 'ready' || item.status === 'ocr-loading' || item.status === 'error'"
+            type="button"
+            class="inline-flex items-center justify-center gap-1 h-8 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="item.status === 'ocr-loading'"
+            @click="runOcr(item)"
+          >
+            <Loader2 v-if="item.status === 'ocr-loading'" class="w-3.5 h-3.5 animate-spin" />
+            <ScanText v-else class="w-3.5 h-3.5" />
+            {{ item.status === 'ocr-loading' ? 'OCR 분석 중...' : 'OCR로 정보 채우기' }}
+          </button>
 
           <!-- done 상태: 상세 이동 -->
           <div v-if="item.status === 'done'" class="mt-auto pt-1">

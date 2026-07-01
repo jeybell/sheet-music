@@ -10,7 +10,7 @@ const songStore = useSongStore()
 
 const query = ref('')
 const songKey = ref('')
-const selectedTag = ref<string | null>(null)
+const selectedTags = ref<string[]>([])
 const allTags = ref<string[]>([])
 const hasFilter = ref(false)
 
@@ -20,8 +20,8 @@ let observer: IntersectionObserver | undefined
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
 const runSearch = () => {
-  hasFilter.value = Boolean(query.value.trim() || songKey.value.trim() || selectedTag.value)
-  void songStore.fetchFirstPage({ query: query.value, songKey: songKey.value, tag: selectedTag.value })
+  hasFilter.value = Boolean(query.value.trim() || songKey.value.trim() || selectedTags.value.length)
+  void songStore.fetchFirstPage({ query: query.value, songKey: songKey.value, tags: selectedTags.value })
 }
 
 watch([query, songKey], () => {
@@ -29,18 +29,24 @@ watch([query, songKey], () => {
   debounceTimer = setTimeout(runSearch, 300)
 })
 
-watch(selectedTag, () => {
+watch(selectedTags, () => {
   runSearch()
-})
+}, { deep: true })
 
 const toggleTag = (tag: string) => {
-  selectedTag.value = selectedTag.value === tag ? null : tag
+  const idx = selectedTags.value.indexOf(tag)
+  if (idx === -1) selectedTags.value.push(tag)
+  else selectedTags.value.splice(idx, 1)
+}
+
+const clearTags = () => {
+  selectedTags.value = []
 }
 
 const clearFilters = () => {
   query.value = ''
   songKey.value = ''
-  selectedTag.value = null
+  selectedTags.value = []
 }
 
 // sentinel 은 목록이 렌더된 뒤에야 존재하므로 ref 변화를 감지해 관찰을 건다.
@@ -113,19 +119,28 @@ onBeforeUnmount(() => observer?.disconnect())
       />
     </div>
 
-    <!-- 태그 필터 -->
-    <div v-if="allTags.length > 0" class="flex flex-wrap gap-1.5 mb-5">
+    <!-- 태그 필터 (다중 선택, AND) -->
+    <div v-if="allTags.length > 0" class="flex flex-wrap items-center gap-1.5 mb-5">
       <button
         v-for="tag in allTags"
         :key="tag"
         type="button"
         class="inline-flex items-center h-7 px-2.5 rounded-full text-xs font-medium border transition-colors"
-        :class="selectedTag === tag
+        :class="selectedTags.includes(tag)
           ? 'bg-primary text-primary-foreground border-primary'
           : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-primary'"
         @click="toggleTag(tag)"
       >
         {{ tag }}
+      </button>
+      <button
+        v-if="selectedTags.length > 0"
+        type="button"
+        class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        @click="clearTags"
+      >
+        <X class="w-3 h-3" />
+        태그 {{ selectedTags.length }}개 해제
       </button>
     </div>
 

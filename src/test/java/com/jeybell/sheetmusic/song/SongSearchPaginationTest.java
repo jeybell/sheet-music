@@ -42,27 +42,42 @@ class SongSearchPaginationTest {
 
         var sort = Sort.by(Sort.Direction.DESC, "createdAt");
 
-        Page<Song> first = songRepository.searchSongs(null, null, null, PageRequest.of(0, 2, sort));
+        Page<Song> first = songRepository.searchSongs(null, null, List.of(), 0, PageRequest.of(0, 2, sort));
         assertThat(first.getTotalElements()).isEqualTo(3);
         assertThat(first.getContent()).hasSize(2);
         assertThat(first.hasNext()).isTrue();
 
-        Page<Song> second = songRepository.searchSongs(null, null, null, PageRequest.of(1, 2, sort));
+        Page<Song> second = songRepository.searchSongs(null, null, List.of(), 0, PageRequest.of(1, 2, sort));
         assertThat(second.getContent()).hasSize(1);
         assertThat(second.hasNext()).isFalse();
     }
 
     @Test
-    void 태그_및_키_필터가_동작한다() {
+    void 키_필터가_동작한다() {
         persist("곡1", "A", List.of("찬양"), "G");
         persist("곡2", "B", List.of("경배"), "C");
         persist("곡3", "C", null, null);
 
         var page = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        assertThat(songRepository.searchSongs(null, null, "찬양", page).getTotalElements()).isEqualTo(1);
         // songKey 는 서비스에서 소문자 %..% 형태로 정규화되어 전달됨
-        assertThat(songRepository.searchSongs(null, "%g%", null, page).getTotalElements()).isEqualTo(1);
-        assertThat(songRepository.searchSongs("%곡%", null, null, page).getTotalElements()).isEqualTo(3);
+        assertThat(songRepository.searchSongs(null, "%g%", List.of(), 0, page).getTotalElements()).isEqualTo(1);
+        assertThat(songRepository.searchSongs("%곡%", null, List.of(), 0, page).getTotalElements()).isEqualTo(3);
+    }
+
+    @Test
+    void 다중_태그는_AND로_필터링된다() {
+        persist("곡1", "A", List.of("찬양", "빠른곡"), null);
+        persist("곡2", "B", List.of("찬양"), null);
+        persist("곡3", "C", List.of("빠른곡"), null);
+
+        var page = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 단일 태그
+        assertThat(songRepository.searchSongs(null, null, List.of("찬양"), 1, page).getTotalElements()).isEqualTo(2);
+        // 두 태그 모두 가진 곡만 (AND)
+        assertThat(songRepository.searchSongs(null, null, List.of("찬양", "빠른곡"), 2, page).getTotalElements()).isEqualTo(1);
+        // 존재하지 않는 조합
+        assertThat(songRepository.searchSongs(null, null, List.of("찬양", "느린곡"), 2, page).getTotalElements()).isEqualTo(0);
     }
 }

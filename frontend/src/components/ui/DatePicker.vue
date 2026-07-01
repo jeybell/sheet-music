@@ -4,6 +4,8 @@ import { Calendar, ChevronLeft, ChevronRight } from '@lucide/vue'
 
 // v-model 값은 'yyyy-mm-dd' 문자열 (네이티브 date input 과 호환)
 const model = defineModel<string>()
+// inline: true 면 트리거 버튼 없이 달력 그리드를 바로 표시(항상 열림)
+const props = defineProps<{ inline?: boolean }>()
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -85,20 +87,30 @@ function nextMonth() {
 
 function select(iso: string) {
   model.value = iso
-  open.value = false
+  if (!props.inline) open.value = false
 }
 
 function onClickOutside(e: MouseEvent) {
   if (root.value && !root.value.contains(e.target as Node)) open.value = false
 }
 
-onMounted(() => document.addEventListener('mousedown', onClickOutside))
-onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
+onMounted(() => {
+  if (props.inline) {
+    initView()
+  } else {
+    document.addEventListener('mousedown', onClickOutside)
+  }
+})
+onBeforeUnmount(() => {
+  if (!props.inline) document.removeEventListener('mousedown', onClickOutside)
+})
 </script>
 
 <template>
-  <div ref="root" class="relative">
+  <div ref="root" :class="inline ? '' : 'relative'">
+    <!-- 팝오버 모드 트리거 버튼 -->
     <button
+      v-if="!inline"
       type="button"
       class="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
       @click="toggle"
@@ -108,9 +120,12 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
       <span v-else class="text-muted-foreground">날짜 선택</span>
     </button>
 
+    <!-- 달력: inline 이면 그 자리에, 아니면 팝오버 -->
     <div
-      v-if="open"
-      class="absolute left-0 z-50 mt-1 w-64 rounded-md border border-border bg-card p-3 shadow-lg"
+      v-if="inline || open"
+      :class="inline
+        ? 'w-full max-w-xs rounded-md border border-border bg-card p-3'
+        : 'absolute left-0 z-50 mt-1 w-64 rounded-md border border-border bg-card p-3 shadow-lg'"
     >
       <div class="flex items-center justify-between mb-2">
         <button type="button" class="p-1 rounded hover:bg-muted text-muted-foreground" @click="prevMonth">

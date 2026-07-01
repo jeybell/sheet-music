@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, QrCode, Download } from '@lucide/vue'
+import QRCode from 'qrcode'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
@@ -294,6 +295,27 @@ const copyShareUrl = async () => {
   alert('링크가 복사되었습니다.')
 }
 
+// ── 공유 QR코드
+const showQrModal = ref(false)
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
+
+const openQrModal = async () => {
+  if (!shareUrl.value) return
+  showQrModal.value = true
+  await nextTick()
+  if (qrCanvas.value) {
+    await QRCode.toCanvas(qrCanvas.value, shareUrl.value, { width: 240, margin: 2 })
+  }
+}
+
+const downloadQr = () => {
+  if (!qrCanvas.value) return
+  const link = document.createElement('a')
+  link.download = `${setlist.value?.title ?? setlist.value?.serviceDate ?? 'setlist'}-qr.png`
+  link.href = qrCanvas.value.toDataURL('image/png')
+  link.click()
+}
+
 const load = () => {
   if (Number.isFinite(props.setlistId)) {
     void store.fetchSetlist(props.setlistId)
@@ -319,6 +341,27 @@ watch(() => props.setlistId, load)
       :setlist-title="setlist?.title ?? setlist?.serviceDate ?? null"
       @close="showViewer = false"
     />
+
+    <!-- 공유 QR코드 모달 -->
+    <div
+      v-if="showQrModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
+      <div class="absolute inset-0 bg-black/60" @click="showQrModal = false" />
+      <div class="relative w-full max-w-xs bg-card border border-border rounded-xl shadow-xl p-5 flex flex-col items-center gap-4">
+        <div class="flex items-center justify-between w-full">
+          <h2 class="text-sm font-semibold text-foreground">공유 QR코드</h2>
+          <button type="button" class="text-muted-foreground hover:text-foreground" @click="showQrModal = false">
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        <canvas ref="qrCanvas" class="rounded-md" />
+        <Button class="w-full" @click="downloadQr">
+          <Download class="w-3.5 h-3.5" />
+          이미지 다운로드
+        </Button>
+      </div>
+    </div>
 
     <!-- 뒤로가기 -->
     <button
@@ -385,6 +428,10 @@ watch(() => props.setlistId, load)
                   <Button variant="outline" size="sm" @click="copyShareUrl">
                     <Link class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">복사</span>
+                  </Button>
+                  <Button variant="outline" size="sm" @click="openQrModal">
+                    <QrCode class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline">QR코드</span>
                   </Button>
                   <Button variant="outline" size="sm" @click="handleRevokeShare">
                     <Link2Off class="w-3.5 h-3.5" />

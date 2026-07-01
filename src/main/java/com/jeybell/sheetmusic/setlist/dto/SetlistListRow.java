@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 public record SetlistListRow(
         Long setlistId,
         LocalDate serviceDate,
-        String serviceType,
         String title,
         String memo,
         String shareToken,

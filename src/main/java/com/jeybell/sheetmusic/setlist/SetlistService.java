@@ -36,7 +36,6 @@ public class SetlistService {
     public SetlistResponse createSetlist(SetlistRequest request) {
         Setlist setlist = new Setlist(
                 request.serviceDate(),
-                request.serviceType(),
                 request.title(),
                 request.memo()
         );
@@ -52,7 +51,6 @@ public class SetlistService {
         Setlist setlist = getActive(setlistId);
         setlist.update(
                 request.serviceDate(),
-                request.serviceType(),
                 request.title(),
                 request.memo()
         );

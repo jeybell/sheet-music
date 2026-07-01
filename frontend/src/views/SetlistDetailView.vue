@@ -82,13 +82,12 @@ const apiError = (e: unknown, fallback: string) =>
 
 // ── 셋리스트 수정
 const isEditing = ref(false)
-const editForm = reactive({ serviceDate: '', serviceType: '', title: '', memo: '' })
+const editForm = reactive({ serviceDate: '', title: '', memo: '' })
 const editError = ref('')
 const isSavingEdit = ref(false)
 
 const startEdit = () => {
   editForm.serviceDate = setlist.value?.serviceDate ?? ''
-  editForm.serviceType = setlist.value?.serviceType ?? ''
   editForm.title = setlist.value?.title ?? ''
   editForm.memo = setlist.value?.memo ?? ''
   editError.value = ''
@@ -105,7 +104,6 @@ const handleUpdate = async () => {
   try {
     await updateSetlist(props.setlistId, {
       serviceDate: editForm.serviceDate,
-      serviceType: editForm.serviceType.trim() || null,
       title: editForm.title.trim() || null,
       memo: editForm.memo.trim() || null,
     })
@@ -326,13 +324,10 @@ watch(() => props.setlistId, load)
           <!-- 보기 모드 -->
           <template v-if="!isEditing">
             <div class="px-5 pt-4 pb-3">
-              <!-- 날짜 / 예배 종류 / 제목 -->
+              <!-- 날짜 / 제목 -->
               <div class="flex items-start justify-between gap-3 mb-3">
                 <div class="min-w-0">
-                  <div class="flex items-center gap-2 mb-1 flex-wrap">
-                    <span class="text-xs text-muted-foreground font-medium">{{ formatDate(setlist.serviceDate) }}</span>
-                    <Badge v-if="setlist.serviceType" variant="blue" class="text-xs">{{ setlist.serviceType }}</Badge>
-                  </div>
+                  <span class="text-xs text-muted-foreground font-medium mb-1 block">{{ formatDate(setlist.serviceDate) }}</span>
                   <h1 class="text-lg font-bold text-foreground leading-snug">{{ setlist.title ?? '제목 없음' }}</h1>
                   <p v-if="setlist.memo" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ setlist.memo }}</p>
                 </div>
@@ -393,15 +388,9 @@ watch(() => props.setlistId, load)
               </div>
               <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4">{{ editError }}</p>
               <div class="flex flex-col gap-3">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div class="flex flex-col gap-1.5">
-                    <Label for="edit-date">날짜 <span class="text-destructive">*</span></Label>
-                    <Input id="edit-date" v-model="editForm.serviceDate" type="date" />
-                  </div>
-                  <div class="flex flex-col gap-1.5">
-                    <Label for="edit-type">예배 종류</Label>
-                    <Input id="edit-type" v-model="editForm.serviceType" type="text" />
-                  </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label for="edit-date">날짜 <span class="text-destructive">*</span></Label>
+                  <Input id="edit-date" v-model="editForm.serviceDate" type="date" />
                 </div>
                 <div class="flex flex-col gap-1.5">
                   <Label for="edit-title">제목</Label>

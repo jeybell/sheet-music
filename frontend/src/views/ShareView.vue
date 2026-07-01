@@ -75,7 +75,7 @@ onMounted(async () => {
       <template v-else-if="setlist">
         <!-- 콘티 정보 -->
         <div class="mb-6">
-          <p class="text-xs text-muted-foreground mb-1">{{ formatDate(setlist.serviceDate) }}<span v-if="setlist.serviceType"> · {{ setlist.serviceType }}</span></p>
+          <p class="text-xs text-muted-foreground mb-1">{{ formatDate(setlist.serviceDate) }}</p>
           <h1 class="text-xl font-bold text-foreground">{{ setlist.title ?? '콘티' }}</h1>
           <p v-if="setlist.memo" class="text-sm text-muted-foreground mt-1">{{ setlist.memo }}</p>
         </div>

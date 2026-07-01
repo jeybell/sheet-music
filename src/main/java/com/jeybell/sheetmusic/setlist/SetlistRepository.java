@@ -16,7 +16,7 @@ public interface SetlistRepository extends JpaRepository<Setlist, Long> {
      */
     @Query("""
             select new com.jeybell.sheetmusic.setlist.dto.SetlistListRow(
-                sl.setlistId, sl.serviceDate, sl.serviceType, sl.title, sl.memo, sl.shareToken, sl.createdAt,
+                sl.setlistId, sl.serviceDate, sl.title, sl.memo, sl.shareToken, sl.createdAt,
                 i.setlistItemId, i.orderNo, s.songId, s.title, s.artist,
                 ss.songSheetId, ss.sheetKey, ss.versionName, i.memo
             )

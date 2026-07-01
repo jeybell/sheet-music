@@ -13,7 +13,6 @@ export interface SetlistItem {
 export interface Setlist {
   setlistId: number
   serviceDate: string
-  serviceType: string | null
   title: string | null
   memo: string | null
   shareToken: string | null
@@ -43,7 +42,6 @@ export interface SharedSetlistItem {
 export interface SharedSetlist {
   setlistId: number
   serviceDate: string
-  serviceType: string | null
   title: string | null
   memo: string | null
   items: SharedSetlistItem[]
@@ -51,7 +49,6 @@ export interface SharedSetlist {
 
 export interface SetlistCreateRequest {
   serviceDate: string
-  serviceType?: string | null
   title?: string | null
   memo?: string | null
 }

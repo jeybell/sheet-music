@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { Plus, Trash2, ChevronRight, X, Music } from '@lucide/vue'
+import { Plus, Trash2, ChevronRight, X, Music, Star } from '@lucide/vue'
 import { createSetlist, deleteSetlist } from '../apis/setlistApi'
 import { addSetlistItem } from '../apis/setlistItemApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -15,6 +15,7 @@ import SongPickerModal from '../components/SongPickerModal.vue'
 import { useSetlistStore } from '../stores/setlistStore'
 import { useSongStore } from '../stores/songStore'
 import { useToast } from '../composables/useToast'
+import { useSetlistFavorites } from '../composables/useSetlistFavorites'
 import type { Setlist } from '../types/setlist'
 
 interface ApiErrorResponse { message?: string }
@@ -23,6 +24,14 @@ const router = useRouter()
 const store = useSetlistStore()
 const songStore = useSongStore()
 const toast = useToast()
+const { favoriteIds, isFavorite, toggleFavorite } = useSetlistFavorites()
+
+const favoriteSetlists = computed(() =>
+  store.setlists.filter((s) => favoriteIds.value.includes(s.setlistId)),
+)
+const otherSetlists = computed(() =>
+  store.setlists.filter((s) => !favoriteIds.value.includes(s.setlistId)),
+)
 
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
@@ -209,27 +218,64 @@ onMounted(() => { void store.fetchSetlists() })
       <p class="text-sm text-muted-foreground mt-1">새 콘티를 만들어 예배 순서를 구성해보세요.</p>
     </div>
 
-    <div v-else class="flex flex-col gap-2">
-      <div
-        v-for="setlist in store.setlists"
-        :key="setlist.setlistId"
-        class="bg-card rounded-xl border border-border px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
-        @click="$router.push(`/setlists/${setlist.setlistId}`)"
-      >
-        <div class="flex items-center gap-3 min-w-0">
-          <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
-          <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+    <div v-else class="flex flex-col gap-5">
+      <!-- 즐겨찾기 -->
+      <div v-if="favoriteSetlists.length > 0" class="flex flex-col gap-2">
+        <h2 class="text-xs font-semibold text-muted-foreground">즐겨찾기</h2>
+        <div
+          v-for="setlist in favoriteSetlists"
+          :key="setlist.setlistId"
+          class="bg-card rounded-xl border border-primary/30 px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+          @click="$router.push(`/setlists/${setlist.setlistId}`)"
+        >
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+            <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
+            <button
+              type="button"
+              class="text-primary"
+              @click.stop="toggleFavorite(setlist.setlistId)"
+            >
+              <Star class="w-4 h-4 fill-current" />
+            </button>
+            <Button variant="destructive" size="sm" @click="handleDelete(setlist, $event)">
+              <Trash2 class="w-3.5 h-3.5" />
+            </Button>
+            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
         </div>
-        <div class="flex items-center gap-3 flex-shrink-0">
-          <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
-          <Button
-            variant="destructive"
-            size="sm"
-            @click="handleDelete(setlist, $event)"
-          >
-            <Trash2 class="w-3.5 h-3.5" />
-          </Button>
-          <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+      </div>
+
+      <!-- 전체 목록 -->
+      <div class="flex flex-col gap-2">
+        <h2 v-if="favoriteSetlists.length > 0" class="text-xs font-semibold text-muted-foreground">전체 콘티</h2>
+        <div
+          v-for="setlist in otherSetlists"
+          :key="setlist.setlistId"
+          class="bg-card rounded-xl border border-border px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+          @click="$router.push(`/setlists/${setlist.setlistId}`)"
+        >
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+            <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
+            <button
+              type="button"
+              class="text-muted-foreground hover:text-primary transition-colors"
+              @click.stop="toggleFavorite(setlist.setlistId)"
+            >
+              <Star class="w-4 h-4" :class="{ 'fill-current text-primary': isFavorite(setlist.setlistId) }" />
+            </button>
+            <Button variant="destructive" size="sm" @click="handleDelete(setlist, $event)">
+              <Trash2 class="w-3.5 h-3.5" />
+            </Button>
+            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
         </div>
       </div>
     </div>

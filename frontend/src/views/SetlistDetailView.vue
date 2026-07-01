@@ -2,7 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical } from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, Star } from '@lucide/vue'
+import { useSetlistFavorites } from '../composables/useSetlistFavorites'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
@@ -29,6 +30,7 @@ const store = useSetlistStore()
 const songStore = useSongStore()
 
 const toast = useToast()
+const { isFavorite, toggleFavorite, addRecent } = useSetlistFavorites()
 const setlist = computed(() => store.selectedSetlist)
 const items = ref<NonNullable<typeof store.selectedSetlist>['items']>([])
 
@@ -297,6 +299,7 @@ const copyShareUrl = async () => {
 const load = () => {
   if (Number.isFinite(props.setlistId)) {
     void store.fetchSetlist(props.setlistId)
+    addRecent(props.setlistId)
   }
 }
 
@@ -346,7 +349,17 @@ watch(() => props.setlistId, load)
               <div class="flex items-start justify-between gap-3 mb-3">
                 <div class="min-w-0">
                   <span class="text-xs text-muted-foreground font-medium mb-1 block">{{ formatDate(setlist.serviceDate) }}</span>
-                  <h1 class="text-lg font-bold text-foreground leading-snug">{{ setlist.title ?? '제목 없음' }}</h1>
+                  <div class="flex items-center gap-1.5">
+                    <h1 class="text-lg font-bold text-foreground leading-snug">{{ setlist.title ?? '제목 없음' }}</h1>
+                    <button
+                      type="button"
+                      class="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                      :aria-label="isFavorite(setlistId) ? '즐겨찾기 해제' : '즐겨찾기 추가'"
+                      @click="toggleFavorite(setlistId)"
+                    >
+                      <Star class="w-4 h-4" :class="{ 'fill-current text-primary': isFavorite(setlistId) }" />
+                    </button>
+                  </div>
                   <p v-if="setlist.memo" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ setlist.memo }}</p>
                 </div>
                 <!-- 액션 버튼 -->

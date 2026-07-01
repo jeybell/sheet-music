@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Plus, Music, ChevronRight, CalendarDays, Flame } from '@lucide/vue'
+import { Plus, Music, ChevronRight, CalendarDays, Flame, Star, History } from '@lucide/vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import { getSetlists } from '../apis/setlistApi'
 import { getPopularSongs } from '../apis/songApi'
+import { useSetlistFavorites } from '../composables/useSetlistFavorites'
 import type { Setlist } from '../types/setlist'
 import type { PopularSong } from '../types/song'
 
 const setlists = ref<Setlist[]>([])
 const popularSongs = ref<PopularSong[]>([])
 const isLoading = ref(true)
+const { favoriteIds, recentIds } = useSetlistFavorites()
 
 const daysUntil = (dateStr: string) => {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -43,6 +45,17 @@ const recentSetlists = computed(() => {
   return setlists.value
     .filter(s => s.setlistId !== nextSetlist.value?.setlistId)
     .slice(0, 5)
+})
+
+// 즐겨찾기한 콘티 (브라우저 로컬 저장)
+const favoriteSetlists = computed(() =>
+  setlists.value.filter(s => favoriteIds.value.includes(s.setlistId)),
+)
+
+// 최근 열어본 콘티 (브라우저 로컬 저장, 열람 순서 유지)
+const recentlyViewedSetlists = computed(() => {
+  const byId = new Map(setlists.value.map(s => [s.setlistId, s]))
+  return recentIds.value.map(id => byId.get(id)).filter((s): s is Setlist => !!s)
 })
 
 onMounted(async () => {
@@ -103,6 +116,50 @@ onMounted(async () => {
           새 콘티 만들기 →
         </RouterLink>
       </div>
+
+      <!-- 즐겨찾기 콘티 -->
+      <section v-if="favoriteSetlists.length > 0">
+        <h2 class="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground mb-3">
+          <Star class="w-4 h-4 text-primary fill-current" />
+          즐겨찾기
+        </h2>
+        <div class="flex flex-col gap-2">
+          <RouterLink
+            v-for="setlist in favoriteSetlists"
+            :key="setlist.setlistId"
+            :to="`/setlists/${setlist.setlistId}`"
+            class="flex items-center justify-between gap-3 bg-card rounded-lg border border-primary/30 px-4 py-3 hover:border-primary/50 transition-colors"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-sm font-semibold text-foreground shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+              <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+            </div>
+            <span class="text-xs text-muted-foreground shrink-0">{{ setlist.items.length }}곡</span>
+          </RouterLink>
+        </div>
+      </section>
+
+      <!-- 최근 열어본 콘티 -->
+      <section v-if="recentlyViewedSetlists.length > 0">
+        <h2 class="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground mb-3">
+          <History class="w-4 h-4 text-primary" />
+          최근 열어본 콘티
+        </h2>
+        <div class="flex flex-col gap-2">
+          <RouterLink
+            v-for="setlist in recentlyViewedSetlists"
+            :key="setlist.setlistId"
+            :to="`/setlists/${setlist.setlistId}`"
+            class="flex items-center justify-between gap-3 bg-card rounded-lg border border-border px-4 py-3 hover:border-primary/50 transition-colors"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-sm font-semibold text-foreground shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+              <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+            </div>
+            <span class="text-xs text-muted-foreground shrink-0">{{ setlist.items.length }}곡</span>
+          </RouterLink>
+        </div>
+      </section>
 
       <!-- 최근 콘티 -->
       <section>

@@ -7,7 +7,8 @@ import {
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { useToast } from '../composables/useToast'
-import { deleteSong, updateSong, updateLyrics, getAllTags, addSongLink, updateSongLink, deleteSongLink } from '../apis/songApi'
+import { deleteSong, updateSong, updateLyrics, getAllTags, addSongLink, updateSongLink, deleteSongLink, getSongSetlistHistory } from '../apis/songApi'
+import type { SongSetlistHistory } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
 import { runOcrOnFile } from '../apis/ocrApi'
@@ -456,15 +457,29 @@ const loadSong = () => {
   if (Number.isFinite(props.songId)) void songStore.fetchSong(props.songId)
 }
 
+// ── 셋리스트 사용 이력
+const setlistHistory = ref<SongSetlistHistory[]>([])
+
+const loadSetlistHistory = async () => {
+  if (!Number.isFinite(props.songId)) return
+  setlistHistory.value = await getSongSetlistHistory(props.songId)
+}
+
+const formatHistoryDate = (dateStr: string) => {
+  const [y, m, d] = dateStr.split('-')
+  return `${y}.${m}.${d}`
+}
+
 onMounted(async () => {
   loadSong()
+  void loadSetlistHistory()
   window.addEventListener('keydown', onKey)
   allTags.value = await getAllTags()
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
 })
-watch(() => props.songId, loadSong)
+watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
 </script>
 
 <template>
@@ -896,6 +911,22 @@ watch(() => props.songId, loadSong)
                 </button>
               </div>
             </div>
+          </Card>
+
+          <!-- ── 셋리스트 사용 이력 ─────────────────────── -->
+          <Card v-if="setlistHistory.length > 0" class="p-5 mt-4">
+            <h2 class="text-sm font-semibold text-foreground mb-3">사용 이력</h2>
+            <ul class="flex flex-col gap-2">
+              <li
+                v-for="h in setlistHistory"
+                :key="h.setlistId"
+                class="flex items-center gap-3 text-sm cursor-pointer hover:text-primary transition-colors"
+                @click="router.push(`/setlists/${h.setlistId}`)"
+              >
+                <span class="text-muted-foreground shrink-0">{{ formatHistoryDate(h.serviceDate) }}</span>
+                <span class="text-foreground truncate">{{ h.title ?? '제목 없음' }}</span>
+              </li>
+            </ul>
           </Card>
 
           <!-- ── 관리 패널 (접이식) ─────────────────────── -->

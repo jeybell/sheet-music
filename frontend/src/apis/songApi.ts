@@ -1,5 +1,6 @@
 import http from "./http";
 import type { Song, SongCreateRequest, SongUpdateRequest, SongLink } from "../types/song";
+import type { PageResponse } from "../types/page";
 
 export interface SongSearchParams {
   query?: string | null;
@@ -7,15 +8,28 @@ export interface SongSearchParams {
   tag?: string | null;
 }
 
-export const getSongs = async (params?: SongSearchParams) => {
-  const { data } = await http.get<Song[]>("/api/songs", {
+// 곡 목록 화면 무한 스크롤용 페이지 단위 조회
+export const getSongsPage = async (
+  params: SongSearchParams | undefined,
+  page: number,
+  size: number,
+) => {
+  const { data } = await http.get<PageResponse<Song>>("/api/songs", {
     params: {
       query: params?.query?.trim() || undefined,
       songKey: params?.songKey?.trim() || undefined,
       tag: params?.tag?.trim() || undefined,
+      page,
+      size,
     },
   });
   return data;
+};
+
+// 곡 전체 조회 (콘티의 곡 선택 모달 등에서 사용). 큰 size 로 한 번에 받아온다.
+export const getSongs = async (params?: SongSearchParams) => {
+  const data = await getSongsPage(params, 0, 2000);
+  return data.content;
 };
 
 export const getSong = async (songId: number) => {

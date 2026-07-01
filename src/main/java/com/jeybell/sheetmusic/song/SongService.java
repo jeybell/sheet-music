@@ -1,11 +1,15 @@
 package com.jeybell.sheetmusic.song;
 
+import com.jeybell.sheetmusic.global.dto.PageResponse;
 import com.jeybell.sheetmusic.global.exception.DuplicateTitleException;
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
 import com.jeybell.sheetmusic.song.dto.SongSheetRequest;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +25,7 @@ public class SongService {
         this.songFileService = songFileService;
     }
 
-    public List<SongResponse> getSongs(String query, String songKey, String tag) {
+    public PageResponse<SongResponse> getSongs(String query, String songKey, String tag, int page, int size) {
         String likeQuery = (query == null || query.isBlank())
                 ? null
                 : "%" + query.trim().toLowerCase() + "%";
@@ -30,10 +34,11 @@ public class SongService {
                 : "%" + songKey.trim().toLowerCase() + "%";
         String normalizedTag = (tag == null || tag.isBlank()) ? null : tag.trim();
 
-        return songRepository.searchSongs(likeQuery, normalizedKey, normalizedTag)
-                .stream()
-                .map(SongResponse::from)
-                .toList();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return PageResponse.from(
+                songRepository.searchSongs(likeQuery, normalizedKey, normalizedTag, pageable)
+                        .map(SongResponse::from)
+        );
     }
 
     public List<String> getAllTags() {

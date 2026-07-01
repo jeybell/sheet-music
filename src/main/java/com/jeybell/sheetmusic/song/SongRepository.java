@@ -2,16 +2,21 @@ package com.jeybell.sheetmusic.song;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SongRepository extends JpaRepository<Song, Long> {
 
+    /**
+     * 곡 검색(페이지네이션). 컬렉션(sheets) fetch join 을 쓰지 않아 DB 레벨 페이징이 가능하다.
+     * 정렬은 Pageable 의 Sort 로 전달한다. sheets 는 SongResponse 매핑 시 지연 로딩된다.
+     */
     @Query("""
-            select distinct s
+            select s
             from Song s
-            left join fetch s.sheets sheets
             where s.deletedAt is null
               and (:query is null
                 or lower(s.title) like :query
@@ -25,9 +30,9 @@ public interface SongRepository extends JpaRepository<Song, Long> {
                     and lower(ss.sheetKey) like :songKey
                 ))
               and (:tag is null or :tag member of s.tags)
-            order by s.createdAt desc
             """)
-    List<Song> searchSongs(@Param("query") String query, @Param("songKey") String songKey, @Param("tag") String tag);
+    Page<Song> searchSongs(@Param("query") String query, @Param("songKey") String songKey,
+                           @Param("tag") String tag, Pageable pageable);
 
     @Query("select distinct t from Song s join s.tags t where s.deletedAt is null order by t")
     List<String> findAllTags();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { Plus, Music, Search, X, FolderUp } from '@lucide/vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Plus, Music, Search, X, FolderUp, Loader2 } from '@lucide/vue'
 import SongList from '../components/SongList.vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import { useSongStore } from '../stores/songStore'
@@ -14,11 +14,14 @@ const selectedTag = ref<string | null>(null)
 const allTags = ref<string[]>([])
 const hasFilter = ref(false)
 
+const sentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | undefined
+
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
 const runSearch = () => {
   hasFilter.value = Boolean(query.value.trim() || songKey.value.trim() || selectedTag.value)
-  void songStore.fetchSongs({ query: query.value, songKey: songKey.value, tag: selectedTag.value })
+  void songStore.fetchFirstPage({ query: query.value, songKey: songKey.value, tag: selectedTag.value })
 }
 
 watch([query, songKey], () => {
@@ -40,10 +43,24 @@ const clearFilters = () => {
   selectedTag.value = null
 }
 
+// sentinel 은 목록이 렌더된 뒤에야 존재하므로 ref 변화를 감지해 관찰을 건다.
+watch(sentinel, (el, prev) => {
+  if (prev && observer) observer.unobserve(prev)
+  if (!el) return
+  if (!observer) {
+    observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) void songStore.fetchNextPage()
+    }, { rootMargin: '200px' })
+  }
+  observer.observe(el)
+})
+
 onMounted(async () => {
-  void songStore.fetchSongs()
+  void songStore.fetchFirstPage()
   allTags.value = await getAllTags()
 })
+
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
@@ -112,11 +129,11 @@ onMounted(async () => {
       </button>
     </div>
 
-    <p v-if="songStore.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
+    <p v-if="songStore.isLoadingList" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
     <p v-else-if="songStore.errorMessage" class="text-sm text-destructive py-4">{{ songStore.errorMessage }}</p>
 
     <!-- 검색 결과 없음 -->
-    <div v-else-if="!songStore.hasSongs && hasFilter" class="py-16 flex flex-col items-center text-center">
+    <div v-else-if="!songStore.hasListSongs && hasFilter" class="py-16 flex flex-col items-center text-center">
       <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
         <Search class="w-6 h-6 text-muted-foreground" />
       </div>
@@ -133,7 +150,7 @@ onMounted(async () => {
     </div>
 
     <!-- 곡 없음 -->
-    <div v-else-if="!songStore.hasSongs" class="py-16 flex flex-col items-center text-center">
+    <div v-else-if="!songStore.hasListSongs" class="py-16 flex flex-col items-center text-center">
       <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
         <Music class="w-6 h-6 text-muted-foreground" />
       </div>
@@ -148,6 +165,15 @@ onMounted(async () => {
       </RouterLink>
     </div>
 
-    <SongList v-else :songs="songStore.songs" />
+    <template v-else>
+      <SongList :songs="songStore.listSongs" />
+
+      <!-- 무한 스크롤 감지 지점 -->
+      <div ref="sentinel" class="h-4" />
+      <div v-if="songStore.isLoadingMore" class="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+        <Loader2 class="w-4 h-4 animate-spin" />
+        더 불러오는 중...
+      </div>
+    </template>
   </DefaultLayout>
 </template>

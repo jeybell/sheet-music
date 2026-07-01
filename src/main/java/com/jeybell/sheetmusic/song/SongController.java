@@ -2,6 +2,7 @@ package com.jeybell.sheetmusic.song;
 
 import com.jeybell.sheetmusic.global.dto.PageResponse;
 import com.jeybell.sheetmusic.song.dto.LyricsRequest;
+import com.jeybell.sheetmusic.song.dto.PopularSongResponse;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
 import jakarta.validation.Valid;
@@ -45,6 +46,13 @@ public class SongController {
     @GetMapping("/tags")
     public ResponseEntity<List<String>> getAllTags() {
         return ResponseEntity.ok(songService.getAllTags());
+    }
+
+    @GetMapping("/popular")
+    public ResponseEntity<List<PopularSongResponse>> getPopularSongs(
+            @RequestParam(name = "limit", defaultValue = "5") int limit
+    ) {
+        return ResponseEntity.ok(songService.getPopularSongs(limit));
     }
 
     @PostMapping

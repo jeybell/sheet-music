@@ -32,6 +32,13 @@ export interface SongLink {
   url: string;
 }
 
+export interface PopularSong {
+  songId: number;
+  title: string;
+  artist: string | null;
+  usageCount: number;
+}
+
 export interface Song {
   songId: number;
   title: string;

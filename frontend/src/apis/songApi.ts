@@ -1,5 +1,5 @@
 import http from "./http";
-import type { Song, SongCreateRequest, SongUpdateRequest, SongLink } from "../types/song";
+import type { Song, SongCreateRequest, SongUpdateRequest, SongLink, PopularSong } from "../types/song";
 import type { PageResponse } from "../types/page";
 
 export interface SongSearchParams {
@@ -61,6 +61,11 @@ export const deleteSong = async (songId: number) => {
 
 export const getAllTags = async (): Promise<string[]> => {
   const { data } = await http.get<string[]>("/api/songs/tags");
+  return data;
+};
+
+export const getPopularSongs = async (limit = 5): Promise<PopularSong[]> => {
+  const { data } = await http.get<PopularSong[]>("/api/songs/popular", { params: { limit } });
   return data;
 };
 

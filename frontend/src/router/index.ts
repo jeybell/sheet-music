@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import HomeView from "../views/HomeView.vue";
 import SongCreateView from "../views/SongCreateView.vue";
 import SongDetailView from "../views/SongDetailView.vue";
 import SongListView from "../views/SongListView.vue";
@@ -13,7 +14,8 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: "/songs",
+      name: "home",
+      component: HomeView,
     },
     {
       path: "/songs",

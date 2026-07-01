@@ -26,6 +26,13 @@ const busy = computed(() => loading.value > 0)
         </RouterLink>
         <nav class="flex gap-1 flex-1">
           <RouterLink
+            to="/"
+            exact-active-class="bg-primary-soft text-primary font-semibold"
+            class="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            홈
+          </RouterLink>
+          <RouterLink
             to="/setlists"
             active-class="bg-primary-soft text-primary font-semibold"
             class="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

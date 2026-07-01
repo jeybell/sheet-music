@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { Search, X, Music } from '@lucide/vue'
+import { Search, X, Music, Eye } from '@lucide/vue'
 import type { Song, SongSheetSummary } from '../types/song'
+import SheetViewerModal from './SheetViewerModal.vue'
+import type { ViewerSong } from './SheetViewerModal.vue'
 
 const props = defineProps<{
   songs: Song[]
@@ -48,13 +50,34 @@ const pickSong = (song: Song) => {
   selectedSheetId.value = null
 }
 
+// 악보 미리보기 (SheetViewerModal 재사용)
+const viewerSheet = ref<ViewerSong | null>(null)
+
+const openViewer = (sheet: SongSheetSummary) => {
+  if (!selectedSong.value) return
+  viewerSheet.value = {
+    title: selectedSong.value.title,
+    artist: selectedSong.value.artist,
+    sheetKey: sheet.sheetKey,
+    versionName: sheet.versionName,
+    files: (sheet.files ?? []).map(f => ({
+      songFileId: f.songFileId,
+      originalFileName: f.originalFileName ?? null,
+      contentType: f.contentType ?? null,
+    })),
+  }
+}
+
 const confirm = () => {
   if (!selectedSong.value) return
   emit('select', selectedSong.value.songId, selectedSheetId.value)
 }
 
 const onKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') emit('close')
+  if (e.key === 'Escape') {
+    if (viewerSheet.value) return // 뷰어가 열려있으면 뷰어만 닫히도록 피커는 유지
+    emit('close')
+  }
 }
 
 onMounted(() => {
@@ -161,21 +184,35 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             <span class="text-sm font-medium">선택 안 함</span>
           </button>
 
-          <button
+          <div
             v-for="sheet in sheets"
             :key="sheet.songSheetId"
-            type="button"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 border transition-colors"
-            :class="selectedSheetId === sheet.songSheetId
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border hover:bg-muted/60 text-foreground'"
-            @click="selectedSheetId = sheet.songSheetId"
+            class="flex items-stretch gap-2 mb-2"
           >
-            <span class="text-sm font-medium">{{ sheetLabel(sheet.sheetKey, sheet.versionName) }}</span>
-            <span v-if="(sheet.files ?? []).length > 0" class="ml-auto text-xs text-muted-foreground">
-              {{ (sheet.files ?? []).length }}장
-            </span>
-          </button>
+            <button
+              type="button"
+              class="flex-1 flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors"
+              :class="selectedSheetId === sheet.songSheetId
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:bg-muted/60 text-foreground'"
+              @click="selectedSheetId = sheet.songSheetId"
+            >
+              <span class="text-sm font-medium">{{ sheetLabel(sheet.sheetKey, sheet.versionName) }}</span>
+              <span v-if="(sheet.files ?? []).length > 0" class="ml-auto text-xs text-muted-foreground">
+                {{ (sheet.files ?? []).length }}장
+              </span>
+            </button>
+            <button
+              v-if="(sheet.files ?? []).length > 0"
+              type="button"
+              class="shrink-0 inline-flex items-center gap-1 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+              title="악보 보기"
+              @click="openViewer(sheet)"
+            >
+              <Eye class="w-4 h-4" />
+              악보
+            </button>
+          </div>
 
           <p v-if="sheets.length === 0" class="text-sm text-muted-foreground text-center py-4">
             등록된 악보 버전이 없습니다.
@@ -194,4 +231,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
       </template>
     </div>
   </div>
+
+  <!-- 악보 미리보기 (피커 위에 오버레이) -->
+  <SheetViewerModal
+    v-if="viewerSheet"
+    :songs="[viewerSheet]"
+    :setlist-title="null"
+    @close="viewerSheet = null"
+  />
 </template>

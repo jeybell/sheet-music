@@ -6,6 +6,7 @@ import {
   X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type, ExternalLink,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
+import { useToast } from '../composables/useToast'
 import { deleteSong, updateSong, updateLyrics, getAllTags, addSongLink, updateSongLink, deleteSongLink } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
@@ -24,6 +25,7 @@ import type { SongSheetSummary, SongFile } from '../types/song'
 const props = defineProps<{ songId: number }>()
 const router = useRouter()
 const songStore = useSongStore()
+const toast = useToast()
 
 const song = computed(() => songStore.selectedSong)
 const sheets = computed(() => song.value?.sheets ?? song.value?.songSheets ?? [])
@@ -115,6 +117,7 @@ const handleUpdateSong = async () => {
     })
     await songStore.fetchSong(props.songId)
     isEditing.value = false
+    toast.success('곡 정보를 저장했어요')
   } catch (e) {
     editError.value = extractApiError(e, '수정에 실패했습니다.')
   } finally {
@@ -158,6 +161,7 @@ const handleCreateSheet = async () => {
     resetSheetForm()
     showAddSheet.value = false
     await songStore.fetchSong(props.songId)
+    toast.success('악보 버전을 추가했어요')
   } catch (e) {
     sheetError.value = extractApiError(e, '악보 버전 추가에 실패했습니다.')
   } finally {
@@ -195,6 +199,7 @@ const handleUpdateSheet = async (sheetId: number) => {
     })
     await songStore.fetchSong(props.songId)
     editingSheetId.value = null
+    toast.success('악보 버전을 저장했어요')
   } catch (e) {
     sheetUpdateError.value = extractApiError(e, '수정에 실패했습니다.')
   } finally {
@@ -209,6 +214,7 @@ const handleDeleteSheet = async (sheet: SongSheetSummary) => {
   try {
     await deleteSongSheet(sheet.songSheetId)
     await songStore.fetchSong(props.songId)
+    toast.success('악보 버전을 삭제했어요')
   } catch (e) {
     alert(extractApiError(e, '삭제에 실패했습니다.'))
   }
@@ -289,6 +295,7 @@ const handleUpload = async (sheetId: number) => {
     uploadInputKeys.value[sheetId] = (uploadInputKeys.value[sheetId] ?? 0) + 1
     uploadMessages.value[sheetId] = '업로드 완료'
     await songStore.fetchSong(props.songId)
+    toast.success('파일을 업로드했어요')
   } catch (e) {
     uploadErrors.value[sheetId] = extractApiError(e, '업로드에 실패했습니다.')
   } finally {
@@ -302,6 +309,7 @@ const handleDeleteFile = async (fileId: number, fileName: string) => {
   try {
     await deleteSongFile(fileId)
     await songStore.fetchSong(props.songId)
+    toast.success('파일을 삭제했어요')
   } catch (e) {
     alert(extractApiError(e, '파일 삭제에 실패했습니다.'))
   }
@@ -377,6 +385,7 @@ const handleAddLink = async () => {
     await loadSong()
     isAddingLink.value = false
     linksExpanded.value = true
+    toast.success('링크를 추가했어요')
   } catch { /* ignore */ }
 }
 
@@ -391,6 +400,7 @@ const handleUpdateLink = async (linkId: number) => {
     await updateSongLink(linkId, { title: editLinkForm.title.trim(), url: editLinkForm.url.trim() })
     await loadSong()
     editingLinkId.value = null
+    toast.success('링크를 저장했어요')
   } catch { /* ignore */ }
 }
 
@@ -399,6 +409,7 @@ const handleDeleteLink = async (linkId: number) => {
   try {
     await deleteSongLink(linkId)
     await loadSong()
+    toast.success('링크를 삭제했어요')
   } catch { /* ignore */ }
 }
 
@@ -433,6 +444,7 @@ const handleSaveLyrics = async () => {
     await updateLyrics(props.songId, lyricsForm.value.trim() || null)
     await songStore.fetchSong(props.songId)
     isEditingLyrics.value = false
+    toast.success('가사를 저장했어요')
   } catch (e) {
     lyricsError.value = extractApiError(e, '가사 저장에 실패했습니다.')
   } finally {
@@ -575,33 +587,82 @@ watch(() => props.songId, loadSong)
         <!-- ── 곡 정보 사이드 ─────────────────────────── -->
         <aside class="lg:order-last lg:overflow-y-auto lg:h-full">
           <Card class="p-4">
-            <h1 class="text-lg font-bold text-foreground leading-snug break-words">{{ song.title }}</h1>
-            <dl class="mt-3 space-y-1.5 text-sm">
-              <div v-if="song.artist" class="flex gap-2">
-                <dt class="text-muted-foreground shrink-0 whitespace-nowrap">아티스트</dt>
-                <dd class="text-foreground break-words">{{ song.artist }}</dd>
+            <!-- 읽기 모드 -->
+            <template v-if="!isEditing">
+              <div class="flex items-start justify-between gap-2">
+                <h1 class="text-lg font-bold text-foreground leading-snug break-words">{{ song.title }}</h1>
+                <button
+                  type="button"
+                  aria-label="곡 정보 수정"
+                  title="곡 정보 수정"
+                  class="shrink-0 -mr-1 -mt-1 p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  @click="startEdit"
+                >
+                  <Pencil class="w-4 h-4" />
+                </button>
               </div>
-            </dl>
-            <p v-if="song.memo" class="mt-3 text-xs text-muted-foreground whitespace-pre-line border-t border-border pt-3">
-              {{ song.memo }}
-            </p>
+              <dl class="mt-3 space-y-1.5 text-sm">
+                <div v-if="song.artist" class="flex gap-2">
+                  <dt class="text-muted-foreground shrink-0 whitespace-nowrap">아티스트</dt>
+                  <dd class="text-foreground break-words">{{ song.artist }}</dd>
+                </div>
+              </dl>
+              <p v-if="song.memo" class="mt-3 text-xs text-muted-foreground whitespace-pre-line border-t border-border pt-3">
+                {{ song.memo }}
+              </p>
 
-            <div v-if="song.tags?.length" class="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
-              <span
-                v-for="tag in song.tags"
-                :key="tag"
-                class="inline-flex items-center h-6 px-2 rounded-full bg-primary/15 text-primary text-xs font-medium"
-              >{{ tag }}</span>
-            </div>
+              <div v-if="song.tags?.length" class="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
+                <span
+                  v-for="tag in song.tags"
+                  :key="tag"
+                  class="inline-flex items-center h-6 px-2 rounded-full bg-primary/15 text-primary text-xs font-medium"
+                >{{ tag }}</span>
+              </div>
 
-            <button
-              type="button"
-              class="mt-4 w-full inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
-              @click="showManage = !showManage"
-            >
-              <Settings2 class="w-4 h-4" />
-              {{ showManage ? '관리 닫기' : '악보 관리' }}
-            </button>
+              <button
+                type="button"
+                class="mt-4 w-full inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                @click="showManage = !showManage"
+              >
+                <Settings2 class="w-4 h-4" />
+                {{ showManage ? '관리 닫기' : '악보 관리' }}
+              </button>
+            </template>
+
+            <!-- 편집 모드 (인라인, '악보 관리' 안 열어도 바로 수정) -->
+            <template v-else>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-foreground">곡 정보 수정</h3>
+                <button type="button" class="text-muted-foreground hover:text-foreground" @click="cancelEdit">
+                  <X class="w-4 h-4" />
+                </button>
+              </div>
+              <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-3 whitespace-pre-line">{{ editError }}</p>
+              <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <Label for="edit-title">제목 <span class="text-destructive">*</span></Label>
+                  <Input id="edit-title" v-model="editForm.title" type="text" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label for="edit-artist">아티스트</Label>
+                  <Input id="edit-artist" v-model="editForm.artist" type="text" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label for="edit-memo">메모 <span class="text-muted-foreground font-normal">(곡 전반)</span></Label>
+                  <Textarea id="edit-memo" v-model="editForm.memo" rows="3" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label>태그</Label>
+                  <TagInput v-model="editForm.tags" :suggestions="allTags" />
+                </div>
+                <div class="flex gap-2">
+                  <Button :disabled="isSavingEdit" @click="handleUpdateSong">
+                    {{ isSavingEdit ? '저장 중...' : '저장' }}
+                  </Button>
+                  <Button variant="outline" :disabled="isSavingEdit" @click="cancelEdit">취소</Button>
+                </div>
+              </div>
+            </template>
           </Card>
 
           <!-- 버전 요약 -->
@@ -853,50 +914,12 @@ watch(() => props.songId, loadSong)
                   <ScanText class="w-3.5 h-3.5" :class="{ 'animate-pulse text-primary': isOcrRunning }" />
                   {{ isOcrRunning ? 'OCR 분석 중...' : 'OCR로 정보 채우기' }}
                 </Button>
-                <Button variant="outline" size="sm" @click="startEdit">
-                  <Pencil class="w-3.5 h-3.5" />
-                  곡 정보 수정
-                </Button>
                 <Button variant="destructive" size="sm" @click="handleDeleteSong">
                   <Trash2 class="w-3.5 h-3.5" />
                   곡 삭제
                 </Button>
               </div>
             </div>
-
-            <Card v-if="isEditing" class="p-5 mb-6">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-semibold text-foreground">곡 정보 수정</h3>
-                <button type="button" class="text-muted-foreground hover:text-foreground" @click="cancelEdit">
-                  <X class="w-4 h-4" />
-                </button>
-              </div>
-              <p v-if="editError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2 mb-4 whitespace-pre-line">{{ editError }}</p>
-              <div class="flex flex-col gap-4">
-                <div class="flex flex-col gap-1.5">
-                  <Label for="edit-title">제목 <span class="text-destructive">*</span></Label>
-                  <Input id="edit-title" v-model="editForm.title" type="text" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <Label for="edit-artist">아티스트</Label>
-                  <Input id="edit-artist" v-model="editForm.artist" type="text" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <Label for="edit-memo">메모</Label>
-                  <Textarea id="edit-memo" v-model="editForm.memo" rows="3" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <Label>태그</Label>
-                  <TagInput v-model="editForm.tags" :suggestions="allTags" />
-                </div>
-                <div class="flex gap-2">
-                  <Button :disabled="isSavingEdit" @click="handleUpdateSong">
-                    {{ isSavingEdit ? '저장 중...' : '저장' }}
-                  </Button>
-                  <Button variant="outline" :disabled="isSavingEdit" @click="cancelEdit">취소</Button>
-                </div>
-              </div>
-            </Card>
 
             <!-- 악보 버전 관리 -->
             <div class="flex items-center justify-between mb-4">

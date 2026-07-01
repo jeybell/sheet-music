@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Sun, Moon, MessageSquarePlus } from '@lucide/vue'
+import ToastHost from '../components/ui/ToastHost.vue'
 import { useTheme } from '../composables/useTheme'
 import { isLoading } from '../composables/useHttpLoading'
 
@@ -76,5 +77,7 @@ const busy = computed(() => loading.value > 0)
     >
       <slot />
     </main>
+
+    <ToastHost />
   </div>
 </template>

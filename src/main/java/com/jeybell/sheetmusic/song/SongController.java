@@ -7,6 +7,7 @@ import com.jeybell.sheetmusic.song.dto.SongMergeRequest;
 import com.jeybell.sheetmusic.song.dto.SongMergeResponse;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
+import com.jeybell.sheetmusic.song.dto.SongSetlistHistoryResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -70,6 +71,11 @@ public class SongController {
     @GetMapping("/{songId}")
     public ResponseEntity<SongResponse> getSong(@PathVariable("songId") Long songId) {
         return ResponseEntity.ok(songService.getSong(songId));
+    }
+
+    @GetMapping("/{songId}/setlist-history")
+    public ResponseEntity<List<SongSetlistHistoryResponse>> getSetlistHistory(@PathVariable("songId") Long songId) {
+        return ResponseEntity.ok(songService.getSetlistHistory(songId));
     }
 
     @PutMapping("/{songId}")

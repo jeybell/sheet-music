@@ -6,6 +6,7 @@ import com.jeybell.sheetmusic.global.exception.DuplicateTitleException;
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
+import com.jeybell.sheetmusic.song.dto.SongSetlistHistoryResponse;
 import com.jeybell.sheetmusic.song.dto.SongSheetRequest;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -39,14 +40,21 @@ public class SongService {
         long tagCount = normalizedTags.size();
 
         SongSort songSort = SongSort.from(sort);
-        Page<Song> result = (songSort == SongSort.KEY)
-                ? songRepository.searchSongsOrderByKey(
-                        likeQuery, normalizedKey, normalizedTags, tagCount, PageRequest.of(page, size))
-                : songRepository.searchSongs(
-                        likeQuery, normalizedKey, normalizedTags, tagCount,
-                        PageRequest.of(page, size, songSort.toSort()));
+        Page<Song> result = switch (songSort) {
+            case KEY -> songRepository.searchSongsOrderByKey(
+                    likeQuery, normalizedKey, normalizedTags, tagCount, PageRequest.of(page, size));
+            case LAST_USED -> songRepository.searchSongsOrderByLastUsed(
+                    likeQuery, normalizedKey, normalizedTags, tagCount, PageRequest.of(page, size));
+            default -> songRepository.searchSongs(
+                    likeQuery, normalizedKey, normalizedTags, tagCount,
+                    PageRequest.of(page, size, songSort.toSort()));
+        };
 
         return PageResponse.from(result.map(SongResponse::from));
+    }
+
+    public List<SongSetlistHistoryResponse> getSetlistHistory(Long songId) {
+        return songRepository.findSetlistHistoryForSong(songId);
     }
 
     public List<String> getAllTags() {

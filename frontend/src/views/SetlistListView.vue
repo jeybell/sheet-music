@@ -27,7 +27,8 @@ const apiError = (e: unknown, fallback: string) =>
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-const showCreateForm = ref(false)
+// 콘티 화면 진입 시 등록 폼을 바로 펼쳐 보여준다
+const showCreateForm = ref(true)
 const createForm = reactive({ serviceDate: today(), title: '', memo: '' })
 const createError = ref('')
 const isCreating = ref(false)
@@ -131,7 +132,7 @@ onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1.5">
           <Label>날짜 <span class="text-destructive">*</span></Label>
-          <DatePicker v-model="createForm.serviceDate" />
+          <DatePicker v-model="createForm.serviceDate" inline />
         </div>
         <div class="flex flex-col gap-1.5">
           <Label for="setlist-title">제목</Label>

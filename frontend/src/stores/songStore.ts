@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { isAxiosError } from 'axios'
-import { getSong, getSongs, type SongSearchParams } from '../apis/songApi'
+import { getSong, getSongs, getSongsPage, type SongSearchParams } from '../apis/songApi'
 import type { Song } from '../types/song'
+
+const PAGE_SIZE = 20
 
 interface ApiErrorResponse {
   message?: string
@@ -23,6 +25,52 @@ export const useSongStore = defineStore('song', () => {
   const errorMessage = ref('')
 
   const hasSongs = computed(() => songs.value.length > 0)
+
+  // ── 곡 목록 화면 무한 스크롤용 페이지 상태 (피커용 songs 와 분리)
+  const listSongs = ref<Song[]>([])
+  const listTotal = ref(0)
+  const listHasNext = ref(false)
+  const isLoadingList = ref(false)
+  const isLoadingMore = ref(false)
+  let listPage = 0
+  let listParams: SongSearchParams | undefined
+
+  const hasListSongs = computed(() => listSongs.value.length > 0)
+
+  // 검색/필터 변경 시: 초기화 후 첫 페이지 로드
+  const fetchFirstPage = async (params?: SongSearchParams) => {
+    listParams = params
+    listPage = 0
+    isLoadingList.value = true
+    errorMessage.value = ''
+    try {
+      const data = await getSongsPage(params, 0, PAGE_SIZE)
+      listSongs.value = data.content
+      listTotal.value = data.totalElements
+      listHasNext.value = data.hasNext
+    } catch (error) {
+      errorMessage.value = getErrorMessage(error, '곡 목록을 불러오지 못했습니다.')
+    } finally {
+      isLoadingList.value = false
+    }
+  }
+
+  // 스크롤 하단 도달 시: 다음 페이지 추가 로드
+  const fetchNextPage = async () => {
+    if (!listHasNext.value || isLoadingMore.value || isLoadingList.value) return
+    isLoadingMore.value = true
+    try {
+      const data = await getSongsPage(listParams, listPage + 1, PAGE_SIZE)
+      listSongs.value.push(...data.content)
+      listPage += 1
+      listTotal.value = data.totalElements
+      listHasNext.value = data.hasNext
+    } catch (error) {
+      errorMessage.value = getErrorMessage(error, '곡 목록을 불러오지 못했습니다.')
+    } finally {
+      isLoadingMore.value = false
+    }
+  }
 
   const fetchSongs = async (params?: SongSearchParams) => {
     isLoading.value = true
@@ -59,5 +107,14 @@ export const useSongStore = defineStore('song', () => {
     hasSongs,
     fetchSongs,
     fetchSong,
+    // 무한 스크롤 목록
+    listSongs,
+    listTotal,
+    listHasNext,
+    isLoadingList,
+    isLoadingMore,
+    hasListSongs,
+    fetchFirstPage,
+    fetchNextPage,
   }
 })

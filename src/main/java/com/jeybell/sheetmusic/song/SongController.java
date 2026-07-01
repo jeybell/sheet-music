@@ -1,5 +1,6 @@
 package com.jeybell.sheetmusic.song;
 
+import com.jeybell.sheetmusic.global.dto.PageResponse;
 import com.jeybell.sheetmusic.song.dto.LyricsRequest;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
@@ -30,12 +31,14 @@ public class SongController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SongResponse>> getSongs(
+    public ResponseEntity<PageResponse<SongResponse>> getSongs(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "songKey", required = false) String songKey,
-            @RequestParam(name = "tag", required = false) String tag
+            @RequestParam(name = "tag", required = false) String tag,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(songService.getSongs(query, songKey, tag));
+        return ResponseEntity.ok(songService.getSongs(query, songKey, tag, page, size));
     }
 
     @GetMapping("/tags")

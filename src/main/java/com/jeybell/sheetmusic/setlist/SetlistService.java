@@ -1,10 +1,14 @@
 package com.jeybell.sheetmusic.setlist;
 
 import com.jeybell.sheetmusic.global.exception.ResourceNotFoundException;
+import com.jeybell.sheetmusic.setlist.dto.SetlistListRow;
 import com.jeybell.sheetmusic.setlist.dto.SetlistRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistResponse;
 import com.jeybell.sheetmusic.setlist.dto.SharedSetlistResponse;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +23,12 @@ public class SetlistService {
     }
 
     public List<SetlistResponse> getSetlists() {
-        return setlistRepository.findAllActive()
-                .stream()
-                .map(SetlistResponse::from)
+        Map<Long, List<SetlistListRow>> grouped = new LinkedHashMap<>();
+        for (SetlistListRow row : setlistRepository.findAllActiveForList()) {
+            grouped.computeIfAbsent(row.setlistId(), key -> new ArrayList<>()).add(row);
+        }
+        return grouped.values().stream()
+                .map(SetlistResponse::fromRows)
                 .toList();
     }
 

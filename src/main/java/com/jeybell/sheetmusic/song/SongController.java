@@ -3,6 +3,8 @@ package com.jeybell.sheetmusic.song;
 import com.jeybell.sheetmusic.global.dto.PageResponse;
 import com.jeybell.sheetmusic.song.dto.LyricsRequest;
 import com.jeybell.sheetmusic.song.dto.PopularSongResponse;
+import com.jeybell.sheetmusic.song.dto.SongMergeRequest;
+import com.jeybell.sheetmusic.song.dto.SongMergeResponse;
 import com.jeybell.sheetmusic.song.dto.SongRequest;
 import com.jeybell.sheetmusic.song.dto.SongResponse;
 import jakarta.validation.Valid;
@@ -26,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SongController {
 
     private final SongService songService;
+    private final SongMergeService songMergeService;
 
-    public SongController(SongService songService) {
+    public SongController(SongService songService, SongMergeService songMergeService) {
         this.songService = songService;
+        this.songMergeService = songMergeService;
     }
 
     @GetMapping
@@ -88,5 +92,14 @@ public class SongController {
     public ResponseEntity<Void> deleteSong(@PathVariable("songId") Long songId) {
         songService.deleteSong(songId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{targetId}/merge")
+    public ResponseEntity<SongMergeResponse> mergeSongs(
+            @PathVariable("targetId") Long targetId,
+            @RequestBody SongMergeRequest request
+    ) {
+        boolean dedupeSheets = request.dedupeSheets() == null || request.dedupeSheets();
+        return ResponseEntity.ok(songMergeService.merge(targetId, request.sourceSongIds(), dedupeSheets));
     }
 }

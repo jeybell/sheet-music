@@ -1,13 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Sun, Moon, MessageSquarePlus } from '@lucide/vue'
+import { useRouter } from 'vue-router'
+import { Sun, Moon, MessageSquarePlus, LogOut } from '@lucide/vue'
 import ToastHost from '../components/ui/ToastHost.vue'
 import { useTheme } from '../composables/useTheme'
 import { isLoading } from '../composables/useHttpLoading'
+import { useAuthStore } from '../stores/authStore'
 
 const { theme, toggleTheme } = useTheme()
 const loading = isLoading()
 const busy = computed(() => loading.value > 0)
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -66,6 +76,15 @@ const busy = computed(() => loading.value > 0)
           >
             <Sun v-if="theme === 'dark'" class="w-4 h-4" />
             <Moon v-else class="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            @click="handleLogout"
+            aria-label="로그아웃"
+            title="로그아웃"
+            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <LogOut class="w-4 h-4" />
           </button>
         </div>
       </div>

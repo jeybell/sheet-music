@@ -136,7 +136,10 @@ const addForm = reactive({ songId: null as number | null, songSheetId: null as n
 const addError = ref('')
 const isAddingItem = ref(false)
 
-const openSongPicker = () => { showSongPicker.value = true }
+const openSongPicker = () => {
+  void songStore.ensureSongsLoaded()
+  showSongPicker.value = true
+}
 
 const onSongPicked = (songId: number, songSheetId: number | null) => {
   const song = songStore.songs.find(s => s.songId === songId)
@@ -279,7 +282,6 @@ const copyShareUrl = async () => {
 const load = () => {
   if (Number.isFinite(props.setlistId)) {
     void store.fetchSetlist(props.setlistId)
-    void songStore.fetchSongs()
   }
 }
 

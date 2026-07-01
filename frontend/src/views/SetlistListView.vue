@@ -45,6 +45,12 @@ const onSongPicked = (songId: number, songSheetId: number | null) => {
   showSongPicker.value = false
 }
 
+// 곡 추가 모달을 열 때 비로소 곡 목록을 로드(진입 시 미리 받지 않음)
+const openSongPicker = () => {
+  void songStore.ensureSongsLoaded()
+  showSongPicker.value = true
+}
+
 const removePendingSong = (idx: number) => { pendingSongs.value.splice(idx, 1) }
 
 const resetCreateForm = () => {
@@ -99,7 +105,7 @@ const formatDate = (dateStr: string) => {
   return `${y}.${m}.${d}`
 }
 
-onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
+onMounted(() => { void store.fetchSetlists() })
 </script>
 
 <template>
@@ -145,7 +151,7 @@ onMounted(() => { void store.fetchSetlists(); void songStore.fetchSongs() })
             <button
               type="button"
               class="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
-              @click="showSongPicker = true"
+              @click="openSongPicker"
             >
               <Plus class="w-3.5 h-3.5" />
               곡 추가

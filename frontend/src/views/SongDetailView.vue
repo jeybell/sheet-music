@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, ScanText, AlignLeft, Type, ExternalLink,
+  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { useToast } from '../composables/useToast'
@@ -11,7 +11,6 @@ import { deleteSong, updateSong, updateLyrics, getAllTags, addSongLink, updateSo
 import type { SongSetlistHistory } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
-import { runOcrOnFile } from '../apis/ocrApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
@@ -229,52 +228,6 @@ const uploadInputKeys = ref<Record<number, number>>({})
 const uploadMessages = ref<Record<number, string | undefined>>({})
 const uploadErrors = ref<Record<number, string | undefined>>({})
 const uploadingSheets = ref<Record<number, boolean>>({})
-
-// ── 수동 OCR ──────────────────────────────────────────────
-const isOcrRunning = ref(false)
-const ocrError = ref('')
-
-const firstImageFileId = computed((): number | null => {
-  for (const sheet of sheets.value) {
-    for (const f of sheet.files ?? []) {
-      if (f.contentType?.startsWith('image/')) return f.songFileId
-    }
-  }
-  return null
-})
-
-const runOcrForInfo = async () => {
-  const fileId = firstImageFileId.value
-  if (!fileId) return
-  isOcrRunning.value = true
-  ocrError.value = ''
-  try {
-    const result = await runOcrOnFile(fileId)
-    if (!result) { ocrError.value = 'OCR 결과가 없습니다.'; return }
-    if (result.title) await updateSong(props.songId, { title: result.title, artist: result.artist ?? song.value?.artist ?? null, memo: song.value?.memo ?? null })
-    await songStore.fetchSong(props.songId)
-  } catch (e) {
-    ocrError.value = extractApiError(e, 'OCR 실행에 실패했습니다.')
-  } finally {
-    isOcrRunning.value = false
-  }
-}
-
-const runOcrForLyrics = async () => {
-  const fileId = firstImageFileId.value
-  if (!fileId) return
-  isOcrRunning.value = true
-  ocrError.value = ''
-  try {
-    const result = await runOcrOnFile(fileId)
-    if (!result?.lyrics) { ocrError.value = 'OCR에서 가사를 추출하지 못했습니다.'; return }
-    lyricsForm.value = result.lyrics
-  } catch (e) {
-    ocrError.value = extractApiError(e, 'OCR 실행에 실패했습니다.')
-  } finally {
-    isOcrRunning.value = false
-  }
-}
 
 const handleFileChange = (event: Event, sheetId: number) => {
   const input = event.target as HTMLInputElement
@@ -859,18 +812,6 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             <div v-if="lyricsOpen" class="px-4 pb-4 border-t border-border">
               <!-- 가사 편집 폼 -->
               <div v-if="isEditingLyrics" class="flex flex-col gap-2 mt-3">
-                <div v-if="firstImageFileId" class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    :disabled="isOcrRunning"
-                    class="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border border-border text-xs text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
-                    @click="runOcrForLyrics"
-                  >
-                    <ScanText class="w-3 h-3" :class="{ 'animate-pulse text-primary': isOcrRunning }" />
-                    {{ isOcrRunning ? 'OCR 분석 중...' : 'OCR로 가사 추출' }}
-                  </button>
-                  <span v-if="ocrError" class="text-xs text-destructive">{{ ocrError }}</span>
-                </div>
                 <p v-if="lyricsError" class="text-xs text-destructive">{{ lyricsError }}</p>
                 <Textarea
                   v-model="lyricsForm"
@@ -962,16 +903,6 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-base font-semibold text-foreground">곡 관리</h2>
               <div v-if="!isEditing" class="flex gap-2 flex-wrap">
-                <Button
-                  v-if="firstImageFileId"
-                  variant="outline"
-                  size="sm"
-                  :disabled="isOcrRunning"
-                  @click="runOcrForInfo"
-                >
-                  <ScanText class="w-3.5 h-3.5" :class="{ 'animate-pulse text-primary': isOcrRunning }" />
-                  {{ isOcrRunning ? 'OCR 분석 중...' : 'OCR로 정보 채우기' }}
-                </Button>
                 <Button variant="destructive" size="sm" @click="handleDeleteSong">
                   <Trash2 class="w-3.5 h-3.5" />
                   곡 삭제

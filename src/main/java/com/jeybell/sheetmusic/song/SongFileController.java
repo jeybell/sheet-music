@@ -1,13 +1,10 @@
 package com.jeybell.sheetmusic.song;
 
-import com.jeybell.sheetmusic.ocr.OcrService;
-import com.jeybell.sheetmusic.song.dto.OcrResult;
 import com.jeybell.sheetmusic.song.dto.SongFileAnnotationRequest;
 import com.jeybell.sheetmusic.song.dto.SongFileAnnotationResponse;
 import com.jeybell.sheetmusic.song.dto.SongFileDownloadResponse;
 import com.jeybell.sheetmusic.song.dto.SongFileResponse;
 import jakarta.validation.Valid;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -30,16 +27,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class SongFileController {
 
     private final SongFileService songFileService;
-    private final OcrService ocrService;
     private final SongFileAnnotationService songFileAnnotationService;
 
     public SongFileController(
             SongFileService songFileService,
-            OcrService ocrService,
             SongFileAnnotationService songFileAnnotationService
     ) {
         this.songFileService = songFileService;
-        this.ocrService = ocrService;
         this.songFileAnnotationService = songFileAnnotationService;
     }
 
@@ -88,15 +82,6 @@ public class SongFileController {
                         .build()
                         .toString())
                 .body(response.resource());
-    }
-
-    @PostMapping("/api/song-files/{songFileId}/ocr")
-    public ResponseEntity<OcrResult> runOcr(@PathVariable("songFileId") Long songFileId) throws IOException {
-        SongFileDownloadResponse file = songFileService.downloadFile(songFileId);
-        byte[] bytes = file.resource().getContentAsByteArray();
-        OcrResult result = ocrService.analyze(bytes, file.originalFileName());
-        if (result == null) return ResponseEntity.noContent().build();
-        return ResponseEntity.ok(result);
     }
 
     @DeleteMapping("/api/song-files/{songFileId}")

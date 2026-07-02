@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Upload, X, ScanText, CheckCircle, AlertCircle, Loader2 } from '@lucide/vue'
+import { ChevronLeft, Upload, X, CheckCircle, AlertCircle, Loader2 } from '@lucide/vue'
 import { createSong } from '../apis/songApi'
 import { createSongSheet } from '../apis/songSheetApi'
 import { uploadSongSheetFile } from '../apis/songFileApi'
-import { previewOcr } from '../apis/ocrApi'
 import { extractApiError } from '../composables/useApiError'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Label from '../components/ui/Label.vue'
 
-type ItemStatus = 'ocr-loading' | 'ready' | 'saving' | 'done' | 'error'
+type ItemStatus = 'ready' | 'saving' | 'done' | 'error'
 
 interface BulkItem {
   id: string
@@ -33,7 +32,6 @@ const isDragging = ref(false)
 
 const pendingCount = computed(() => items.value.filter(i => i.status === 'ready').length)
 const doneCount = computed(() => items.value.filter(i => i.status === 'done').length)
-const ocrLoadingCount = computed(() => items.value.filter(i => i.status === 'ocr-loading').length)
 const canSaveAll = computed(() => pendingCount.value > 0 && !isSavingAll.value)
 
 const addFiles = (files: FileList | File[]) => {
@@ -53,22 +51,6 @@ const addFiles = (files: FileList | File[]) => {
     }
     items.value.push(item)
   })
-}
-
-// 카드별 수동 OCR: 버튼으로만 실행. 결과가 있으면 해당 필드만 채운다.
-const runOcr = async (item: BulkItem) => {
-  item.status = 'ocr-loading'
-  item.errorMessage = ''
-  try {
-    const result = await previewOcr(item.file)
-    if (result.title) item.title = result.title
-    if (result.key) item.sheetKey = result.key
-    if (result.artist) item.artist = result.artist
-  } catch {
-    item.errorMessage = 'OCR 분석에 실패했습니다. 직접 입력해 주세요.'
-  } finally {
-    item.status = 'ready'
-  }
 }
 
 const handleFileInput = (e: Event) => {
@@ -125,7 +107,6 @@ const saveAll = async () => {
 }
 
 const statusLabel: Record<ItemStatus, string> = {
-  'ocr-loading': 'OCR 분석 중',
   'ready': '대기',
   'saving': '저장 중',
   'done': '완료',
@@ -151,7 +132,6 @@ const statusLabel: Record<ItemStatus, string> = {
       <div class="flex items-center gap-3">
         <span v-if="items.length > 0" class="text-sm text-muted-foreground">
           {{ doneCount }}/{{ items.length }}개 완료
-          <span v-if="ocrLoadingCount > 0" class="ml-1">(OCR {{ ocrLoadingCount }}개 분석 중)</span>
         </span>
         <Button :disabled="!canSaveAll" @click="saveAll">
           {{ isSavingAll ? '저장 중...' : `전체 저장 (${pendingCount}개)` }}
@@ -189,7 +169,7 @@ const statusLabel: Record<ItemStatus, string> = {
         :key="item.id"
         class="relative bg-card rounded-xl border shadow-sm overflow-hidden flex flex-col"
         :class="{
-          'border-border': item.status === 'ready' || item.status === 'ocr-loading',
+          'border-border': item.status === 'ready',
           'border-primary/40': item.status === 'saving',
           'border-green-500/40': item.status === 'done',
           'border-destructive/40': item.status === 'error',
@@ -207,17 +187,15 @@ const statusLabel: Record<ItemStatus, string> = {
           <div
             class="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
             :class="{
-              'bg-muted text-muted-foreground': item.status === 'ocr-loading',
               'bg-background/80 text-foreground': item.status === 'ready',
               'bg-primary/10 text-primary': item.status === 'saving',
               'bg-green-500/10 text-green-600 dark:text-green-400': item.status === 'done',
               'bg-destructive/10 text-destructive': item.status === 'error',
             }"
           >
-            <Loader2 v-if="item.status === 'ocr-loading' || item.status === 'saving'" class="w-3 h-3 animate-spin" />
+            <Loader2 v-if="item.status === 'saving'" class="w-3 h-3 animate-spin" />
             <CheckCircle v-else-if="item.status === 'done'" class="w-3 h-3" />
             <AlertCircle v-else-if="item.status === 'error'" class="w-3 h-3" />
-            <ScanText v-else-if="item.status === 'ready'" class="w-3 h-3" />
             {{ statusLabel[item.status] }}
           </div>
 
@@ -269,19 +247,6 @@ const statusLabel: Record<ItemStatus, string> = {
               />
             </div>
           </div>
-
-          <!-- 수동 OCR 버튼 -->
-          <button
-            v-if="item.status === 'ready' || item.status === 'ocr-loading' || item.status === 'error'"
-            type="button"
-            class="inline-flex items-center justify-center gap-1 h-8 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="item.status === 'ocr-loading'"
-            @click="runOcr(item)"
-          >
-            <Loader2 v-if="item.status === 'ocr-loading'" class="w-3.5 h-3.5 animate-spin" />
-            <ScanText v-else class="w-3.5 h-3.5" />
-            {{ item.status === 'ocr-loading' ? 'OCR 분석 중...' : 'OCR로 정보 채우기' }}
-          </button>
 
           <!-- done 상태: 상세 이동 -->
           <div v-if="item.status === 'done'" class="mt-auto pt-1">

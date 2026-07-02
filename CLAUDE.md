@@ -46,9 +46,8 @@ setlists (셋리스트/콘티)
 - **곡/악보/파일**: songs·song_sheets·song_files CRUD, 곡 검색, soft delete
 - **셋리스트**: setlists·setlist_items CRUD, 콘티 화면, 드래그앤드롭 순서 변경, 셋리스트 PDF 다운로드(jsPDF)
 - **공유 링크**: UUID 토큰 기반 콘티 공유 (`/share/:token`), 공개 뷰
-- **OCR 자동 추출**: EasyOCR Python 마이크로서비스 → Spring Boot 연동. 제목/코드/아티스트/가사/rawText 추출, `@Async` 비동기 처리 후 상세 화면 15초 폴링 반영
-- **통합 등록/업로드**: 곡+악보 1단계 통합 등록(OCR 자동입력), 일괄 업로드 화면(`/songs/bulk`, 드래그앤드롭 + 카드별 편집)
-- **가사 관리**: songs.lyrics 컬럼, `PATCH /lyrics`, 곡 상세 가사 섹션(OCR 적용 + 직접 편집)
+- **통합 등록/업로드**: 곡+악보 1단계 통합 등록, 일괄 업로드 화면(`/songs/bulk`, 드래그앤드롭 + 카드별 편집)
+- **가사 관리**: songs.lyrics 컬럼, `PATCH /lyrics`, 곡 상세 가사 섹션(직접 편집)
 - **태그**: song_tags 테이블(`@ElementCollection EAGER+SUBSELECT`), 태그 칩 입력/필터
 - **링크**: song_links 테이블, 멀티 플랫폼(YouTube/Spotify/Melon 등) 자동 감지, YouTube 임베드 토글
 - **통합 검색**: 제목·아티스트·가사 LIKE + 키 대소문자 무관 LIKE 필터 + 태그 필터
@@ -71,6 +70,7 @@ setlists (셋리스트/콘티)
 | V9 | song_links 테이블 (기존 youtube_url 데이터 이전) |
 | V10 | setlists.service_type 컬럼 제거 |
 | V11 | users 테이블 (사용자 인증) |
+| V15 | song_files.ocr_* 컬럼 제거 (OCR 기능 완전 제거, #142) |
 
 ## 다음 작업 예정 이슈
 > #80~#87(악보 목록 정렬·태그·페이지네이션·건수, 일괄 업로드 OCR 분리, 콘티 등록 UI·예배종류 제거), #85(콘티 목록 성능), #110(콘티 순서변경 터치 지원), #77(사용자 인증 도입)은 처리 완료.
@@ -92,8 +92,8 @@ setlists (셋리스트/콘티)
 ### 배포 정보
 - 백엔드: https://worship-sheet.fly.dev (Fly.io, GitHub Actions로 `main` push 시 자동배포)
 - 프론트엔드: https://worship-sheet.vercel.app (Vercel, Git 연동으로 `main` push 시 자동배포, Root Directory: `frontend`)
-- OCR 서비스: https://worship-sheet-ocr.fly.dev (Fly.io, 4GB 메모리·CPU 2코어 / `auto_stop=false` / `min_machines_running=1` / `OCR_SERVICE_URL` 백엔드 환경변수에 등록됨)
 - DB: Supabase
+- OCR 자동 추출 기능은 사용 빈도 대비 Fly.io 상시 가동 비용(24시간 4GB/2CPU) 부담이 커서 #142로 완전히 제거함 (`ocr-service` 앱도 폐기 대상 — Fly.io 대시보드에서 별도로 앱 삭제 필요).
 - ⚠️ 사용자 인증(#77) 배포 후 Fly.io 백엔드에 `JWT_SECRET` 환경변수(32바이트 이상 랜덤 문자열)를 반드시 설정할 것. 미설정 시 기본값(dev-only)이 사용되어 보안상 위험함
 
 ## 다음 세션 시작 가이드

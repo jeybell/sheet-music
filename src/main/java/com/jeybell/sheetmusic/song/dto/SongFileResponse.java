@@ -1,8 +1,6 @@
 package com.jeybell.sheetmusic.song.dto;
 
 import com.jeybell.sheetmusic.song.SongFile;
-import java.util.Arrays;
-import java.util.List;
 
 public record SongFileResponse(
         Long songFileId,
@@ -11,19 +9,10 @@ public record SongFileResponse(
         String storedFileName,
         String filePath,
         String contentType,
-        Long fileSize,
-        boolean ocrDone,
-        OcrResult ocrResult
+        Long fileSize
 ) {
 
     public static SongFileResponse from(SongFile songFile) {
-        OcrResult ocr = null;
-        if (songFile.isOcrDone()) {
-            List<String> chords = songFile.getOcrChords() == null || songFile.getOcrChords().isBlank()
-                    ? List.of()
-                    : Arrays.asList(songFile.getOcrChords().split(","));
-            ocr = new OcrResult(songFile.getOcrTitle(), songFile.getOcrKey(), chords, null, songFile.getOcrLyrics(), songFile.getOcrRawText());
-        }
         return new SongFileResponse(
                 songFile.getSongFileId(),
                 songFile.getSongSheet().getSongSheetId(),
@@ -31,9 +20,7 @@ public record SongFileResponse(
                 songFile.getStoredFileName(),
                 songFile.getFilePath(),
                 songFile.getContentType(),
-                songFile.getFileSize(),
-                songFile.isOcrDone(),
-                ocr
+                songFile.getFileSize()
         );
     }
 }

@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Upload, X, ScanText, ChevronDown } from '@lucide/vue'
+import { ChevronLeft, Upload, X, ChevronDown } from '@lucide/vue'
 import { createSong } from '../apis/songApi'
 import { createSongSheet } from '../apis/songSheetApi'
 import { uploadSongSheetFile } from '../apis/songFileApi'
-import { previewOcr } from '../apis/ocrApi'
 import { extractApiError } from '../composables/useApiError'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
@@ -24,7 +23,6 @@ const form = reactive({
 
 const imageFile = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
-const isOcrLoading = ref(false)
 const isSaving = ref(false)
 const errorMessage = ref('')
 const showExtra = ref(false)
@@ -37,21 +35,6 @@ const handleImageChange = (e: Event) => {
   if (!file) return
   imageFile.value = file
   imagePreviewUrl.value = URL.createObjectURL(file)
-}
-
-const runOcr = async () => {
-  if (!imageFile.value) return
-  isOcrLoading.value = true
-  try {
-    const result = await previewOcr(imageFile.value)
-    if (result.title) form.title = result.title
-    if (result.key) form.sheetKey = result.key
-    if (result.artist) form.artist = result.artist
-  } catch {
-    // OCR 실패해도 수동 입력으로 진행
-  } finally {
-    isOcrLoading.value = false
-  }
 }
 
 const clearImage = () => {
@@ -81,7 +64,6 @@ const handleSubmit = async () => {
         memo: null,
       })
       await uploadSongSheetFile(sheet.songSheetId, imageFile.value)
-      // 업로드 직후 상세 페이지로 이동, OCR은 백그라운드 처리 중
     }
 
     await router.push(`/songs/${song.songId}`)
@@ -148,17 +130,6 @@ const handleSubmit = async () => {
               </button>
             </div>
 
-            <div v-if="imageFile" class="flex items-center gap-2 mt-1">
-              <button
-                type="button"
-                :disabled="isOcrLoading"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-muted hover:bg-muted/70 text-foreground disabled:opacity-50 transition-colors"
-                @click="runOcr"
-              >
-                <ScanText class="w-3.5 h-3.5" :class="{ 'animate-pulse': isOcrLoading }" />
-                {{ isOcrLoading ? 'OCR 분석 중...' : 'OCR로 정보 채우기' }}
-              </button>
-            </div>
           </div>
 
           <div class="border-t border-border" />
@@ -195,8 +166,8 @@ const handleSubmit = async () => {
           </div>
 
           <div class="flex gap-2 pt-1">
-            <Button type="submit" :disabled="isSaving || isOcrLoading">
-              {{ isSaving ? '저장 중...' : isOcrLoading ? 'OCR 분석 중...' : '저장' }}
+            <Button type="submit" :disabled="isSaving">
+              {{ isSaving ? '저장 중...' : '저장' }}
             </Button>
             <Button type="button" variant="outline" @click="$router.push('/songs')">취소</Button>
           </div>

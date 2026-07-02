@@ -46,24 +46,6 @@ public class SongFile {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    @Column(name = "ocr_title")
-    private String ocrTitle;
-
-    @Column(name = "ocr_key", length = 20)
-    private String ocrKey;
-
-    @Column(name = "ocr_chords", columnDefinition = "TEXT")
-    private String ocrChords;
-
-    @Column(name = "ocr_raw_text", columnDefinition = "TEXT")
-    private String ocrRawText;
-
-    @Column(name = "ocr_lyrics", columnDefinition = "TEXT")
-    private String ocrLyrics;
-
-    @Column(name = "ocr_done", nullable = false)
-    private boolean ocrDone = false;
-
     protected SongFile() {
     }
 
@@ -131,20 +113,4 @@ public class SongFile {
     public void updateFilePath(String filePath) {
         this.filePath = filePath;
     }
-
-    public void applyOcrResult(String title, String key, String chords, String lyrics, String rawText) {
-        this.ocrTitle = title;
-        this.ocrKey = key;
-        this.ocrChords = chords;
-        this.ocrLyrics = lyrics;
-        this.ocrRawText = rawText;
-        this.ocrDone = true;
-    }
-
-    public String getOcrTitle() { return ocrTitle; }
-    public String getOcrKey() { return ocrKey; }
-    public String getOcrChords() { return ocrChords; }
-    public String getOcrLyrics() { return ocrLyrics; }
-    public String getOcrRawText() { return ocrRawText; }
-    public boolean isOcrDone() { return ocrDone; }
 }

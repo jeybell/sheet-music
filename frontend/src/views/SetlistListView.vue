@@ -393,7 +393,7 @@ onMounted(() => { void store.fetchSetlists() })
         </div>
 
         <!-- 전체 목록 -->
-        <div v-if="otherSetlists.length > 0" class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2">
           <h2 v-if="favoriteSetlists.length > 0" class="text-xs font-semibold text-muted-foreground">전체 콘티</h2>
           <div
             v-for="setlist in otherSetlists"

@@ -1,12 +1,3 @@
-export interface OcrResult {
-  title: string | null;
-  key: string | null;
-  chords: string[];
-  artist: string | null;
-  lyrics: string | null;
-  rawText: string | null;
-}
-
 export interface SongFile {
   songFileId: number;
   originalFileName?: string | null;
@@ -14,8 +5,6 @@ export interface SongFile {
   filePath?: string | null;
   contentType?: string | null;
   fileSize?: number | null;
-  ocrDone?: boolean;
-  ocrResult?: OcrResult | null;
 }
 
 export interface SongSheetSummary {

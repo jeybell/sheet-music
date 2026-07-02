@@ -6,7 +6,6 @@
 |--------|------|
 | 웹앱 | https://worship-sheet.vercel.app |
 | 백엔드 API | https://worship-sheet.fly.dev |
-| OCR 서비스 | https://worship-sheet-ocr.fly.dev |
 
 > 데이터는 팀 전체가 함께 보는 공용 데이터입니다. 로그인은 접근 제한 용도이며 사용자별로 자료가 분리되지 않습니다.
 
@@ -34,12 +33,11 @@
 **악보 → `곡 등록`** 으로 들어갑니다.
 
 - 악보 이미지를 올리면 **그 곡의 첫 악보 버전이 자동으로 만들어지고 파일도 첨부**됩니다.
-- **`OCR로 정보 채우기`** 버튼을 누르면 이미지에서 제목·키·아티스트·가사를 자동 추출해 채워줍니다. (자동 실행이 아니라 버튼을 눌러야 실행됩니다)
 - 제목만 필수이고 키·아티스트·메모는 선택입니다. `저장`을 누르면 등록됩니다.
 
 **여러 곡을 한꺼번에** 올리려면 **악보 → `일괄 업로드`**:
 - 이미지를 드래그앤드롭하면 카드가 생깁니다.
-- 카드마다 `OCR로 정보 채우기`로 자동 입력하거나 직접 입력한 뒤, `전체 저장`으로 한 번에 등록합니다.
+- 카드마다 직접 입력한 뒤, `전체 저장`으로 한 번에 등록합니다.
 
 ## 4. 곡 찾기
 **악보** 목록에서:
@@ -54,7 +52,7 @@
 - **악보 슬라이드 뷰어** — ←/→ 키 또는 좌우 버튼으로 페이지 넘김. 크게 보려면 전체화면 뷰어.
 - **곡 정보 수정** — 정보 카드의 **연필 ✏️ 버튼**을 누르면 제목·아티스트·메모·태그를 그 자리에서 바로 고칩니다.
 - **악보 관리**(`악보 관리` 버튼) — 키/버전별 악보 버전 추가·수정·삭제, 각 버전에 파일 업로드/삭제.
-- **가사** — 직접 편집하거나 `OCR로 가사 채우기`로 이미지에서 추출.
+- **가사** — 직접 편집.
 - **링크** — YouTube·Spotify·Melon 등 주소만 붙여넣으면 플랫폼을 자동 인식. YouTube는 바로 임베드 재생.
 - **사용 이력** — 이 곡이 쓰인 콘티 목록(날짜·제목).
 - 저장하면 하단에 **"저장했어요"** 안내가 뜹니다.
@@ -98,8 +96,7 @@
 
 - **인증** — JWT 로그인/회원가입 + **게스트 로그인**. 공유 링크·악보 파일 조회는 비로그인 공개
 - **곡/악보/파일** — 곡·악보 버전(키별)·파일 CRUD, soft delete
-- **OCR** — 악보 이미지에서 제목·키·아티스트·가사 추출(수동 실행)
-- **등록** — 곡+악보 통합 등록, 일괄 업로드(카드별 개별 OCR)
+- **등록** — 곡+악보 통합 등록, 일괄 업로드
 - **검색/정렬** — 제목·아티스트·가사 검색, 키 필터, 다중 태그(AND) 필터, 정렬, 무한 스크롤, 결과 건수
 - **가사·태그·링크** — 가사 편집, 태그, 멀티 플랫폼 링크(YouTube 임베드)
 - **콘티** — 생성·수정·복사(템플릿), 드래그 순서 변경(터치 지원), 곡별 연주 키
@@ -119,7 +116,6 @@
 | 프론트엔드 | Vue 3, TypeScript, Pinia, Vue Router, Tailwind CSS v4 |
 | DB | PostgreSQL (Supabase), Flyway 마이그레이션 |
 | 스토리지 | Cloudflare R2 (`STORAGE_TYPE`으로 local 전환 가능) |
-| OCR | Python, EasyOCR (Fly.io 별도 서비스) |
 | 인프라 | Fly.io(백엔드), Vercel(프론트엔드), GitHub Actions 자동배포 |
 
 `main` 브랜치에 push하면 GitHub Actions로 백엔드·프론트엔드가 자동 배포됩니다.
@@ -181,8 +177,6 @@ erDiagram
         VARCHAR file_path
         VARCHAR content_type
         BIGINT file_size
-        BOOLEAN ocr_done
-        TEXT ocr_raw_text
         TIMESTAMP deleted_at
     }
     song_file_annotations {
@@ -232,7 +226,6 @@ erDiagram
 - 삭제는 모두 **soft delete**(`deleted_at` 기록).
 - 파일 저장 경로: `songs/{songId}/`, 저장 파일명은 UUID(원본명 별도 보관).
 - `sheet_key`·`version_name`은 선택이며 같은 곡 안에서 동일 키 중복 허용.
-- OCR은 **수동 실행**(버튼)이며, 결과를 폼/가사에 채워 넣는 방식.
 - 스토리지는 `STORAGE_TYPE`으로 `local`/`r2` 전환.
 - 콘티 목록은 경량 DTO 프로젝션, 곡 목록은 페이지네이션으로 성능 최적화.
 
@@ -273,7 +266,6 @@ npm run dev
 | `CORS_ALLOWED_ORIGINS` | 허용 오리진(쉼표 구분) |
 | `STORAGE_TYPE` | `local` / `r2` |
 | `R2_ENDPOINT/ACCESS_KEY/SECRET_KEY/BUCKET` | R2 사용 시 |
-| `OCR_SERVICE_URL` | OCR 마이크로서비스 주소 |
 
 ---
 
@@ -313,7 +305,6 @@ npm run dev
 | `POST` | `/api/song-sheets/{id}/files` | 파일 업로드(multipart) |
 | `GET` | `/api/song-files/{id}/view` | 파일 인라인 조회(공개) |
 | `GET` | `/api/song-files/{id}/download` | 파일 다운로드(공개) |
-| `POST` | `/api/song-files/{id}/ocr` | 파일 OCR 실행 |
 | `DELETE` | `/api/song-files/{id}` | 파일 삭제(soft) |
 | `GET/PUT/DELETE` | `/api/song-files/{id}/annotation` | 악보 필기(벡터) 조회/저장/삭제 |
 
@@ -344,7 +335,6 @@ npm run dev
 ### 기타
 | Method | Path | 설명 |
 |--------|------|------|
-| `POST` | `/api/ocr/preview` | 업로드 없이 OCR 미리보기(multipart) |
 | `GET/POST` | `/api/feature-requests` | 기능 요청 조회/등록 |
 | `PATCH` | `/api/feature-requests/{id}/status` | 기능 요청 상태 변경 |
 | `DELETE` | `/api/feature-requests/{id}` | 기능 요청 삭제 |

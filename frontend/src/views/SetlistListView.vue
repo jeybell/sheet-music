@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { Plus, Trash2, ChevronRight, X, Music, List, CalendarDays, ChevronLeft, Star} from '@lucide/vue'
+import { Plus, Trash2, ChevronRight, X, Music, List, CalendarDays, ChevronLeft, Star, Search} from '@lucide/vue'
 import { createSetlist, deleteSetlist } from '../apis/setlistApi'
 import { addSetlistItem } from '../apis/setlistItemApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -26,12 +26,27 @@ const songStore = useSongStore()
 const toast = useToast()
 const { favoriteIds, isFavorite, toggleFavorite } = useSetlistFavorites()
 
+// 콘티 제목·날짜뿐 아니라 포함된 곡 제목/아티스트로도 검색 (#2)
+const searchQuery = ref('')
+const matchesQuery = (s: Setlist) => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return true
+  if (s.title?.toLowerCase().includes(q)) return true
+  if (s.serviceDate.includes(q)) return true
+  return s.items.some(
+    (it) =>
+      it.songTitle.toLowerCase().includes(q) ||
+      (it.songArtist?.toLowerCase().includes(q) ?? false),
+  )
+}
+
 const favoriteSetlists = computed(() =>
-  store.setlists.filter((s) => favoriteIds.value.includes(s.setlistId)),
+  store.setlists.filter((s) => favoriteIds.value.includes(s.setlistId) && matchesQuery(s)),
 )
 const otherSetlists = computed(() =>
-  store.setlists.filter((s) => !favoriteIds.value.includes(s.setlistId)),
+  store.setlists.filter((s) => !favoriteIds.value.includes(s.setlistId) && matchesQuery(s)),
 )
+const hasSearchResults = computed(() => favoriteSetlists.value.length + otherSetlists.value.length > 0)
 
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
@@ -160,6 +175,9 @@ const calendarCells = computed(() => {
 })
 
 const selectedDateSetlists = computed(() => selectedDate.value ? setlistsByDate.value.get(selectedDate.value) ?? [] : [])
+
+// 캘린더 셀에 표시할 콘티 라벨 (제목 없으면 대체 텍스트) — #3
+const setlistLabel = (s: Setlist) => s.title?.trim() || '제목 없음'
 
 const prevMonth = () => {
   if (viewMonth.value === 1) { viewMonth.value = 12; viewYear.value-- } else { viewMonth.value-- }
@@ -310,20 +328,27 @@ onMounted(() => { void store.fetchSetlists() })
             <button
               v-else
               type="button"
-              class="aspect-square rounded-md text-sm flex flex-col items-center justify-center gap-0.5 transition-colors"
+              class="min-h-[3.75rem] rounded-md p-1 flex flex-col items-stretch gap-0.5 text-left transition-colors overflow-hidden"
               :class="selectedDate === cell.iso
-                ? 'bg-primary text-primary-foreground font-medium'
-                : setlistsByDate.has(cell.iso)
-                  ? 'bg-primary-soft text-primary hover:bg-primary/20'
-                  : 'text-foreground hover:bg-muted'"
+                ? 'ring-2 ring-primary ring-inset'
+                : 'hover:bg-muted'"
               @click="selectDate(cell.iso)"
             >
-              <span>{{ cell.day }}</span>
               <span
-                v-if="setlistsByDate.has(cell.iso)"
-                class="w-1.5 h-1.5 rounded-full"
-                :class="selectedDate === cell.iso ? 'bg-primary-foreground' : 'bg-primary'"
-              />
+                class="text-xs leading-none px-0.5"
+                :class="setlistsByDate.has(cell.iso) ? 'font-semibold text-primary' : 'text-muted-foreground'"
+              >{{ cell.day }}</span>
+              <template v-if="setlistsByDate.get(cell.iso)">
+                <span
+                  v-for="s in setlistsByDate.get(cell.iso)!.slice(0, 2)"
+                  :key="s.setlistId"
+                  class="text-[10px] leading-tight rounded px-1 py-0.5 truncate bg-primary-soft text-primary"
+                >{{ setlistLabel(s) }}</span>
+                <span
+                  v-if="setlistsByDate.get(cell.iso)!.length > 2"
+                  class="text-[10px] leading-tight text-muted-foreground px-1"
+                >+{{ setlistsByDate.get(cell.iso)!.length - 2 }}</span>
+              </template>
             </button>
           </template>
         </div>
@@ -353,6 +378,17 @@ onMounted(() => { void store.fetchSetlists() })
     </template>
 
     <div v-else class="flex flex-col gap-5">
+      <!-- 검색: 콘티 제목 / 날짜 / 포함된 곡 제목·아티스트 (#2) -->
+      <div v-if="store.setlists.length > 0" class="relative">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input
+          v-model="searchQuery"
+          type="search"
+          placeholder="콘티·곡 제목, 아티스트, 날짜로 검색"
+          class="pl-9"
+        />
+      </div>
+
       <div v-if="store.setlists.length === 0" class="py-16 flex flex-col items-center text-center">
         <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
           <Plus class="w-6 h-6 text-muted-foreground" />
@@ -360,6 +396,10 @@ onMounted(() => { void store.fetchSetlists() })
         <p class="text-sm font-medium text-foreground">콘티가 없습니다</p>
         <p class="text-sm text-muted-foreground mt-1">새 콘티를 만들어 예배 순서를 구성해보세요.</p>
       </div>
+
+      <p v-else-if="!hasSearchResults" class="text-sm text-muted-foreground text-center py-12">
+        '{{ searchQuery }}'에 해당하는 콘티가 없습니다.
+      </p>
 
       <template v-else>
         <!-- 즐겨찾기 -->

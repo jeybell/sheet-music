@@ -7,7 +7,6 @@ import { useSetlistFavorites } from '../composables/useSetlistFavorites'
 import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, QrCode, Copy, Download, Presentation, Star, KeyRound, Check} from '@lucide/vue'
 import QRCode from 'qrcode'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems, duplicateSetlist } from '../apis/setlistApi'
-import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import { useToast } from '../composables/useToast'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -426,6 +425,10 @@ watch(() => props.setlistId, load)
         <DatePicker v-model="duplicateDate" inline />
         <Button :disabled="isDuplicating" @click="handleDuplicate">
           {{ isDuplicating ? '복사 중...' : '복사하기' }}
+        </Button>
+      </div>
+    </div>
+
     <!-- 공유 QR코드 모달 -->
     <div
       v-if="showQrModal"
@@ -500,6 +503,7 @@ watch(() => props.setlistId, load)
                   <Button variant="outline" size="sm" @click="openDuplicateModal">
                     <Copy class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">복사</span>
+                  </Button>
                   <Button
                     variant="secondary"
                     size="sm"
@@ -582,7 +586,6 @@ watch(() => props.setlistId, load)
 
         <!-- 하단: 곡 목록 (내부 스크롤) -->
         <div class="flex-1 min-h-0 flex flex-col">
-          <!-- 섹션 헤더 -->
           <!-- 섹션 헤더 -->
           <div class="flex items-center justify-between mb-3 shrink-0">
             <h2 class="text-sm font-semibold text-foreground">

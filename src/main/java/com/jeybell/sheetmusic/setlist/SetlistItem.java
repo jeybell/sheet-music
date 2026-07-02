@@ -42,30 +42,39 @@ public class SetlistItem {
     @Column(name = "performance_key", length = 20)
     private String performanceKey;
 
+    @Column(name = "youtube_url", length = 500)
+    private String youtubeUrl;
+
     protected SetlistItem() {
     }
 
     public SetlistItem(Song song, SongSheet songSheet, Integer orderNo, String memo) {
-        this(song, songSheet, orderNo, memo, null);
+        this(song, songSheet, orderNo, memo, null, null);
     }
 
     public SetlistItem(Song song, SongSheet songSheet, Integer orderNo, String memo, String performanceKey) {
+        this(song, songSheet, orderNo, memo, performanceKey, null);
+    }
+
+    public SetlistItem(Song song, SongSheet songSheet, Integer orderNo, String memo, String performanceKey, String youtubeUrl) {
         this.song = song;
         this.songSheet = songSheet;
         this.orderNo = orderNo;
         this.memo = memo;
         this.performanceKey = performanceKey;
+        this.youtubeUrl = youtubeUrl;
     }
 
     void assignSetlist(Setlist setlist) {
         this.setlist = setlist;
     }
 
-    public void update(SongSheet songSheet, Integer orderNo, String memo, String performanceKey) {
+    public void update(SongSheet songSheet, Integer orderNo, String memo, String performanceKey, String youtubeUrl) {
         this.songSheet = songSheet;
         this.orderNo = orderNo;
         this.memo = memo;
         this.performanceKey = performanceKey;
+        this.youtubeUrl = youtubeUrl;
     }
 
     public Long getSetlistItemId() {
@@ -94,5 +103,9 @@ public class SetlistItem {
 
     public String getPerformanceKey() {
         return performanceKey;
+    }
+
+    public String getYoutubeUrl() {
+        return youtubeUrl;
     }
 }

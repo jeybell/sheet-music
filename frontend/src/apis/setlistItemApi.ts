@@ -11,6 +11,7 @@ export interface SetlistItemUpdateRequest {
   orderNo: number
   memo?: string | null
   performanceKey?: string | null
+  youtubeUrl?: string | null
 }
 
 export const updateSetlistItem = async (itemId: number, request: SetlistItemUpdateRequest) => {

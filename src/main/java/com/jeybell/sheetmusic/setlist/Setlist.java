@@ -35,6 +35,9 @@ public class Setlist {
     @Column(columnDefinition = "TEXT")
     private String memo;
 
+    @Column(name = "youtube_url", length = 500)
+    private String youtubeUrl;
+
     @OneToMany(mappedBy = "setlist", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderNo ASC")
     private List<SetlistItem> items = new ArrayList<>();
@@ -52,9 +55,14 @@ public class Setlist {
     }
 
     public Setlist(LocalDate serviceDate, String title, String memo) {
+        this(serviceDate, title, memo, null);
+    }
+
+    public Setlist(LocalDate serviceDate, String title, String memo, String youtubeUrl) {
         this.serviceDate = serviceDate;
         this.title = title;
         this.memo = memo;
+        this.youtubeUrl = youtubeUrl;
     }
 
     @PrePersist
@@ -62,10 +70,11 @@ public class Setlist {
         this.createdAt = LocalDateTime.now();
     }
 
-    public void update(LocalDate serviceDate, String title, String memo) {
+    public void update(LocalDate serviceDate, String title, String memo, String youtubeUrl) {
         this.serviceDate = serviceDate;
         this.title = title;
         this.memo = memo;
+        this.youtubeUrl = youtubeUrl;
     }
 
     public String generateShareToken() {
@@ -100,6 +109,10 @@ public class Setlist {
 
     public String getMemo() {
         return memo;
+    }
+
+    public String getYoutubeUrl() {
+        return youtubeUrl;
     }
 
     public List<SetlistItem> getItems() {

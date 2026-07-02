@@ -12,7 +12,8 @@ public record SetlistItemResponse(
         String sheetKey,
         String versionName,
         String memo,
-        String performanceKey
+        String performanceKey,
+        String youtubeUrl
 ) {
 
     public static SetlistItemResponse from(SetlistItem item) {
@@ -26,7 +27,8 @@ public record SetlistItemResponse(
                 item.getSongSheet() != null ? item.getSongSheet().getSheetKey() : null,
                 item.getSongSheet() != null ? item.getSongSheet().getVersionName() : null,
                 item.getMemo(),
-                item.getPerformanceKey()
+                item.getPerformanceKey(),
+                item.getYoutubeUrl()
         );
     }
 }

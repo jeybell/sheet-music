@@ -1,6 +1,7 @@
 package com.jeybell.sheetmusic.setlist.dto;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record SetlistItemRequest(
         @NotNull(message = "songId is required")
@@ -13,6 +14,9 @@ public record SetlistItemRequest(
 
         String memo,
 
-        String performanceKey
+        String performanceKey,
+
+        @Size(max = 500, message = "youtubeUrl must be 500 characters or less")
+        String youtubeUrl
 ) {
 }

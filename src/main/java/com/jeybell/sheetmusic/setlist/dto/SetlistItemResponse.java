@@ -11,7 +11,8 @@ public record SetlistItemResponse(
         Long songSheetId,
         String sheetKey,
         String versionName,
-        String memo
+        String memo,
+        String performanceKey
 ) {
 
     public static SetlistItemResponse from(SetlistItem item) {
@@ -24,7 +25,8 @@ public record SetlistItemResponse(
                 item.getSongSheet() != null ? item.getSongSheet().getSongSheetId() : null,
                 item.getSongSheet() != null ? item.getSongSheet().getSheetKey() : null,
                 item.getSongSheet() != null ? item.getSongSheet().getVersionName() : null,
-                item.getMemo()
+                item.getMemo(),
+                item.getPerformanceKey()
         );
     }
 }

@@ -42,7 +42,7 @@ public class SetlistItemService {
         Song song = getActiveSong(request.songId());
         SongSheet songSheet = resolveSheet(request.songSheetId(), song);
 
-        SetlistItem item = new SetlistItem(song, songSheet, request.orderNo(), request.memo());
+        SetlistItem item = new SetlistItem(song, songSheet, request.orderNo(), request.memo(), request.performanceKey());
         setlist.addItem(item);
 
         return SetlistItemResponse.from(item);
@@ -53,7 +53,7 @@ public class SetlistItemService {
         SetlistItem item = getActiveItem(itemId);
         SongSheet songSheet = resolveSheet(request.songSheetId(), item.getSong());
 
-        item.update(songSheet, request.orderNo(), request.memo());
+        item.update(songSheet, request.orderNo(), request.memo(), request.performanceKey());
 
         return SetlistItemResponse.from(item);
     }
@@ -75,7 +75,7 @@ public class SetlistItemService {
         for (int i = 0; i < itemIds.size(); i++) {
             SetlistItem item = itemMap.get(itemIds.get(i));
             if (item != null && item.getSetlist().getSetlistId().equals(setlistId)) {
-                item.update(item.getSongSheet(), i + 1, item.getMemo());
+                item.update(item.getSongSheet(), i + 1, item.getMemo(), item.getPerformanceKey());
             }
         }
     }

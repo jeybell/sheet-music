@@ -52,6 +52,24 @@ const handleKey = (e: KeyboardEvent) => {
 onMounted(() => document.addEventListener('keydown', handleKey))
 onUnmounted(() => document.removeEventListener('keydown', handleKey))
 
+// ── 모바일 터치 스와이프 (좌우로 이전/다음 슬라이드 이동)
+const SWIPE_THRESHOLD_PX = 50
+let touchStartX = 0
+let touchStartY = 0
+
+const onTouchStart = (e: TouchEvent) => {
+  touchStartX = e.changedTouches[0].clientX
+  touchStartY = e.changedTouches[0].clientY
+}
+
+const onTouchEnd = (e: TouchEvent) => {
+  const dx = e.changedTouches[0].clientX - touchStartX
+  const dy = e.changedTouches[0].clientY - touchStartY
+  if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy)) return
+  if (dx < 0) next()
+  else prev()
+}
+
 const downloadPdf = async () => {
   isDownloading.value = true
   try {
@@ -131,7 +149,11 @@ const downloadPdf = async () => {
     </div>
 
     <!-- 본문 -->
-    <div class="flex-1 flex items-center justify-center overflow-hidden relative px-12">
+    <div
+      class="flex-1 flex items-center justify-center overflow-hidden relative px-12"
+      @touchstart="onTouchStart"
+      @touchend="onTouchEnd"
+    >
       <!-- 이전 -->
       <button
         type="button"

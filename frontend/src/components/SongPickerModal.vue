@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { Search, X, Music, Eye } from '@lucide/vue'
+import { computed, reactive, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { isAxiosError } from 'axios'
+import { Search, X, Music, Eye, Pencil } from '@lucide/vue'
 import type { Song, SongSheetSummary } from '../types/song'
+import { updateSongSheet } from '../apis/songSheetApi'
 import SheetViewerModal from './SheetViewerModal.vue'
 import type { ViewerSong } from './SheetViewerModal.vue'
+import Button from './ui/Button.vue'
+import Input from './ui/Input.vue'
+import Textarea from './ui/Textarea.vue'
+import Label from './ui/Label.vue'
+
+interface ApiErrorResponse { message?: string }
+const apiError = (e: unknown, fallback: string) =>
+  isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
 
 const props = defineProps<{
   songs: Song[]
@@ -65,6 +75,44 @@ const openViewer = (sheet: SongSheetSummary) => {
       originalFileName: f.originalFileName ?? null,
       contentType: f.contentType ?? null,
     })),
+  }
+}
+
+// 악보 인라인 수정
+const editingSheetId = ref<number | null>(null)
+const editForm = reactive({ sheetKey: '', versionName: '', memo: '' })
+const isSavingSheet = ref(false)
+const editSheetError = ref('')
+
+const startEditSheet = (sheet: SongSheetSummary) => {
+  editingSheetId.value = sheet.songSheetId
+  editForm.sheetKey = sheet.sheetKey ?? ''
+  editForm.versionName = sheet.versionName ?? ''
+  editForm.memo = sheet.memo ?? ''
+  editSheetError.value = ''
+}
+
+const cancelEditSheet = () => {
+  editingSheetId.value = null
+}
+
+const saveEditSheet = async (sheet: SongSheetSummary) => {
+  isSavingSheet.value = true
+  editSheetError.value = ''
+  try {
+    const updated = await updateSongSheet(sheet.songSheetId, {
+      sheetKey: editForm.sheetKey.trim() || null,
+      versionName: editForm.versionName.trim() || null,
+      memo: editForm.memo.trim() || null,
+    })
+    sheet.sheetKey = updated.sheetKey
+    sheet.versionName = updated.versionName
+    sheet.memo = updated.memo
+    editingSheetId.value = null
+  } catch (e) {
+    editSheetError.value = apiError(e, '악보 수정에 실패했습니다.')
+  } finally {
+    isSavingSheet.value = false
   }
 }
 
@@ -187,31 +235,67 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
           <div
             v-for="sheet in sheets"
             :key="sheet.songSheetId"
-            class="flex items-stretch gap-2 mb-2"
+            class="mb-2"
           >
-            <button
-              type="button"
-              class="flex-1 flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors"
-              :class="selectedSheetId === sheet.songSheetId
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border hover:bg-muted/60 text-foreground'"
-              @click="selectedSheetId = sheet.songSheetId"
-            >
-              <span class="text-sm font-medium">{{ sheetLabel(sheet.sheetKey, sheet.versionName) }}</span>
-              <span v-if="(sheet.files ?? []).length > 0" class="ml-auto text-xs text-muted-foreground">
-                {{ (sheet.files ?? []).length }}장
-              </span>
-            </button>
-            <button
-              v-if="(sheet.files ?? []).length > 0"
-              type="button"
-              class="shrink-0 inline-flex items-center gap-1 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
-              title="악보 보기"
-              @click="openViewer(sheet)"
-            >
-              <Eye class="w-4 h-4" />
-              악보
-            </button>
+            <!-- 악보 인라인 수정 폼 -->
+            <div v-if="editingSheetId === sheet.songSheetId" class="p-3 rounded-lg border border-primary bg-primary/5 flex flex-col gap-2">
+              <p v-if="editSheetError" class="text-xs text-destructive bg-destructive-soft rounded-md px-2 py-1.5">{{ editSheetError }}</p>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="flex flex-col gap-1">
+                  <Label class="text-xs">키</Label>
+                  <Input v-model="editForm.sheetKey" type="text" placeholder="예: G" />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <Label class="text-xs">버전명</Label>
+                  <Input v-model="editForm.versionName" type="text" placeholder="예: 인도자용" />
+                </div>
+              </div>
+              <div class="flex flex-col gap-1">
+                <Label class="text-xs">메모</Label>
+                <Textarea v-model="editForm.memo" rows="2" />
+              </div>
+              <div class="flex gap-2">
+                <Button size="sm" :disabled="isSavingSheet" @click="saveEditSheet(sheet)">
+                  {{ isSavingSheet ? '저장 중...' : '저장' }}
+                </Button>
+                <Button size="sm" variant="outline" :disabled="isSavingSheet" @click="cancelEditSheet">취소</Button>
+              </div>
+            </div>
+
+            <!-- 악보 버전 행 -->
+            <div v-else class="flex items-stretch gap-2">
+              <button
+                type="button"
+                class="flex-1 flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors"
+                :class="selectedSheetId === sheet.songSheetId
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:bg-muted/60 text-foreground'"
+                @click="selectedSheetId = sheet.songSheetId"
+              >
+                <span class="text-sm font-medium">{{ sheetLabel(sheet.sheetKey, sheet.versionName) }}</span>
+                <span v-if="(sheet.files ?? []).length > 0" class="ml-auto text-xs text-muted-foreground">
+                  {{ (sheet.files ?? []).length }}장
+                </span>
+              </button>
+              <button
+                type="button"
+                class="shrink-0 inline-flex items-center gap-1 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                title="악보 수정"
+                @click="startEditSheet(sheet)"
+              >
+                <Pencil class="w-4 h-4" />
+              </button>
+              <button
+                v-if="(sheet.files ?? []).length > 0"
+                type="button"
+                class="shrink-0 inline-flex items-center gap-1 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                title="악보 보기"
+                @click="openViewer(sheet)"
+              >
+                <Eye class="w-4 h-4" />
+                악보
+              </button>
+            </div>
           </div>
 
           <p v-if="sheets.length === 0" class="text-sm text-muted-foreground text-center py-4">

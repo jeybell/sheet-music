@@ -6,8 +6,12 @@ import SongListView from "../views/SongListView.vue";
 import BulkUploadView from "../views/BulkUploadView.vue";
 import SetlistListView from "../views/SetlistListView.vue";
 import SetlistDetailView from "../views/SetlistDetailView.vue";
+import SetlistPresentView from "../views/SetlistPresentView.vue";
 import FeatureRequestView from "../views/FeatureRequestView.vue";
 import ShareView from "../views/ShareView.vue";
+import LoginView from "../views/LoginView.vue";
+import RegisterView from "../views/RegisterView.vue";
+import { AUTH_TOKEN_KEY } from "../apis/http";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -52,6 +56,12 @@ const router = createRouter({
       props: (route) => ({ setlistId: Number(route.params.setlistId) }),
     },
     {
+      path: "/setlists/:setlistId/present",
+      name: "setlist-present",
+      component: SetlistPresentView,
+      props: (route) => ({ setlistId: Number(route.params.setlistId) }),
+    },
+    {
       path: "/feature-requests",
       name: "feature-requests",
       component: FeatureRequestView,
@@ -61,7 +71,31 @@ const router = createRouter({
       name: "share",
       component: ShareView,
     },
+    {
+      path: "/login",
+      name: "login",
+      component: LoginView,
+    },
+    {
+      path: "/register",
+      name: "register",
+      component: RegisterView,
+    },
   ],
+});
+
+const PUBLIC_PATH_PREFIXES = ["/login", "/register", "/share/"];
+
+router.beforeEach((to) => {
+  const isPublic = PUBLIC_PATH_PREFIXES.some((prefix) => to.path.startsWith(prefix));
+  const isAuthenticated = !!localStorage.getItem(AUTH_TOKEN_KEY);
+
+  if (!isPublic && !isAuthenticated) {
+    return { path: "/login", query: { redirect: to.fullPath } };
+  }
+  if ((to.name === "login" || to.name === "register") && isAuthenticated) {
+    return { path: "/" };
+  }
 });
 
 export default router;

@@ -53,6 +53,7 @@ setlists (셋리스트/콘티)
 - **링크**: song_links 테이블, 멀티 플랫폼(YouTube/Spotify/Melon 등) 자동 감지, YouTube 임베드 토글
 - **통합 검색**: 제목·아티스트·가사 LIKE + 키 대소문자 무관 LIKE 필터 + 태그 필터
 - **로딩 UX**: axios 인터셉터 전역 로딩 바 + 콘텐츠 딤 처리 (`useHttpLoading`)
+- **사용자 인증**: Spring Security + JWT 자체 구현(`/api/auth/register`, `/api/auth/login`), 30일 만료 토큰. `/api/auth/**`, `GET /api/setlists/share/**`, `GET /api/song-files/*/view`·`/download`만 공개, 나머지 API는 인증 필요. 프론트엔드는 `authStore`(Pinia) + axios 인터셉터로 토큰 첨부, 라우터 가드로 미인증 시 `/login` 리다이렉트, 401 응답 시 자동 로그아웃
 - **UI**: shadcn-vue 스타일 + Tailwind v4 + 다크/라이트 테마 + 반응형, 악보 이미지 슬라이드 뷰어
 - **인프라**: CI/CD 자동배포(GitHub Actions → Fly.io, Vercel Git 연동), Cloudflare R2 연동(STORAGE_TYPE 전환, 현재 local 모드)
 
@@ -69,17 +70,20 @@ setlists (셋리스트/콘티)
 | V8 | song_tags 테이블 |
 | V9 | song_links 테이블 (기존 youtube_url 데이터 이전) |
 | V10 | setlists.service_type 컬럼 제거 |
+| V11 | users 테이블 (사용자 인증) |
 
 ## 다음 작업 예정 이슈
-> #80~#87(악보 목록 정렬·태그·페이지네이션·건수, 일괄 업로드 OCR 분리, 콘티 등록 UI·예배종류 제거), #85(콘티 목록 성능)은 처리 완료.
+> #80~#87(악보 목록 정렬·태그·페이지네이션·건수, 일괄 업로드 OCR 분리, 콘티 등록 UI·예배종류 제거), #85(콘티 목록 성능), #110(콘티 순서변경 터치 지원), #77(사용자 인증 도입)은 처리 완료.
 
 | 번호 | 제목 |
 |------|------|
-| #77 | 사용자 인증 도입 (로그인/회원가입) |
-| #76 | 홈 대시보드 (최근 콘티 + 다음 예배 카운트다운) — 관련 #32 |
+| #106 | 콘티 곡 선택 모달에서 악보 수정 기능 추가 |
+| #107 | 공유 링크 뷰어에서 앱 홈으로 이동하는 기능 제공 |
+| #108 | 콘티 목록 캘린더 뷰 (날짜별 콘티 표시) |
+| #109 | 악보 이미지에 스타일러스(애플펜슬) 필기 메모 (벡터 저장) |
 | #75 | 콘티 아이템 키 전조 메모 및 표시 — 관련 #35 |
 | #74 | 콘티 복사 (템플릿으로 재사용) — 관련 #37 |
-| #73 | 콘티 즐겨찾기 / 최근 사용 콘티 빠른 접근 |
+| #73 | 콘티 즐겨찾기 / 최근 사용 콘티 빠른 접근 (#77 완료로 진행 가능) |
 | #72 | 콘티 진행 모드 (프레젠테이션 뷰) — 관련 #33 |
 | #71 | 콘티 QR코드 공유 |
 | #70 | 콘티 공유 링크 뷰어 개선 (악보 포함 풀스크린 공유) |
@@ -90,6 +94,7 @@ setlists (셋리스트/콘티)
 - 프론트엔드: https://worship-sheet.vercel.app (Vercel, Git 연동으로 `main` push 시 자동배포, Root Directory: `frontend`)
 - OCR 서비스: https://worship-sheet-ocr.fly.dev (Fly.io, 4GB 메모리·CPU 2코어 / `auto_stop=false` / `min_machines_running=1` / `OCR_SERVICE_URL` 백엔드 환경변수에 등록됨)
 - DB: Supabase
+- ⚠️ 사용자 인증(#77) 배포 후 Fly.io 백엔드에 `JWT_SECRET` 환경변수(32바이트 이상 랜덤 문자열)를 반드시 설정할 것. 미설정 시 기본값(dev-only)이 사용되어 보안상 위험함
 
 ## 다음 세션 시작 가이드
 - 새 세션 시작 시 **가장 먼저** `git pull origin main`으로 최신 코드를 받을 것.

@@ -64,6 +64,17 @@ export const getAllTags = async (): Promise<string[]> => {
   return data;
 };
 
+export interface SongSetlistHistory {
+  setlistId: number;
+  serviceDate: string;
+  title: string | null;
+}
+
+export const getSongSetlistHistory = async (songId: number): Promise<SongSetlistHistory[]> => {
+  const { data } = await http.get<SongSetlistHistory[]>(`/api/songs/${songId}/setlist-history`);
+  return data;
+};
+
 export const getPopularSongs = async (limit = 5): Promise<PopularSong[]> => {
   const { data } = await http.get<PopularSong[]>("/api/songs/popular", { params: { limit } });
   return data;

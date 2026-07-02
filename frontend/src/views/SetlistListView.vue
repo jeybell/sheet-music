@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { Plus, Trash2, ChevronRight, X, Music } from '@lucide/vue'
+import { Plus, Trash2, ChevronRight, X, Music, List, CalendarDays, ChevronLeft, Star} from '@lucide/vue'
 import { createSetlist, deleteSetlist } from '../apis/setlistApi'
 import { addSetlistItem } from '../apis/setlistItemApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -15,6 +15,7 @@ import SongPickerModal from '../components/SongPickerModal.vue'
 import { useSetlistStore } from '../stores/setlistStore'
 import { useSongStore } from '../stores/songStore'
 import { useToast } from '../composables/useToast'
+import { useSetlistFavorites } from '../composables/useSetlistFavorites'
 import type { Setlist } from '../types/setlist'
 
 interface ApiErrorResponse { message?: string }
@@ -23,6 +24,14 @@ const router = useRouter()
 const store = useSetlistStore()
 const songStore = useSongStore()
 const toast = useToast()
+const { favoriteIds, isFavorite, toggleFavorite } = useSetlistFavorites()
+
+const favoriteSetlists = computed(() =>
+  store.setlists.filter((s) => favoriteIds.value.includes(s.setlistId)),
+)
+const otherSetlists = computed(() =>
+  store.setlists.filter((s) => !favoriteIds.value.includes(s.setlistId)),
+)
 
 const apiError = (e: unknown, fallback: string) =>
   isAxiosError<ApiErrorResponse>(e) ? (e.response?.data?.message ?? fallback) : fallback
@@ -118,6 +127,55 @@ const formatDate = (dateStr: string) => {
   return `${y}.${m}.${d}`
 }
 
+// ── 캘린더 뷰
+const viewMode = ref<'list' | 'calendar'>('list')
+const pad = (n: number) => String(n).padStart(2, '0')
+
+const now = new Date()
+const viewYear = ref(now.getFullYear())
+const viewMonth = ref(now.getMonth() + 1) // 1~12
+const selectedDate = ref<string | null>(null)
+
+const monthLabel = computed(() => `${viewYear.value}년 ${viewMonth.value}월`)
+
+const setlistsByDate = computed(() => {
+  const map = new Map<string, Setlist[]>()
+  for (const s of store.setlists) {
+    const list = map.get(s.serviceDate) ?? []
+    list.push(s)
+    map.set(s.serviceDate, list)
+  }
+  return map
+})
+
+const calendarCells = computed(() => {
+  const startDow = new Date(viewYear.value, viewMonth.value - 1, 1).getDay()
+  const daysInMonth = new Date(viewYear.value, viewMonth.value, 0).getDate()
+  const cells: ({ day: number; iso: string } | null)[] = []
+  for (let i = 0; i < startDow; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, iso: `${viewYear.value}-${pad(viewMonth.value)}-${pad(d)}` })
+  }
+  return cells
+})
+
+const selectedDateSetlists = computed(() => selectedDate.value ? setlistsByDate.value.get(selectedDate.value) ?? [] : [])
+
+const prevMonth = () => {
+  if (viewMonth.value === 1) { viewMonth.value = 12; viewYear.value-- } else { viewMonth.value-- }
+}
+const nextMonth = () => {
+  if (viewMonth.value === 12) { viewMonth.value = 1; viewYear.value++ } else { viewMonth.value++ }
+}
+
+const selectDate = (iso: string) => {
+  selectedDate.value = iso
+  const matches = setlistsByDate.value.get(iso) ?? []
+  if (matches.length === 1) {
+    router.push(`/setlists/${matches[0].setlistId}`)
+  }
+}
+
 onMounted(() => { void store.fetchSetlists() })
 </script>
 
@@ -130,18 +188,40 @@ onMounted(() => { void store.fetchSetlists() })
       @close="showSongPicker = false"
     />
 
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-xl font-bold text-foreground">콘티</h1>
-      <Button @click="showCreateForm = !showCreateForm" :variant="showCreateForm ? 'outline' : 'default'">
-        <template v-if="showCreateForm">
-          <X class="w-4 h-4" />
-          취소
-        </template>
-        <template v-else>
-          <Plus class="w-4 h-4" />
-          새 콘티
-        </template>
-      </Button>
+    <div class="flex items-center justify-between mb-6 gap-3">
+      <h1 class="text-xl font-bold text-foreground shrink-0">콘티</h1>
+      <div class="flex items-center gap-2">
+        <div v-if="!showCreateForm" class="inline-flex rounded-md border border-border p-0.5">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 px-2.5 h-7 rounded text-xs font-medium transition-colors"
+            :class="viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+            @click="viewMode = 'list'"
+          >
+            <List class="w-3.5 h-3.5" />
+            목록
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 px-2.5 h-7 rounded text-xs font-medium transition-colors"
+            :class="viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+            @click="viewMode = 'calendar'"
+          >
+            <CalendarDays class="w-3.5 h-3.5" />
+            캘린더
+          </button>
+        </div>
+        <Button @click="showCreateForm = !showCreateForm" :variant="showCreateForm ? 'outline' : 'default'">
+          <template v-if="showCreateForm">
+            <X class="w-4 h-4" />
+            취소
+          </template>
+          <template v-else>
+            <Plus class="w-4 h-4" />
+            새 콘티
+          </template>
+        </Button>
+      </div>
     </div>
 
     <!-- 생성 폼 -->
@@ -201,38 +281,156 @@ onMounted(() => { void store.fetchSetlists() })
     <template v-if="!showCreateForm">
     <p v-if="store.isLoading" class="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
     <p v-else-if="store.errorMessage" class="text-sm text-destructive py-4">{{ store.errorMessage }}</p>
-    <div v-else-if="store.setlists.length === 0" class="py-16 flex flex-col items-center text-center">
-      <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
-        <Plus class="w-6 h-6 text-muted-foreground" />
-      </div>
-      <p class="text-sm font-medium text-foreground">콘티가 없습니다</p>
-      <p class="text-sm text-muted-foreground mt-1">새 콘티를 만들어 예배 순서를 구성해보세요.</p>
-    </div>
 
-    <div v-else class="flex flex-col gap-2">
-      <div
-        v-for="setlist in store.setlists"
-        :key="setlist.setlistId"
-        class="bg-card rounded-xl border border-border px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
-        @click="$router.push(`/setlists/${setlist.setlistId}`)"
-      >
-        <div class="flex items-center gap-3 min-w-0">
-          <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
-          <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+    <!-- 캘린더 뷰 -->
+    <template v-else-if="viewMode === 'calendar'">
+      <Card class="p-4 mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <button type="button" class="p-1.5 rounded hover:bg-muted text-muted-foreground" @click="prevMonth">
+            <ChevronLeft class="w-4 h-4" />
+          </button>
+          <span class="text-sm font-semibold text-foreground">{{ monthLabel }}</span>
+          <button type="button" class="p-1.5 rounded hover:bg-muted text-muted-foreground" @click="nextMonth">
+            <ChevronRight class="w-4 h-4" />
+          </button>
         </div>
-        <div class="flex items-center gap-3 flex-shrink-0">
-          <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
-          <Button
-            variant="destructive"
-            size="sm"
-            @click="handleDelete(setlist, $event)"
-          >
-            <Trash2 class="w-3.5 h-3.5" />
-          </Button>
-          <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+
+        <div class="grid grid-cols-7 gap-1 mb-1">
+          <span
+            v-for="(w, i) in ['일', '월', '화', '수', '목', '금', '토']"
+            :key="w"
+            class="text-center text-xs py-1"
+            :class="i === 0 ? 'text-destructive' : i === 6 ? 'text-primary' : 'text-muted-foreground'"
+          >{{ w }}</span>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1">
+          <template v-for="(cell, i) in calendarCells" :key="i">
+            <span v-if="!cell" />
+            <button
+              v-else
+              type="button"
+              class="aspect-square rounded-md text-sm flex flex-col items-center justify-center gap-0.5 transition-colors"
+              :class="selectedDate === cell.iso
+                ? 'bg-primary text-primary-foreground font-medium'
+                : setlistsByDate.has(cell.iso)
+                  ? 'bg-primary-soft text-primary hover:bg-primary/20'
+                  : 'text-foreground hover:bg-muted'"
+              @click="selectDate(cell.iso)"
+            >
+              <span>{{ cell.day }}</span>
+              <span
+                v-if="setlistsByDate.has(cell.iso)"
+                class="w-1.5 h-1.5 rounded-full"
+                :class="selectedDate === cell.iso ? 'bg-primary-foreground' : 'bg-primary'"
+              />
+            </button>
+          </template>
+        </div>
+      </Card>
+
+      <!-- 선택한 날짜의 콘티 목록 (같은 날짜에 여러 개인 경우) -->
+      <div v-if="selectedDate" class="flex flex-col gap-2">
+        <p v-if="selectedDateSetlists.length === 0" class="text-sm text-muted-foreground text-center py-6">
+          {{ formatDate(selectedDate) }}에 등록된 콘티가 없습니다.
+        </p>
+        <div
+          v-for="setlist in selectedDateSetlists"
+          :key="setlist.setlistId"
+          class="bg-card rounded-xl border border-border px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+          @click="$router.push(`/setlists/${setlist.setlistId}`)"
+        >
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+            <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
+            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
         </div>
       </div>
-    </div>
+    </template>
+
+    <div v-else class="flex flex-col gap-5">
+      <!-- 즐겨찾기 -->
+      <div v-if="favoriteSetlists.length > 0" class="flex flex-col gap-2">
+        <h2 class="text-xs font-semibold text-muted-foreground">즐겨찾기</h2>
+        <div
+          v-for="setlist in favoriteSetlists"
+          :key="setlist.setlistId"
+          class="bg-card rounded-xl border border-primary/30 px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+          @click="$router.push(`/setlists/${setlist.setlistId}`)"
+        >
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+            <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
+            <button
+              type="button"
+              class="text-primary"
+              @click.stop="toggleFavorite(setlist.setlistId)"
+            >
+              <Star class="w-4 h-4 fill-current" />
+            </button>
+            <Button variant="destructive" size="sm" @click="handleDelete(setlist, $event)">
+              <Trash2 class="w-3.5 h-3.5" />
+            </Button>
+            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 전체 목록 -->
+      <div class="flex flex-col gap-2">
+        <h2 v-if="favoriteSetlists.length > 0" class="text-xs font-semibold text-muted-foreground">전체 콘티</h2>
+        <div
+          v-for="setlist in otherSetlists"
+    <!-- 목록 뷰 -->
+    <template v-else>
+      <div v-if="store.setlists.length === 0" class="py-16 flex flex-col items-center text-center">
+        <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+          <Plus class="w-6 h-6 text-muted-foreground" />
+        </div>
+        <p class="text-sm font-medium text-foreground">콘티가 없습니다</p>
+        <p class="text-sm text-muted-foreground mt-1">새 콘티를 만들어 예배 순서를 구성해보세요.</p>
+      </div>
+
+      <div v-else class="flex flex-col gap-2">
+        <div
+          v-for="setlist in store.setlists"
+          :key="setlist.setlistId"
+          class="bg-card rounded-xl border border-border px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+          @click="$router.push(`/setlists/${setlist.setlistId}`)"
+        >
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-sm font-semibold text-foreground flex-shrink-0">{{ formatDate(setlist.serviceDate) }}</span>
+            <span v-if="setlist.title" class="text-sm text-muted-foreground truncate">{{ setlist.title }}</span>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <span class="text-xs text-muted-foreground">{{ setlist.items.length }}곡</span>
+            <button
+              type="button"
+              class="text-muted-foreground hover:text-primary transition-colors"
+              @click.stop="toggleFavorite(setlist.setlistId)"
+            >
+              <Star class="w-4 h-4" :class="{ 'fill-current text-primary': isFavorite(setlist.setlistId) }" />
+            </button>
+            <Button variant="destructive" size="sm" @click="handleDelete(setlist, $event)">
+            <Button
+              variant="destructive"
+              size="sm"
+              @click="handleDelete(setlist, $event)"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </Button>
+            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+        </div>
+      </div>
+    </template>
     </template>
   </DefaultLayout>
 </template>

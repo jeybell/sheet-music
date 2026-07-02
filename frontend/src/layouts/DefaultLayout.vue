@@ -31,7 +31,7 @@ const handleLogout = () => {
         />
       </div>
 
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-2 sm:gap-8">
+      <div class="max-w-5xl mx-auto px-3 sm:px-6 h-12 sm:h-14 flex items-center gap-2 sm:gap-8">
         <RouterLink to="/" class="text-base font-bold text-primary tracking-tight shrink-0">
           Worship Sheet
         </RouterLink>
@@ -91,7 +91,7 @@ const handleLogout = () => {
     </header>
 
     <main
-      class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 transition-opacity duration-200"
+      class="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 transition-opacity duration-200"
       :class="busy ? 'opacity-60 pointer-events-none' : 'opacity-100'"
     >
       <slot />

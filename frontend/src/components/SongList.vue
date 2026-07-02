@@ -17,9 +17,9 @@ const getFirstKey = (song: Song) => getSheets(song).find(s => s.sheetKey)?.sheet
       v-for="song in songs"
       :key="song.songId"
       :to="`/songs/${song.songId}`"
-      class="bg-card rounded-xl border border-border p-4 flex items-center gap-4 hover:border-primary/50 hover:shadow-md transition-all group"
+      class="bg-card rounded-xl border border-border p-3 sm:p-4 flex items-center gap-3 sm:gap-4 hover:border-primary/50 hover:shadow-md transition-all group"
     >
-      <div class="shrink-0 w-12 h-12 rounded-lg bg-primary-soft flex items-center justify-center">
+      <div class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary-soft flex items-center justify-center">
         <span
           v-if="getFirstKey(song)"
           class="text-sm font-bold text-primary leading-none"

@@ -78,6 +78,8 @@ const onKey = (e: KeyboardEvent) => {
 
 // ── 관리 패널 토글
 const showManage = ref(false)
+// 모바일: 곡 정보 사이드바 접기/펼치기 (기본 접힘 → 악보가 우선 노출)
+const showMobileDetails = ref(false)
 
 // ── 곡 수정
 const isEditing = ref(false)
@@ -501,12 +503,12 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
     <p v-else-if="songStore.errorMessage" class="text-sm text-destructive">{{ songStore.errorMessage }}</p>
 
     <template v-else-if="song">
-      <div class="h-[calc(100dvh-7.5rem)] flex flex-col">
-      <div class="grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-6 flex-1 min-h-0 lg:overflow-hidden">
+      <div class="lg:h-[calc(100dvh-7.5rem)] flex flex-col">
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-3 lg:gap-6 flex-1 min-h-0 lg:overflow-hidden">
         <!-- ── 악보 뷰어 (메인) ───────────────────────── -->
         <div class="flex flex-col min-h-0">
           <div
-            class="relative rounded-xl border border-border bg-muted/40 overflow-hidden flex items-center justify-center flex-1 min-h-0"
+            class="relative rounded-xl border border-border bg-muted/40 overflow-hidden flex items-center justify-center min-h-[70vh] lg:min-h-0 lg:flex-1"
           >
             <template v-if="currentSlide">
               <!-- 이미지 슬라이드 -->
@@ -584,8 +586,8 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             </div>
           </div>
 
-          <!-- 썸네일 인디케이터 -->
-          <div v-if="slides.length > 1" class="mt-3 shrink-0 flex flex-wrap gap-2">
+          <!-- 썸네일 인디케이터 (모바일: 가로 스크롤) -->
+          <div v-if="slides.length > 1" class="mt-2 lg:mt-3 shrink-0 flex overflow-x-auto gap-2 pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
             <button
               v-for="(slide, i) in slides"
               :key="`${slide.file.songFileId}`"
@@ -601,8 +603,21 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
           </div>
         </div>
 
+        <!-- 모바일 전용: 곡 정보 펼치기/접기 (악보 우선 노출) -->
+        <button
+          type="button"
+          class="lg:hidden w-full inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          @click="showMobileDetails = !showMobileDetails"
+        >
+          <ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showMobileDetails }" />
+          {{ showMobileDetails ? '곡 정보 접기' : '곡 정보 · 가사 · 악보 관리' }}
+        </button>
+
         <!-- ── 곡 정보 사이드 ─────────────────────────── -->
-        <aside class="lg:order-last lg:overflow-y-auto lg:h-full">
+        <aside
+          class="lg:order-last lg:overflow-y-auto lg:h-full lg:block"
+          :class="showMobileDetails ? 'block' : 'hidden'"
+        >
           <Card class="p-4">
             <!-- 읽기 모드 -->
             <template v-if="!isEditing">

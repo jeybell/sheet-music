@@ -5,6 +5,7 @@ import com.jeybell.sheetmusic.setlist.dto.SetlistListRow;
 import com.jeybell.sheetmusic.setlist.dto.SetlistRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistResponse;
 import com.jeybell.sheetmusic.setlist.dto.SharedSetlistResponse;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,6 +62,20 @@ public class SetlistService {
     public void deleteSetlist(Long setlistId) {
         Setlist setlist = getActive(setlistId);
         setlist.softDelete();
+    }
+
+    /**
+     * 콘티 복사(템플릿으로 재사용). 곡 순서·악보 버전 설정을 그대로 복사하고
+     * 날짜만 새로 지정한다. 공유 링크는 복사하지 않는다.
+     */
+    @Transactional
+    public SetlistResponse duplicateSetlist(Long setlistId, LocalDate newServiceDate) {
+        Setlist source = getActive(setlistId);
+        Setlist copy = new Setlist(newServiceDate, source.getTitle(), source.getMemo());
+        for (SetlistItem item : source.getItems()) {
+            copy.addItem(new SetlistItem(item.getSong(), item.getSongSheet(), item.getOrderNo(), item.getMemo()));
+        }
+        return SetlistResponse.from(setlistRepository.save(copy));
     }
 
     @Transactional

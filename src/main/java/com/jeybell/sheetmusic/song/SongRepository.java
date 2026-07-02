@@ -1,6 +1,7 @@
 package com.jeybell.sheetmusic.song;
 
 import com.jeybell.sheetmusic.song.dto.PopularSongResponse;
+import com.jeybell.sheetmusic.song.dto.SongSetlistHistoryResponse;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -73,6 +74,51 @@ public interface SongRepository extends JpaRepository<Song, Long> {
     Page<Song> searchSongsOrderByKey(@Param("query") String query, @Param("songKey") String songKey,
                                      @Param("tags") List<String> tags, @Param("tagCount") long tagCount,
                                      Pageable pageable);
+
+    /**
+     * 최근 사용일순 정렬 전용. 콘티(setlist)에 쓰인 적 있는 곡은 최근 사용일 내림차순,
+     * 쓰인 적 없는 곡은 마지막에 온다. 필터 조건은 searchSongs 와 동일.
+     */
+    @Query("""
+            select s
+            from Song s
+            where s.deletedAt is null
+              and (:query is null
+                or lower(s.title) like :query
+                or lower(s.artist) like :query
+                or lower(s.lyrics) like :query)
+              and (:songKey is null
+                or exists (
+                  select 1 from SongSheet ss
+                  where ss.song = s
+                    and ss.deletedAt is null
+                    and lower(ss.sheetKey) like :songKey
+                ))
+              and (:tagCount = 0
+                or (
+                  select count(distinct t) from Song sx join sx.tags t
+                  where sx = s and t in :tags
+                ) = :tagCount)
+            order by (
+              select max(sl.serviceDate) from SetlistItem si join si.setlist sl
+              where si.song = s and sl.deletedAt is null
+            ) desc nulls last
+            """)
+    Page<Song> searchSongsOrderByLastUsed(@Param("query") String query, @Param("songKey") String songKey,
+                                          @Param("tags") List<String> tags, @Param("tagCount") long tagCount,
+                                          Pageable pageable);
+
+    /**
+     * 곡 상세: 해당 곡이 포함된 셋리스트 이력(최근순). soft-delete 된 콘티는 제외.
+     */
+    @Query("""
+            select new com.jeybell.sheetmusic.song.dto.SongSetlistHistoryResponse(
+                sl.setlistId, sl.serviceDate, sl.title)
+            from SetlistItem si join si.setlist sl
+            where si.song.songId = :songId and sl.deletedAt is null
+            order by sl.serviceDate desc
+            """)
+    List<SongSetlistHistoryResponse> findSetlistHistoryForSong(@Param("songId") Long songId);
 
     @Query("select distinct t from Song s join s.tags t where s.deletedAt is null order by t")
     List<String> findAllTags();

@@ -20,6 +20,7 @@ const SORT_OPTIONS = [
   { value: 'ARTIST', label: '아티스트순' },
   { value: 'KEY', label: '키순' },
   { value: 'LATEST', label: '최신순' },
+  { value: 'LAST_USED', label: '최근 사용일순' },
 ] as const
 const SORT_STORAGE_KEY = 'song-list-sort'
 const sortBy = ref<string>(localStorage.getItem(SORT_STORAGE_KEY) ?? 'TITLE')

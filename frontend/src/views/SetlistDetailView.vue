@@ -563,7 +563,7 @@ watch(() => props.setlistId, load)
           <template v-if="!isEditing">
             <div class="px-5 pt-4 pb-3">
               <!-- 날짜 / 제목 -->
-              <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-3">
                 <div class="min-w-0">
                   <span class="text-xs text-muted-foreground font-medium mb-1 block">{{ formatDate(setlist.serviceDate) }}</span>
                   <div class="flex items-center gap-1.5">
@@ -580,7 +580,7 @@ watch(() => props.setlistId, load)
                   <p v-if="setlist.memo" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ setlist.memo }}</p>
                 </div>
                 <!-- 액션 버튼 -->
-                <div class="flex gap-1.5 shrink-0">
+                <div class="flex gap-1.5 shrink-0 flex-wrap justify-end">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -641,7 +641,7 @@ watch(() => props.setlistId, load)
               </div>
 
               <!-- 공유 링크 바 -->
-              <div class="pt-3 border-t border-border flex items-center gap-2">
+              <div class="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center gap-2">
                 <template v-if="!shareUrl">
                   <Button variant="outline" size="sm" :disabled="isGeneratingShare" @click="handleGenerateShare">
                     <Share2 class="w-3.5 h-3.5" />
@@ -649,8 +649,11 @@ watch(() => props.setlistId, load)
                   </Button>
                 </template>
                 <template v-else>
-                  <Share2 class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <code class="flex-1 text-xs bg-muted px-2 py-1 rounded truncate text-foreground min-w-0">{{ shareUrl }}</code>
+                  <div class="flex items-center gap-2 w-full sm:flex-1 min-w-0">
+                    <Share2 class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <code class="flex-1 text-xs bg-muted px-2 py-1 rounded truncate text-foreground min-w-0">{{ shareUrl }}</code>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
                   <Button variant="outline" size="sm" @click="copyShareUrl">
                     <Link class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">복사</span>
@@ -663,6 +666,7 @@ watch(() => props.setlistId, load)
                     <Link2Off class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">비활성화</span>
                   </Button>
+                  </div>
                 </template>
               </div>
             </div>
@@ -769,7 +773,7 @@ watch(() => props.setlistId, load)
                 v-for="(item, idx) in items"
                 :key="item.setlistItemId"
                 :data-drag-index="idx"
-                class="px-4 py-3 flex items-start gap-3 transition-opacity select-none"
+                class="px-3 py-2.5 sm:px-4 sm:py-3 flex items-start gap-2 sm:gap-3 transition-opacity select-none"
                 :class="{
                   'opacity-40': dragIndex === idx,
                   'ring-2 ring-primary ring-offset-1 ring-offset-background': dragOverIndex === idx && dragIndex !== idx,

@@ -322,13 +322,13 @@ onMounted(() => { void store.fetchSetlists() })
           >{{ w }}</span>
         </div>
 
-        <div class="grid grid-cols-7 gap-1">
+        <div class="grid grid-cols-7 gap-0.5 sm:gap-1">
           <template v-for="(cell, i) in calendarCells" :key="i">
             <span v-if="!cell" />
             <button
               v-else
               type="button"
-              class="min-h-[3.75rem] rounded-md p-1 flex flex-col items-stretch gap-0.5 text-left transition-colors overflow-hidden"
+              class="min-h-[3rem] sm:min-h-[3.75rem] rounded-md p-0.5 sm:p-1 flex flex-col items-stretch gap-0.5 text-left transition-colors overflow-hidden"
               :class="selectedDate === cell.iso
                 ? 'ring-2 ring-primary ring-inset'
                 : 'hover:bg-muted'"
@@ -342,7 +342,7 @@ onMounted(() => { void store.fetchSetlists() })
                 <span
                   v-for="s in setlistsByDate.get(cell.iso)!.slice(0, 2)"
                   :key="s.setlistId"
-                  class="text-[10px] leading-tight rounded px-1 py-0.5 truncate bg-primary-soft text-primary"
+                  class="text-[9px] sm:text-[10px] leading-tight rounded px-0.5 sm:px-1 py-0.5 truncate bg-primary-soft text-primary"
                 >{{ setlistLabel(s) }}</span>
                 <span
                   v-if="setlistsByDate.get(cell.iso)!.length > 2"
@@ -408,7 +408,7 @@ onMounted(() => { void store.fetchSetlists() })
           <div
             v-for="setlist in favoriteSetlists"
             :key="setlist.setlistId"
-            class="bg-card rounded-xl border border-primary/30 px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+            class="bg-card rounded-xl border border-primary/30 px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between gap-3 sm:gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
             @click="$router.push(`/setlists/${setlist.setlistId}`)"
           >
             <div class="flex items-center gap-3 min-w-0">
@@ -438,7 +438,7 @@ onMounted(() => { void store.fetchSetlists() })
           <div
             v-for="setlist in otherSetlists"
             :key="setlist.setlistId"
-            class="bg-card rounded-xl border border-border px-5 py-4 flex items-center justify-between gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+            class="bg-card rounded-xl border border-border px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between gap-3 sm:gap-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
             @click="$router.push(`/setlists/${setlist.setlistId}`)"
           >
             <div class="flex items-center gap-3 min-w-0">

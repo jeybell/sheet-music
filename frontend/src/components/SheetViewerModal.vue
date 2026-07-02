@@ -60,11 +60,13 @@ let touchStartX = 0
 let touchStartY = 0
 
 const onTouchStart = (e: TouchEvent) => {
+  if (penMode.value) return // 필기 모드에서는 캔버스 드로잉과 스와이프 내비게이션이 충돌하므로 스와이프 비활성화
   touchStartX = e.changedTouches[0].clientX
   touchStartY = e.changedTouches[0].clientY
 }
 
 const onTouchEnd = (e: TouchEvent) => {
+  if (penMode.value) return
   const dx = e.changedTouches[0].clientX - touchStartX
   const dy = e.changedTouches[0].clientY - touchStartY
   if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy)) return
@@ -202,7 +204,9 @@ watch(currentSong, () => { void loadAnnotationsForCurrentSong() })
 let activeStroke: AnnotationStroke | null = null
 let activeFileId: number | null = null
 let activePointerId: number | null = null
-let saveTimer: ReturnType<typeof setTimeout> | undefined
+// 파일별로 별도 디바운스 타이머를 둔다. 공유 타이머 하나만 쓰면 여러 악보를 빠르게
+// 오가며 그릴 때 이전 파일의 예약된 저장이 취소되어 필기가 유실될 수 있다.
+const saveTimers = new Map<number, ReturnType<typeof setTimeout>>()
 const lastActiveFileId = ref<number | null>(null)
 
 const onCanvasPointerDown = (e: PointerEvent, fileId: number) => {
@@ -237,10 +241,12 @@ const onCanvasPointerMove = (e: PointerEvent, fileId: number) => {
 }
 
 const scheduleSave = (fileId: number) => {
-  clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
+  const existing = saveTimers.get(fileId)
+  if (existing) clearTimeout(existing)
+  saveTimers.set(fileId, setTimeout(() => {
+    saveTimers.delete(fileId)
     void saveSongFileAnnotation(fileId, strokesByFile[fileId] ?? [])
-  }, 400)
+  }, 400))
 }
 
 const onCanvasPointerUp = (e: PointerEvent, fileId: number) => {

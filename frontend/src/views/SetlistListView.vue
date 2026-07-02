@@ -143,7 +143,7 @@ const formatDate = (dateStr: string) => {
 }
 
 // ── 캘린더 뷰
-const viewMode = ref<'list' | 'calendar'>('list')
+const viewMode = ref<'list' | 'calendar'>('calendar')
 const pad = (n: number) => String(n).padStart(2, '0')
 
 const now = new Date()
@@ -213,20 +213,20 @@ onMounted(() => { void store.fetchSetlists() })
           <button
             type="button"
             class="inline-flex items-center gap-1 px-2.5 h-7 rounded text-xs font-medium transition-colors"
-            :class="viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
-            @click="viewMode = 'list'"
-          >
-            <List class="w-3.5 h-3.5" />
-            목록
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 px-2.5 h-7 rounded text-xs font-medium transition-colors"
             :class="viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
             @click="viewMode = 'calendar'"
           >
             <CalendarDays class="w-3.5 h-3.5" />
             캘린더
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 px-2.5 h-7 rounded text-xs font-medium transition-colors"
+            :class="viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+            @click="viewMode = 'list'"
+          >
+            <List class="w-3.5 h-3.5" />
+            목록
           </button>
         </div>
         <Button @click="showCreateForm = !showCreateForm" :variant="showCreateForm ? 'outline' : 'default'">

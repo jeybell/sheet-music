@@ -119,7 +119,7 @@ onBeforeUnmount(() => observer?.disconnect())
         <input
           v-model="query"
           type="text"
-          placeholder="제목 · 아티스트 · 가사 검색"
+          placeholder="제목 · 아티스트 · 가사 · 태그 검색"
           class="w-full h-10 pl-9 pr-9 rounded-md border border-input bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
         />
         <button

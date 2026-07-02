@@ -93,6 +93,22 @@ class SongSearchPaginationTest {
     }
 
     @Test
+    void 자유검색어로_태그도_매칭된다() {
+        persist("놀라운은혜", "존뉴턴", List.of("찬양", "은혜"), null);
+        persist("다른곡", "B", List.of("경배"), null);
+
+        var page = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 태그명이 제목/아티스트/가사에 없어도 자유검색어(query)로 매칭되어야 함
+        var byTag = songRepository.searchSongs("%은혜%", null, List.of(), 0, page);
+        assertThat(byTag.getTotalElements()).isEqualTo(1);
+        assertThat(byTag.getContent().get(0).getTitle()).isEqualTo("놀라운은혜");
+
+        // 어디에도 없는 검색어는 0건
+        assertThat(songRepository.searchSongs("%없는태그%", null, List.of(), 0, page).getTotalElements()).isEqualTo(0);
+    }
+
+    @Test
     void 다중_태그는_AND로_필터링된다() {
         persist("곡1", "A", List.of("찬양", "빠른곡"), null);
         persist("곡2", "B", List.of("찬양"), null);

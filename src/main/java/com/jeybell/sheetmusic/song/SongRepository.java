@@ -23,7 +23,11 @@ public interface SongRepository extends JpaRepository<Song, Long> {
               and (:query is null
                 or lower(s.title) like :query
                 or lower(s.artist) like :query
-                or lower(s.lyrics) like :query)
+                or lower(s.lyrics) like :query
+                or exists (
+                  select 1 from Song stq join stq.tags tq
+                  where stq = s and lower(tq) like :query
+                ))
               and (:songKey is null
                 or exists (
                   select 1 from SongSheet ss
@@ -53,7 +57,11 @@ public interface SongRepository extends JpaRepository<Song, Long> {
               and (:query is null
                 or lower(s.title) like :query
                 or lower(s.artist) like :query
-                or lower(s.lyrics) like :query)
+                or lower(s.lyrics) like :query
+                or exists (
+                  select 1 from Song stq join stq.tags tq
+                  where stq = s and lower(tq) like :query
+                ))
               and (:songKey is null
                 or exists (
                   select 1 from SongSheet ss
@@ -86,7 +94,11 @@ public interface SongRepository extends JpaRepository<Song, Long> {
               and (:query is null
                 or lower(s.title) like :query
                 or lower(s.artist) like :query
-                or lower(s.lyrics) like :query)
+                or lower(s.lyrics) like :query
+                or exists (
+                  select 1 from Song stq join stq.tags tq
+                  where stq = s and lower(tq) like :query
+                ))
               and (:songKey is null
                 or exists (
                   select 1 from SongSheet ss

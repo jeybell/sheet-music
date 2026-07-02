@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { isAxiosError } from 'axios'
-import { Search, X, Music, Eye, Pencil } from '@lucide/vue'
+import { Search, X, Music, Eye, Pencil, ChevronDown, Plus } from '@lucide/vue'
 import type { Song, SongSheetSummary } from '../types/song'
 import { updateSongSheet } from '../apis/songSheetApi'
 import SheetViewerModal from './SheetViewerModal.vue'
@@ -26,9 +26,9 @@ const emit = defineEmits<{
 
 const query = ref('')
 const selectedTag = ref<string | null>(null)
-const selectedSong = ref<Song | null>(null)
-const selectedSheetId = ref<number | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
+// 곡을 펼치면 그 곡의 악보 버전 목록이 바로 아래에 나타난다(단계 전환 없음)
+const expandedSongId = ref<number | null>(null)
 
 const allTags = computed(() => {
   const set = new Set<string>()
@@ -45,29 +45,34 @@ const filtered = computed(() => {
   })
 })
 
-const sheets = computed<SongSheetSummary[]>(() => {
-  if (!selectedSong.value) return []
-  return selectedSong.value.sheets ?? selectedSong.value.songSheets ?? []
-})
+const sheetsOf = (song: Song): SongSheetSummary[] => song.sheets ?? song.songSheets ?? []
 
 const sheetLabel = (key: string | null, version: string | null) => {
   if (key && version) return `${key} · ${version}`
   return key ?? version ?? '버전명 없음'
 }
 
-const pickSong = (song: Song) => {
-  selectedSong.value = song
-  selectedSheetId.value = null
+// 곡 행 클릭: 악보가 없으면 바로 추가, 있으면 버전 목록을 펼친다
+const onSongClick = (song: Song) => {
+  cancelEditSheet()
+  if (sheetsOf(song).length === 0) {
+    emit('select', song.songId, null)
+    return
+  }
+  expandedSongId.value = expandedSongId.value === song.songId ? null : song.songId
+}
+
+const addWithSheet = (songId: number, songSheetId: number | null) => {
+  emit('select', songId, songSheetId)
 }
 
 // 악보 미리보기 (SheetViewerModal 재사용)
 const viewerSheet = ref<ViewerSong | null>(null)
 
-const openViewer = (sheet: SongSheetSummary) => {
-  if (!selectedSong.value) return
+const openViewer = (song: Song, sheet: SongSheetSummary) => {
   viewerSheet.value = {
-    title: selectedSong.value.title,
-    artist: selectedSong.value.artist,
+    title: song.title,
+    artist: song.artist,
     sheetKey: sheet.sheetKey,
     versionName: sheet.versionName,
     files: (sheet.files ?? []).map(f => ({
@@ -116,11 +121,6 @@ const saveEditSheet = async (sheet: SongSheetSummary) => {
   }
 }
 
-const confirm = () => {
-  if (!selectedSong.value) return
-  emit('select', selectedSong.value.songId, selectedSheetId.value)
-}
-
 const onKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     if (viewerSheet.value) return // 뷰어가 열려있으면 뷰어만 닫히도록 피커는 유지
@@ -150,169 +150,140 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
         </button>
       </div>
 
-      <template v-if="!selectedSong">
-        <!-- 검색 -->
-        <div class="px-4 py-3 border-b border-border shrink-0 flex flex-col gap-2">
-          <div class="relative">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              ref="searchInput"
-              v-model="query"
-              type="text"
-              placeholder="제목 또는 아티스트 검색"
-              class="w-full pl-9 pr-3 py-2 text-sm bg-muted rounded-md text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-          <div v-if="allTags.length > 0" class="flex flex-wrap gap-1.5">
-            <button
-              v-for="tag in allTags"
-              :key="tag"
-              type="button"
-              class="inline-flex items-center h-6 px-2 rounded-full text-xs font-medium border transition-colors"
-              :class="selectedTag === tag
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-muted text-muted-foreground border-border hover:border-primary hover:text-primary'"
-              @click="selectedTag = selectedTag === tag ? null : tag"
-            >
-              {{ tag }}
-            </button>
-          </div>
+      <!-- 검색 -->
+      <div class="px-4 py-3 border-b border-border shrink-0 flex flex-col gap-2">
+        <div class="relative">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            ref="searchInput"
+            v-model="query"
+            type="text"
+            placeholder="제목 또는 아티스트 검색"
+            class="w-full pl-9 pr-3 py-2 text-sm bg-muted rounded-md text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50"
+          />
         </div>
-
-        <!-- 곡 목록 -->
-        <div class="overflow-y-auto flex-1">
-          <p v-if="filtered.length === 0" class="text-sm text-muted-foreground text-center py-10">
-            검색 결과가 없습니다.
-          </p>
+        <div v-if="allTags.length > 0" class="flex flex-wrap gap-1.5">
           <button
-            v-for="song in filtered"
-            :key="song.songId"
+            v-for="tag in allTags"
+            :key="tag"
             type="button"
-            class="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/60 transition-colors text-left border-b border-border last:border-0"
-            @click="pickSong(song)"
+            class="inline-flex items-center h-6 px-2 rounded-full text-xs font-medium border transition-colors"
+            :class="selectedTag === tag
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-muted text-muted-foreground border-border hover:border-primary hover:text-primary'"
+            @click="selectedTag = selectedTag === tag ? null : tag"
+          >
+            {{ tag }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 곡 목록 (곡 클릭 시 그 자리에서 버전 펼침) -->
+      <div class="overflow-y-auto flex-1">
+        <p v-if="filtered.length === 0" class="text-sm text-muted-foreground text-center py-10">
+          검색 결과가 없습니다.
+        </p>
+
+        <div v-for="song in filtered" :key="song.songId" class="border-b border-border last:border-0">
+          <!-- 곡 행 -->
+          <button
+            type="button"
+            class="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/60 transition-colors text-left"
+            :class="expandedSongId === song.songId ? 'bg-muted/40' : ''"
+            @click="onSongClick(song)"
           >
             <div class="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
               <Music class="w-4 h-4 text-muted-foreground" />
             </div>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <p class="text-sm font-medium text-foreground truncate">{{ song.title }}</p>
               <p v-if="song.artist" class="text-xs text-muted-foreground truncate">{{ song.artist }}</p>
             </div>
-            <span v-if="(song.sheets ?? song.songSheets ?? []).length > 0" class="ml-auto text-xs text-muted-foreground shrink-0">
-              {{ (song.sheets ?? song.songSheets ?? []).length }}개 버전
+            <span v-if="sheetsOf(song).length > 0" class="text-xs text-muted-foreground shrink-0">
+              {{ sheetsOf(song).length }}개 버전
             </span>
-          </button>
-        </div>
-      </template>
-
-      <!-- 악보 버전 선택 -->
-      <template v-else>
-        <div class="px-5 py-3 border-b border-border shrink-0 flex items-center gap-2">
-          <button type="button" class="text-muted-foreground hover:text-foreground" @click="selectedSong = null">
-            <X class="w-4 h-4" />
-          </button>
-          <div>
-            <p class="text-sm font-semibold text-foreground">{{ selectedSong.title }}</p>
-            <p v-if="selectedSong.artist" class="text-xs text-muted-foreground">{{ selectedSong.artist }}</p>
-          </div>
-        </div>
-
-        <div class="overflow-y-auto flex-1 px-5 py-4">
-          <p class="text-xs text-muted-foreground mb-3">악보 버전 선택 (선택 안 해도 됩니다)</p>
-
-          <!-- 선택 안 함 -->
-          <button
-            type="button"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 border transition-colors"
-            :class="selectedSheetId === null
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border hover:bg-muted/60 text-foreground'"
-            @click="selectedSheetId = null"
-          >
-            <span class="text-sm font-medium">선택 안 함</span>
+            <!-- 악보 없는 곡은 바로 추가되므로 + 아이콘, 있으면 펼침 화살표 -->
+            <Plus v-if="sheetsOf(song).length === 0" class="w-4 h-4 text-muted-foreground shrink-0" />
+            <ChevronDown
+              v-else
+              class="w-4 h-4 text-muted-foreground shrink-0 transition-transform"
+              :class="expandedSongId === song.songId ? 'rotate-180' : ''"
+            />
           </button>
 
-          <div
-            v-for="sheet in sheets"
-            :key="sheet.songSheetId"
-            class="mb-2"
-          >
-            <!-- 악보 인라인 수정 폼 -->
-            <div v-if="editingSheetId === sheet.songSheetId" class="p-3 rounded-lg border border-primary bg-primary/5 flex flex-col gap-2">
-              <p v-if="editSheetError" class="text-xs text-destructive bg-destructive-soft rounded-md px-2 py-1.5">{{ editSheetError }}</p>
-              <div class="grid grid-cols-2 gap-2">
-                <div class="flex flex-col gap-1">
-                  <Label class="text-xs">키</Label>
-                  <Input v-model="editForm.sheetKey" type="text" placeholder="예: G" />
+          <!-- 펼쳐진 버전 목록 -->
+          <div v-if="expandedSongId === song.songId" class="px-5 pb-3 pt-1 bg-muted/20 flex flex-col gap-1.5">
+            <!-- 버전 없이 추가 -->
+            <button
+              type="button"
+              class="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+              @click="addWithSheet(song.songId, null)"
+            >
+              <Plus class="w-3.5 h-3.5 text-primary shrink-0" />
+              <span class="text-sm text-foreground">버전 없이 추가</span>
+            </button>
+
+            <template v-for="sheet in sheetsOf(song)" :key="sheet.songSheetId">
+              <!-- 인라인 수정 폼 -->
+              <div v-if="editingSheetId === sheet.songSheetId" class="p-3 rounded-md border border-primary bg-primary/5 flex flex-col gap-2">
+                <p v-if="editSheetError" class="text-xs text-destructive bg-destructive-soft rounded-md px-2 py-1.5">{{ editSheetError }}</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-xs">키</Label>
+                    <Input v-model="editForm.sheetKey" type="text" placeholder="예: G" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <Label class="text-xs">버전명</Label>
+                    <Input v-model="editForm.versionName" type="text" placeholder="예: 인도자용" />
+                  </div>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <Label class="text-xs">버전명</Label>
-                  <Input v-model="editForm.versionName" type="text" placeholder="예: 인도자용" />
+                  <Label class="text-xs">메모</Label>
+                  <Textarea v-model="editForm.memo" rows="2" />
+                </div>
+                <div class="flex gap-2">
+                  <Button size="sm" :disabled="isSavingSheet" @click="saveEditSheet(sheet)">
+                    {{ isSavingSheet ? '저장 중...' : '저장' }}
+                  </Button>
+                  <Button size="sm" variant="outline" :disabled="isSavingSheet" @click="cancelEditSheet">취소</Button>
                 </div>
               </div>
-              <div class="flex flex-col gap-1">
-                <Label class="text-xs">메모</Label>
-                <Textarea v-model="editForm.memo" rows="2" />
-              </div>
-              <div class="flex gap-2">
-                <Button size="sm" :disabled="isSavingSheet" @click="saveEditSheet(sheet)">
-                  {{ isSavingSheet ? '저장 중...' : '저장' }}
-                </Button>
-                <Button size="sm" variant="outline" :disabled="isSavingSheet" @click="cancelEditSheet">취소</Button>
-              </div>
-            </div>
 
-            <!-- 악보 버전 행 -->
-            <div v-else class="flex items-stretch gap-2">
-              <button
-                type="button"
-                class="flex-1 flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors"
-                :class="selectedSheetId === sheet.songSheetId
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border hover:bg-muted/60 text-foreground'"
-                @click="selectedSheetId = sheet.songSheetId"
-              >
-                <span class="text-sm font-medium">{{ sheetLabel(sheet.sheetKey, sheet.versionName) }}</span>
-                <span v-if="(sheet.files ?? []).length > 0" class="ml-auto text-xs text-muted-foreground">
-                  {{ (sheet.files ?? []).length }}장
-                </span>
-              </button>
-              <button
-                type="button"
-                class="shrink-0 inline-flex items-center gap-1 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
-                title="악보 수정"
-                @click="startEditSheet(sheet)"
-              >
-                <Pencil class="w-4 h-4" />
-              </button>
-              <button
-                v-if="(sheet.files ?? []).length > 0"
-                type="button"
-                class="shrink-0 inline-flex items-center gap-1 px-3 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
-                title="악보 보기"
-                @click="openViewer(sheet)"
-              >
-                <Eye class="w-4 h-4" />
-                악보
-              </button>
-            </div>
+              <!-- 버전 행: 클릭하면 그 버전으로 바로 추가 -->
+              <div v-else class="flex items-stretch gap-1.5">
+                <button
+                  type="button"
+                  class="flex-1 flex items-center gap-2 px-3 py-2 rounded-md border border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                  @click="addWithSheet(song.songId, sheet.songSheetId)"
+                >
+                  <Plus class="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span class="text-sm font-medium text-foreground">{{ sheetLabel(sheet.sheetKey, sheet.versionName) }}</span>
+                  <span v-if="(sheet.files ?? []).length > 0" class="ml-auto text-xs text-muted-foreground">
+                    {{ (sheet.files ?? []).length }}장
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="shrink-0 inline-flex items-center px-2.5 rounded-md border border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                  title="악보 수정"
+                  @click.stop="startEditSheet(sheet)"
+                >
+                  <Pencil class="w-4 h-4" />
+                </button>
+                <button
+                  v-if="(sheet.files ?? []).length > 0"
+                  type="button"
+                  class="shrink-0 inline-flex items-center px-2.5 rounded-md border border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+                  title="악보 보기"
+                  @click.stop="openViewer(song, sheet)"
+                >
+                  <Eye class="w-4 h-4" />
+                </button>
+              </div>
+            </template>
           </div>
-
-          <p v-if="sheets.length === 0" class="text-sm text-muted-foreground text-center py-4">
-            등록된 악보 버전이 없습니다.
-          </p>
         </div>
-
-        <div class="px-5 py-3 border-t border-border shrink-0">
-          <button
-            type="button"
-            class="w-full bg-primary text-primary-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-primary/90 transition-colors"
-            @click="confirm"
-          >
-            선택 완료
-          </button>
-        </div>
-      </template>
+      </div>
     </div>
   </div>
 

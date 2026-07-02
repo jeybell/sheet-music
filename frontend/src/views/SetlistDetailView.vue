@@ -301,6 +301,39 @@ const saveYt = async (item: (typeof items.value)[number]) => {
   }
 }
 
+// ── 곡별 메모 인라인 수정
+const editingMemoItemId = ref<number | null>(null)
+const memoEditValue = ref('')
+const isSavingMemo = ref(false)
+
+const startEditMemo = (item: (typeof items.value)[number]) => {
+  editingMemoItemId.value = item.setlistItemId
+  memoEditValue.value = item.memo ?? ''
+}
+
+const cancelEditMemo = () => {
+  editingMemoItemId.value = null
+}
+
+const saveMemo = async (item: (typeof items.value)[number]) => {
+  isSavingMemo.value = true
+  try {
+    await updateSetlistItem(item.setlistItemId, {
+      songSheetId: item.songSheetId,
+      orderNo: item.orderNo,
+      memo: memoEditValue.value.trim() || null,
+      performanceKey: item.performanceKey,
+      youtubeUrl: item.youtubeUrl,
+    })
+    editingMemoItemId.value = null
+    await store.fetchSetlist(props.setlistId)
+  } catch (e) {
+    alert(apiError(e, '메모 저장에 실패했습니다.'))
+  } finally {
+    isSavingMemo.value = false
+  }
+}
+
 // ── YouTube 링크 헬퍼 (song 상세와 동일한 방식)
 const extractYoutubeId = (url: string): string | null => {
   try {
@@ -757,7 +790,12 @@ watch(() => props.setlistId, load)
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap mb-0.5">
-                    <span class="text-sm font-semibold text-foreground">{{ item.songTitle }}</span>
+                    <button
+                      type="button"
+                      class="text-sm font-semibold text-foreground hover:text-primary hover:underline text-left"
+                      title="곡 상세 보기"
+                      @click.stop="router.push(`/songs/${item.songId}`)"
+                    >{{ item.songTitle }}</button>
                     <span v-if="item.songArtist" class="text-xs text-muted-foreground">{{ item.songArtist }}</span>
                   </div>
                   <div class="flex items-center gap-1 flex-wrap mb-1">
@@ -846,7 +884,44 @@ watch(() => props.setlistId, load)
                       </button>
                     </template>
                   </div>
-                  <p v-if="item.memo" class="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{{ item.memo }}</p>
+                  <!-- 메모: 표시 + 인라인 수정 -->
+                  <template v-if="editingMemoItemId === item.setlistItemId">
+                    <textarea
+                      v-model="memoEditValue"
+                      rows="2"
+                      placeholder="메모 입력"
+                      class="w-full text-xs px-2 py-1 rounded border border-primary bg-background text-foreground resize-y"
+                      @click.stop
+                      @keydown.esc.stop="cancelEditMemo"
+                    />
+                    <div class="flex gap-2 mt-1">
+                      <button type="button" class="inline-flex items-center gap-0.5 text-xs text-primary" :disabled="isSavingMemo" @click.stop="saveMemo(item)">
+                        <Check class="w-3.5 h-3.5" />저장
+                      </button>
+                      <button type="button" class="inline-flex items-center gap-0.5 text-xs text-muted-foreground" @click.stop="cancelEditMemo">
+                        <X class="w-3.5 h-3.5" />취소
+                      </button>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <button
+                      v-if="item.memo"
+                      type="button"
+                      class="group/memo text-left w-full"
+                      title="메모 수정"
+                      @click.stop="startEditMemo(item)"
+                    >
+                      <span class="text-xs text-muted-foreground whitespace-pre-line leading-relaxed group-hover/memo:text-foreground transition-colors">{{ item.memo }}</span>
+                    </button>
+                    <button
+                      v-else
+                      type="button"
+                      class="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                      @click.stop="startEditMemo(item)"
+                    >
+                      <Pencil class="w-3 h-3" />메모 추가
+                    </button>
+                  </template>
                 </div>
                 <button
                   type="button"

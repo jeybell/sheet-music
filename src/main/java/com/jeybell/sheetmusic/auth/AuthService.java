@@ -41,4 +41,14 @@ public class AuthService {
         }
         return new AuthResponse(jwtService.generateToken(user.getUsername()), user.getUsername());
     }
+
+    /**
+     * 가입 없이 바로 사용해볼 수 있는 게스트 로그인. 현재 데이터는 팀 전체가 공유하고
+     * 사용자별로 분리되지 않으므로(로그인은 접근 게이트 용도), 실제 계정 없이
+     * 고정된 게스트 신원으로 토큰만 발급한다.
+     */
+    @Transactional(readOnly = true)
+    public AuthResponse guestLogin() {
+        return new AuthResponse(jwtService.generateToken("guest"), "guest");
+    }
 }

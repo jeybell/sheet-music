@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { login as loginApi, register as registerApi } from '../apis/authApi'
+import { login as loginApi, register as registerApi, guestLogin as guestLoginApi } from '../apis/authApi'
 import { AUTH_TOKEN_KEY, AUTH_USERNAME_KEY } from '../apis/http'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -25,6 +25,11 @@ export const useAuthStore = defineStore('auth', () => {
     setSession(res.token, res.username)
   }
 
+  const loginAsGuest = async () => {
+    const res = await guestLoginApi()
+    setSession(res.token, res.username)
+  }
+
   const logout = () => {
     token.value = null
     username.value = null
@@ -32,5 +37,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(AUTH_USERNAME_KEY)
   }
 
-  return { token, username, isAuthenticated, login, register, logout }
+  return { token, username, isAuthenticated, login, register, loginAsGuest, logout }
 })

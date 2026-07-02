@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, KeyRound, Check } from '@lucide/vue'
-import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems } from '../apis/setlistApi'
 import { addSetlistItem, deleteSetlistItem, updateSetlistItem } from '../apis/setlistItemApi'
+import { useSetlistFavorites } from '../composables/useSetlistFavorites'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, QrCode, Copy, Download, Presentation, Star, KeyRound, Check} from '@lucide/vue'
+import QRCode from 'qrcode'
+import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems, duplicateSetlist } from '../apis/setlistApi'
+import { addSetlistItem, deleteSetlistItem } from '../apis/setlistItemApi'
 import { getSong } from '../apis/songApi'
 import { useToast } from '../composables/useToast'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -29,6 +32,7 @@ const store = useSetlistStore()
 const songStore = useSongStore()
 
 const toast = useToast()
+const { isFavorite, toggleFavorite, addRecent } = useSetlistFavorites()
 const setlist = computed(() => store.selectedSetlist)
 const items = ref<NonNullable<typeof store.selectedSetlist>['items']>([])
 
@@ -139,6 +143,37 @@ const handleDelete = async () => {
     await router.push('/setlists')
   } catch (e) {
     alert(apiError(e, '삭제에 실패했습니다.'))
+  }
+}
+
+// ── 셋리스트 복사 (템플릿으로 재사용)
+const showDuplicateModal = ref(false)
+const duplicateDate = ref('')
+const duplicateError = ref('')
+const isDuplicating = ref(false)
+
+const openDuplicateModal = () => {
+  duplicateDate.value = setlist.value?.serviceDate ?? ''
+  duplicateError.value = ''
+  showDuplicateModal.value = true
+}
+
+const handleDuplicate = async () => {
+  if (!duplicateDate.value) {
+    duplicateError.value = '날짜는 필수입니다.'
+    return
+  }
+  isDuplicating.value = true
+  duplicateError.value = ''
+  try {
+    const created = await duplicateSetlist(props.setlistId, duplicateDate.value)
+    showDuplicateModal.value = false
+    toast.success('콘티를 복사했어요')
+    await router.push(`/setlists/${created.setlistId}`)
+  } catch (e) {
+    duplicateError.value = apiError(e, '복사에 실패했습니다.')
+  } finally {
+    isDuplicating.value = false
   }
 }
 
@@ -328,9 +363,31 @@ const copyShareUrl = async () => {
   alert('링크가 복사되었습니다.')
 }
 
+// ── 공유 QR코드
+const showQrModal = ref(false)
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
+
+const openQrModal = async () => {
+  if (!shareUrl.value) return
+  showQrModal.value = true
+  await nextTick()
+  if (qrCanvas.value) {
+    await QRCode.toCanvas(qrCanvas.value, shareUrl.value, { width: 240, margin: 2 })
+  }
+}
+
+const downloadQr = () => {
+  if (!qrCanvas.value) return
+  const link = document.createElement('a')
+  link.download = `${setlist.value?.title ?? setlist.value?.serviceDate ?? 'setlist'}-qr.png`
+  link.href = qrCanvas.value.toDataURL('image/png')
+  link.click()
+}
+
 const load = () => {
   if (Number.isFinite(props.setlistId)) {
     void store.fetchSetlist(props.setlistId)
+    addRecent(props.setlistId)
   }
 }
 
@@ -353,6 +410,42 @@ watch(() => props.setlistId, load)
       :setlist-title="setlist?.title ?? setlist?.serviceDate ?? null"
       @close="showViewer = false"
     />
+
+    <!-- 콘티 복사 모달 -->
+    <div v-if="showDuplicateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60" @click="showDuplicateModal = false" />
+      <div class="relative w-full max-w-xs bg-card border border-border rounded-xl shadow-xl p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-foreground">콘티 복사</h2>
+          <button type="button" class="text-muted-foreground hover:text-foreground" @click="showDuplicateModal = false">
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        <p class="text-xs text-muted-foreground -mt-2">곡 순서·악보 버전을 그대로 복사합니다. 새 날짜만 지정해주세요.</p>
+        <p v-if="duplicateError" class="text-sm text-destructive bg-destructive-soft rounded-md px-3 py-2">{{ duplicateError }}</p>
+        <DatePicker v-model="duplicateDate" inline />
+        <Button :disabled="isDuplicating" @click="handleDuplicate">
+          {{ isDuplicating ? '복사 중...' : '복사하기' }}
+    <!-- 공유 QR코드 모달 -->
+    <div
+      v-if="showQrModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
+      <div class="absolute inset-0 bg-black/60" @click="showQrModal = false" />
+      <div class="relative w-full max-w-xs bg-card border border-border rounded-xl shadow-xl p-5 flex flex-col items-center gap-4">
+        <div class="flex items-center justify-between w-full">
+          <h2 class="text-sm font-semibold text-foreground">공유 QR코드</h2>
+          <button type="button" class="text-muted-foreground hover:text-foreground" @click="showQrModal = false">
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        <canvas ref="qrCanvas" class="rounded-md" />
+        <Button class="w-full" @click="downloadQr">
+          <Download class="w-3.5 h-3.5" />
+          이미지 다운로드
+        </Button>
+      </div>
+    </div>
 
     <!-- 뒤로가기 -->
     <button
@@ -380,7 +473,17 @@ watch(() => props.setlistId, load)
               <div class="flex items-start justify-between gap-3 mb-3">
                 <div class="min-w-0">
                   <span class="text-xs text-muted-foreground font-medium mb-1 block">{{ formatDate(setlist.serviceDate) }}</span>
-                  <h1 class="text-lg font-bold text-foreground leading-snug">{{ setlist.title ?? '제목 없음' }}</h1>
+                  <div class="flex items-center gap-1.5">
+                    <h1 class="text-lg font-bold text-foreground leading-snug">{{ setlist.title ?? '제목 없음' }}</h1>
+                    <button
+                      type="button"
+                      class="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                      :aria-label="isFavorite(setlistId) ? '즐겨찾기 해제' : '즐겨찾기 추가'"
+                      @click="toggleFavorite(setlistId)"
+                    >
+                      <Star class="w-4 h-4" :class="{ 'fill-current text-primary': isFavorite(setlistId) }" />
+                    </button>
+                  </div>
                   <p v-if="setlist.memo" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ setlist.memo }}</p>
                 </div>
                 <!-- 액션 버튼 -->
@@ -393,6 +496,18 @@ watch(() => props.setlistId, load)
                   >
                     <BookOpen class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">{{ isLoadingViewer ? '로딩 중...' : '악보 보기' }}</span>
+                  </Button>
+                  <Button variant="outline" size="sm" @click="openDuplicateModal">
+                    <Copy class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline">복사</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    :disabled="items.length === 0"
+                    @click="$router.push(`/setlists/${setlistId}/present`)"
+                  >
+                    <Presentation class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline">진행 모드</span>
                   </Button>
                   <Button variant="outline" size="sm" @click="startEdit">
                     <Pencil class="w-3.5 h-3.5" />
@@ -419,6 +534,10 @@ watch(() => props.setlistId, load)
                   <Button variant="outline" size="sm" @click="copyShareUrl">
                     <Link class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">복사</span>
+                  </Button>
+                  <Button variant="outline" size="sm" @click="openQrModal">
+                    <QrCode class="w-3.5 h-3.5" />
+                    <span class="hidden sm:inline">QR코드</span>
                   </Button>
                   <Button variant="outline" size="sm" @click="handleRevokeShare">
                     <Link2Off class="w-3.5 h-3.5" />

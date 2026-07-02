@@ -14,3 +14,8 @@ export const login = async (username: string, password: string) => {
   const { data } = await http.post<AuthResponse>("/api/auth/login", { username, password });
   return data;
 };
+
+export const guestLogin = async () => {
+  const { data } = await http.post<AuthResponse>("/api/auth/guest");
+  return data;
+};

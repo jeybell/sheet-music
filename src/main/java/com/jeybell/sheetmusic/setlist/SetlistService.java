@@ -38,7 +38,8 @@ public class SetlistService {
         Setlist setlist = new Setlist(
                 request.serviceDate(),
                 request.title(),
-                request.memo()
+                request.memo(),
+                request.youtubeUrl()
         );
         return SetlistResponse.from(setlistRepository.save(setlist));
     }
@@ -53,7 +54,8 @@ public class SetlistService {
         setlist.update(
                 request.serviceDate(),
                 request.title(),
-                request.memo()
+                request.memo(),
+                request.youtubeUrl()
         );
         return SetlistResponse.from(setlist);
     }
@@ -71,9 +73,10 @@ public class SetlistService {
     @Transactional
     public SetlistResponse duplicateSetlist(Long setlistId, LocalDate newServiceDate) {
         Setlist source = getActive(setlistId);
-        Setlist copy = new Setlist(newServiceDate, source.getTitle(), source.getMemo());
+        Setlist copy = new Setlist(newServiceDate, source.getTitle(), source.getMemo(), source.getYoutubeUrl());
         for (SetlistItem item : source.getItems()) {
-            copy.addItem(new SetlistItem(item.getSong(), item.getSongSheet(), item.getOrderNo(), item.getMemo()));
+            copy.addItem(new SetlistItem(item.getSong(), item.getSongSheet(), item.getOrderNo(),
+                    item.getMemo(), item.getPerformanceKey(), item.getYoutubeUrl()));
         }
         return SetlistResponse.from(setlistRepository.save(copy));
     }

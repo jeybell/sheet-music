@@ -9,6 +9,7 @@ export interface SetlistItem {
   versionName: string | null
   memo: string | null
   performanceKey: string | null
+  youtubeUrl: string | null
 }
 
 export interface Setlist {
@@ -16,6 +17,7 @@ export interface Setlist {
   serviceDate: string
   title: string | null
   memo: string | null
+  youtubeUrl: string | null
   shareToken: string | null
   items: SetlistItem[]
   createdAt: string
@@ -52,6 +54,7 @@ export interface SetlistCreateRequest {
   serviceDate: string
   title?: string | null
   memo?: string | null
+  youtubeUrl?: string | null
 }
 
 export interface SetlistItemCreateRequest {
@@ -60,4 +63,5 @@ export interface SetlistItemCreateRequest {
   orderNo: number
   memo?: string | null
   performanceKey?: string | null
+  youtubeUrl?: string | null
 }

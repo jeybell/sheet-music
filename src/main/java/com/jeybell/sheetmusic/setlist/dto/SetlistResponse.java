@@ -10,6 +10,7 @@ public record SetlistResponse(
         LocalDate serviceDate,
         String title,
         String memo,
+        String youtubeUrl,
         String shareToken,
         List<SetlistItemResponse> items,
         LocalDateTime createdAt
@@ -21,6 +22,7 @@ public record SetlistResponse(
                 setlist.getServiceDate(),
                 setlist.getTitle(),
                 setlist.getMemo(),
+                setlist.getYoutubeUrl(),
                 setlist.getShareToken(),
                 setlist.getItems().stream()
                         .map(SetlistItemResponse::from)
@@ -35,6 +37,7 @@ public record SetlistResponse(
      */
     public static SetlistResponse fromRows(List<SetlistListRow> rows) {
         SetlistListRow head = rows.get(0);
+        // 목록 조회(경량 프로젝션)는 YouTube 링크를 싣지 않는다. 링크는 상세 화면에서만 사용한다.
         List<SetlistItemResponse> items = rows.stream()
                 .filter(row -> row.setlistItemId() != null)
                 .map(row -> new SetlistItemResponse(
@@ -47,7 +50,8 @@ public record SetlistResponse(
                         row.sheetKey(),
                         row.versionName(),
                         row.itemMemo(),
-                        row.performanceKey()
+                        row.performanceKey(),
+                        null
                 ))
                 .toList();
         return new SetlistResponse(
@@ -55,6 +59,7 @@ public record SetlistResponse(
                 head.serviceDate(),
                 head.title(),
                 head.memo(),
+                null,
                 head.shareToken(),
                 items,
                 head.createdAt()

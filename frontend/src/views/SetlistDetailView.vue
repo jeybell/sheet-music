@@ -4,7 +4,7 @@ import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { addSetlistItem, deleteSetlistItem, updateSetlistItem } from '../apis/setlistItemApi'
 import { useSetlistFavorites } from '../composables/useSetlistFavorites'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, QrCode, Copy, Download, Presentation, Star, KeyRound, Check} from '@lucide/vue'
+import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, QrCode, Copy, Download, Presentation, Star, KeyRound, Check, PlayCircle} from '@lucide/vue'
 import QRCode from 'qrcode'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems, duplicateSetlist } from '../apis/setlistApi'
 import { getSong } from '../apis/songApi'
@@ -98,7 +98,7 @@ const apiError = (e: unknown, fallback: string) =>
 
 // ── 셋리스트 수정
 const isEditing = ref(false)
-const editForm = reactive({ serviceDate: '', title: '', memo: '' })
+const editForm = reactive({ serviceDate: '', title: '', memo: '', youtubeUrl: '' })
 const editError = ref('')
 const isSavingEdit = ref(false)
 
@@ -106,6 +106,7 @@ const startEdit = () => {
   editForm.serviceDate = setlist.value?.serviceDate ?? ''
   editForm.title = setlist.value?.title ?? ''
   editForm.memo = setlist.value?.memo ?? ''
+  editForm.youtubeUrl = setlist.value?.youtubeUrl ?? ''
   editError.value = ''
   isEditing.value = true
 }
@@ -122,6 +123,7 @@ const handleUpdate = async () => {
       serviceDate: editForm.serviceDate,
       title: editForm.title.trim() || null,
       memo: editForm.memo.trim() || null,
+      youtubeUrl: editForm.youtubeUrl.trim() || null,
     })
     await store.fetchSetlist(props.setlistId)
     isEditing.value = false
@@ -179,7 +181,7 @@ const handleDuplicate = async () => {
 // ── 곡 추가
 const showAddItem = ref(false)
 const showSongPicker = ref(false)
-const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, songTitle: '', memo: '', performanceKey: '' })
+const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, songTitle: '', memo: '', performanceKey: '', youtubeUrl: '' })
 const addError = ref('')
 const isAddingItem = ref(false)
 
@@ -202,6 +204,7 @@ const resetAddForm = () => {
   addForm.songTitle = ''
   addForm.memo = ''
   addForm.performanceKey = ''
+  addForm.youtubeUrl = ''
   addError.value = ''
 }
 
@@ -219,6 +222,7 @@ const handleAddItem = async () => {
       orderNo: items.value.length + 1,
       memo: addForm.memo.trim() || null,
       performanceKey: addForm.performanceKey.trim() || null,
+      youtubeUrl: addForm.youtubeUrl.trim() || null,
     })
     resetAddForm()
     showAddItem.value = false
@@ -253,6 +257,7 @@ const saveKey = async (item: (typeof items.value)[number]) => {
       orderNo: item.orderNo,
       memo: item.memo,
       performanceKey: keyEditValue.value.trim() || null,
+      youtubeUrl: item.youtubeUrl,
     })
     editingKeyItemId.value = null
     await store.fetchSetlist(props.setlistId)
@@ -262,6 +267,58 @@ const saveKey = async (item: (typeof items.value)[number]) => {
     isSavingKey.value = false
   }
 }
+
+// ── 곡별 YouTube 링크 인라인 수정
+const editingYtItemId = ref<number | null>(null)
+const ytEditValue = ref('')
+const isSavingYt = ref(false)
+
+const startEditYt = (item: (typeof items.value)[number]) => {
+  editingYtItemId.value = item.setlistItemId
+  ytEditValue.value = item.youtubeUrl ?? ''
+}
+
+const cancelEditYt = () => {
+  editingYtItemId.value = null
+}
+
+const saveYt = async (item: (typeof items.value)[number]) => {
+  isSavingYt.value = true
+  try {
+    await updateSetlistItem(item.setlistItemId, {
+      songSheetId: item.songSheetId,
+      orderNo: item.orderNo,
+      memo: item.memo,
+      performanceKey: item.performanceKey,
+      youtubeUrl: ytEditValue.value.trim() || null,
+    })
+    editingYtItemId.value = null
+    await store.fetchSetlist(props.setlistId)
+  } catch (e) {
+    alert(apiError(e, 'YouTube 링크 저장에 실패했습니다.'))
+  } finally {
+    isSavingYt.value = false
+  }
+}
+
+// ── YouTube 링크 헬퍼 (song 상세와 동일한 방식)
+const extractYoutubeId = (url: string): string | null => {
+  try {
+    const u = new URL(url)
+    if (u.hostname === 'youtu.be') return u.pathname.slice(1).split('?')[0] || null
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v')
+  } catch { /* 잘못된 URL 무시 */ }
+  return null
+}
+
+const openLink = (url: string) => { window.open(url, '_blank', 'noopener') }
+
+// 콘티 전체 YouTube 임베드 토글
+const showSetlistEmbed = ref(false)
+const setlistYoutubeId = computed(() => {
+  const url = setlist.value?.youtubeUrl
+  return url ? extractYoutubeId(url) : null
+})
 
 // ── 곡 삭제
 const handleDeleteItem = async (itemId: number, songTitle: string) => {
@@ -524,6 +581,32 @@ watch(() => props.setlistId, load)
                 </div>
               </div>
 
+              <!-- 콘티 전체 YouTube 링크 -->
+              <div v-if="setlist.youtubeUrl" class="pt-3 border-t border-border">
+                <div class="flex items-center gap-2">
+                  <Button variant="outline" size="sm" @click="openLink(setlist.youtubeUrl!)">
+                    <PlayCircle class="w-3.5 h-3.5 text-red-500" />
+                    YouTube 열기
+                  </Button>
+                  <Button
+                    v-if="setlistYoutubeId"
+                    variant="ghost"
+                    size="sm"
+                    @click="showSetlistEmbed = !showSetlistEmbed"
+                  >
+                    {{ showSetlistEmbed ? '접기' : '여기서 재생' }}
+                  </Button>
+                </div>
+                <div v-if="showSetlistEmbed && setlistYoutubeId" class="mt-2">
+                  <iframe
+                    :src="`https://www.youtube.com/embed/${setlistYoutubeId}`"
+                    class="w-full aspect-video rounded-md"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  />
+                </div>
+              </div>
+
               <!-- 공유 링크 바 -->
               <div class="pt-3 border-t border-border flex items-center gap-2">
                 <template v-if="!shareUrl">
@@ -575,6 +658,10 @@ watch(() => props.setlistId, load)
                   <Label for="edit-memo">메모</Label>
                   <Textarea id="edit-memo" v-model="editForm.memo" rows="2" />
                 </div>
+                <div class="flex flex-col gap-1.5">
+                  <Label for="edit-youtube">YouTube 링크 <span class="text-muted-foreground font-normal">(콘티 전체)</span></Label>
+                  <Input id="edit-youtube" v-model="editForm.youtubeUrl" type="url" placeholder="https://youtu.be/..." />
+                </div>
                 <div class="flex gap-2">
                   <Button :disabled="isSavingEdit" @click="handleUpdate">{{ isSavingEdit ? '저장 중...' : '저장' }}</Button>
                   <Button variant="outline" :disabled="isSavingEdit" @click="isEditing = false">취소</Button>
@@ -619,6 +706,11 @@ watch(() => props.setlistId, load)
               <div class="flex flex-col gap-1.5">
                 <Label for="add-performance-key">연주 키 <span class="text-muted-foreground font-normal">(악보 원래 키와 다를 경우)</span></Label>
                 <Input id="add-performance-key" v-model="addForm.performanceKey" type="text" placeholder="예: G" class="max-w-[8rem]" />
+              </div>
+              <!-- YouTube 링크 (곡별) -->
+              <div class="flex flex-col gap-1.5">
+                <Label for="add-youtube">YouTube 링크 <span class="text-muted-foreground font-normal">(이 곡 참고 영상)</span></Label>
+                <Input id="add-youtube" v-model="addForm.youtubeUrl" type="url" placeholder="https://youtu.be/..." />
               </div>
               <!-- 메모 (여러 줄) -->
               <div class="flex flex-col gap-1.5">
@@ -707,6 +799,52 @@ watch(() => props.setlistId, load)
                         <KeyRound class="w-3 h-3" />연주 키 설정
                       </span>
                     </button>
+
+                    <!-- 곡별 YouTube 링크: 열기 + 인라인 수정 -->
+                    <template v-if="editingYtItemId === item.setlistItemId">
+                      <input
+                        v-model="ytEditValue"
+                        type="url"
+                        placeholder="https://youtu.be/..."
+                        class="w-44 h-5 px-1.5 text-xs rounded border border-primary bg-background text-foreground"
+                        @click.stop
+                        @keydown.enter.stop="saveYt(item)"
+                        @keydown.esc.stop="cancelEditYt"
+                      />
+                      <button type="button" class="text-primary" :disabled="isSavingYt" @click.stop="saveYt(item)">
+                        <Check class="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" class="text-muted-foreground" @click.stop="cancelEditYt">
+                        <X class="w-3.5 h-3.5" />
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button
+                        v-if="item.youtubeUrl"
+                        type="button"
+                        class="inline-flex items-center gap-0.5 text-xs text-red-500 hover:underline"
+                        @click.stop="openLink(item.youtubeUrl)"
+                      >
+                        <PlayCircle class="w-3.5 h-3.5" />YouTube
+                      </button>
+                      <button
+                        v-else
+                        type="button"
+                        class="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                        @click.stop="startEditYt(item)"
+                      >
+                        <PlayCircle class="w-3 h-3" />링크 추가
+                      </button>
+                      <button
+                        v-if="item.youtubeUrl"
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground"
+                        aria-label="YouTube 링크 수정"
+                        @click.stop="startEditYt(item)"
+                      >
+                        <Pencil class="w-3 h-3" />
+                      </button>
+                    </template>
                   </div>
                   <p v-if="item.memo" class="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{{ item.memo }}</p>
                 </div>

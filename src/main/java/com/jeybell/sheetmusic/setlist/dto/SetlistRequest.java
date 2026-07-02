@@ -11,6 +11,9 @@ public record SetlistRequest(
         @Size(max = 255, message = "title must be 255 characters or less")
         String title,
 
-        String memo
+        String memo,
+
+        @Size(max = 500, message = "youtubeUrl must be 500 characters or less")
+        String youtubeUrl
 ) {
 }

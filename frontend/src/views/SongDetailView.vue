@@ -459,6 +459,8 @@ const loadSong = () => {
 
 // ── 셋리스트 사용 이력
 const setlistHistory = ref<SongSetlistHistory[]>([])
+// 최근 1개만 기본 노출, 여러 개면 펼치기
+const historyExpanded = ref(false)
 
 const loadSetlistHistory = async () => {
   if (!Number.isFinite(props.songId)) return
@@ -918,7 +920,8 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             <h2 class="text-sm font-semibold text-foreground mb-3">사용 이력</h2>
             <ul class="flex flex-col gap-2">
               <li
-                v-for="h in setlistHistory"
+                v-for="(h, idx) in setlistHistory"
+                v-show="idx === 0 || historyExpanded"
                 :key="h.setlistId"
                 class="flex items-center gap-3 text-sm cursor-pointer hover:text-primary transition-colors"
                 @click="router.push(`/setlists/${h.setlistId}`)"
@@ -927,6 +930,15 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 <span class="text-foreground truncate">{{ h.title ?? '제목 없음' }}</span>
               </li>
             </ul>
+            <button
+              v-if="setlistHistory.length > 1"
+              type="button"
+              class="w-full mt-2 pt-2 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 justify-center border-t border-border"
+              @click="historyExpanded = !historyExpanded"
+            >
+              <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': historyExpanded }" />
+              {{ historyExpanded ? '접기' : `더보기 ${setlistHistory.length - 1}개` }}
+            </button>
           </Card>
 
           <!-- ── 관리 패널 (접이식) ─────────────────────── -->

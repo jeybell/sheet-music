@@ -178,6 +178,13 @@ const handleDuplicate = async () => {
   }
 }
 
+// ── 곡 목록 보기 모드: '곡명만'(compact) / '상세'(detail), 선택은 localStorage 기억 (#152)
+const SONG_VIEW_KEY = 'setlist-song-view'
+const songViewMode = ref<'compact' | 'detail'>(
+  localStorage.getItem(SONG_VIEW_KEY) === 'compact' ? 'compact' : 'detail',
+)
+watch(songViewMode, (v) => localStorage.setItem(SONG_VIEW_KEY, v))
+
 // ── 곡 추가
 const showAddItem = ref(false)
 const showSongPicker = ref(false)
@@ -711,15 +718,32 @@ watch(() => props.setlistId, load)
         <!-- 하단: 곡 목록 (내부 스크롤) -->
         <div class="flex-1 min-h-0 flex flex-col">
           <!-- 섹션 헤더 -->
-          <div class="flex items-center justify-between mb-3 shrink-0">
+          <div class="flex items-center justify-between gap-2 flex-wrap mb-3 shrink-0">
             <h2 class="text-sm font-semibold text-foreground">
               곡 목록
               <span class="ml-1.5 font-normal text-muted-foreground">{{ items.length }}곡</span>
             </h2>
-            <Button variant="outline" size="sm" @click="showAddItem = !showAddItem">
-              <template v-if="showAddItem"><X class="w-3.5 h-3.5" />취소</template>
-              <template v-else><Plus class="w-3.5 h-3.5" />곡 추가</template>
-            </Button>
+            <div class="flex items-center gap-2">
+              <!-- 보기 모드: 곡명만 / 상세 (#152) -->
+              <div v-if="items.length > 0" class="inline-flex rounded-md border border-border p-0.5">
+                <button
+                  type="button"
+                  class="px-2 h-7 rounded text-xs font-medium transition-colors"
+                  :class="songViewMode === 'compact' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+                  @click="songViewMode = 'compact'"
+                >곡명만</button>
+                <button
+                  type="button"
+                  class="px-2 h-7 rounded text-xs font-medium transition-colors"
+                  :class="songViewMode === 'detail' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+                  @click="songViewMode = 'detail'"
+                >상세</button>
+              </div>
+              <Button variant="outline" size="sm" @click="showAddItem = !showAddItem">
+                <template v-if="showAddItem"><X class="w-3.5 h-3.5" />취소</template>
+                <template v-else><Plus class="w-3.5 h-3.5" />곡 추가</template>
+              </Button>
+            </div>
           </div>
 
           <!-- 곡 추가 폼 -->
@@ -774,12 +798,16 @@ watch(() => props.setlistId, load)
                 :key="item.setlistItemId"
                 :data-drag-index="idx"
                 class="px-3 py-2.5 sm:px-4 sm:py-3 flex items-start gap-2 sm:gap-3 transition-opacity select-none"
-                :class="{
-                  'opacity-40': dragIndex === idx,
-                  'ring-2 ring-primary ring-offset-1 ring-offset-background': dragOverIndex === idx && dragIndex !== idx,
-                }"
+                :class="[
+                  songViewMode === 'compact' ? '!py-1.5' : '',
+                  {
+                    'opacity-40': dragIndex === idx,
+                    'ring-2 ring-primary ring-offset-1 ring-offset-background': dragOverIndex === idx && dragIndex !== idx,
+                  },
+                ]"
               >
                 <button
+                  v-if="songViewMode === 'detail'"
                   type="button"
                   class="p-1 -m-1 text-muted-foreground hover:text-foreground shrink-0 mt-0.5 cursor-grab active:cursor-grabbing touch-none"
                   @pointerdown="onHandlePointerDown($event, idx)"
@@ -802,6 +830,8 @@ watch(() => props.setlistId, load)
                     >{{ item.songTitle }}</button>
                     <span v-if="item.songArtist" class="text-xs text-muted-foreground">{{ item.songArtist }}</span>
                   </div>
+                  <!-- 상세 모드에서만: 키/버전·연주키·YouTube·메모 (#152) -->
+                  <template v-if="songViewMode === 'detail'">
                   <div class="flex items-center gap-1 flex-wrap mb-1">
                     <Badge v-if="sheetLabel(item.sheetKey, item.versionName)" variant="violet">
                       {{ sheetLabel(item.sheetKey, item.versionName) }}
@@ -926,8 +956,10 @@ watch(() => props.setlistId, load)
                       <Pencil class="w-3 h-3" />메모 추가
                     </button>
                   </template>
+                  </template>
                 </div>
                 <button
+                  v-if="songViewMode === 'detail'"
                   type="button"
                   class="p-1.5 text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   @click.stop="handleDeleteItem(item.setlistItemId, item.songTitle)"

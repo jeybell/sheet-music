@@ -22,6 +22,7 @@ import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
 import { useSetlistStore } from '../stores/setlistStore'
 import { useSongStore } from '../stores/songStore'
+import { isSafeHttpUrl } from '../lib/utils'
 
 interface ApiErrorResponse { message?: string }
 
@@ -351,7 +352,11 @@ const extractYoutubeId = (url: string): string | null => {
   return null
 }
 
-const openLink = (url: string) => { window.open(url, '_blank', 'noopener') }
+const openLink = (url: string) => {
+  // http/https 가 아닌 스킴(javascript: 등)은 열지 않는다(저장형 XSS 방어).
+  if (!isSafeHttpUrl(url)) return
+  window.open(url, '_blank', 'noopener')
+}
 
 // 콘티 전체 YouTube 임베드 토글
 const showSetlistEmbed = ref(false)

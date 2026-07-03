@@ -20,6 +20,7 @@ import Badge from '../components/ui/Badge.vue'
 import Card from '../components/ui/Card.vue'
 import TagInput from '../components/ui/TagInput.vue'
 import { useSongStore } from '../stores/songStore'
+import { isSafeHttpUrl } from '../lib/utils'
 import type { SongSheetSummary, SongFile } from '../types/song'
 
 const props = defineProps<{ songId: number }>()
@@ -737,11 +738,17 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                   {{ link.title || platformLabel(link.url) }}
                 </span>
                 <a
+                  v-if="isSafeHttpUrl(link.url)"
                   :href="link.url"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="flex-1 min-w-0 text-xs text-muted-foreground hover:text-foreground truncate transition-colors"
                 >{{ link.url }}</a>
+                <span
+                  v-else
+                  class="flex-1 min-w-0 text-xs text-muted-foreground truncate"
+                  title="안전하지 않은 링크라 열 수 없습니다"
+                >{{ link.url }}</span>
                 <!-- YouTube 임베드 토글 -->
                 <button
                   v-if="extractYoutubeId(link.url)"

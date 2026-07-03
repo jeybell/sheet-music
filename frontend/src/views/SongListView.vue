@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Plus, Music, Search, X, FolderUp, Loader2 } from '@lucide/vue'
+import { Plus, Music, Search, X, FolderUp, Loader2, ChevronDown } from '@lucide/vue'
 import SongList from '../components/SongList.vue'
 import Select from '../components/ui/Select.vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
@@ -27,6 +27,27 @@ const sortBy = ref<string>(localStorage.getItem(SORT_STORAGE_KEY) ?? 'TITLE')
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | undefined
+
+// 태그 칩: 기본 2줄까지만 보이고 넘치면 '더보기'로 펼침 (#146)
+const tagsExpanded = ref(false)
+const tagsOverflow = ref(false)
+const tagWrapEl = ref<HTMLElement | null>(null)
+const COLLAPSED_TAG_PX = 64 // max-h-16 = 약 2줄
+let tagResizeObserver: ResizeObserver | undefined
+
+const checkTagOverflow = () => {
+  const el = tagWrapEl.value
+  tagsOverflow.value = !!el && el.scrollHeight > COLLAPSED_TAG_PX
+}
+
+// 태그 영역은 allTags 로드 후에야 렌더되므로 ref 변화를 감지해 관찰을 건다.
+watch(tagWrapEl, (el) => {
+  if (tagResizeObserver) { tagResizeObserver.disconnect(); tagResizeObserver = undefined }
+  if (!el) return
+  tagResizeObserver = new ResizeObserver(() => checkTagOverflow())
+  tagResizeObserver.observe(el)
+  checkTagOverflow()
+})
 
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -87,7 +108,10 @@ onMounted(async () => {
   allTags.value = await getAllTags()
 })
 
-onBeforeUnmount(() => observer?.disconnect())
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  tagResizeObserver?.disconnect()
+})
 </script>
 
 <template>
@@ -140,29 +164,46 @@ onBeforeUnmount(() => observer?.disconnect())
       />
     </div>
 
-    <!-- 태그 필터 (다중 선택, AND) — 모바일은 가로 스크롤, sm↑는 줄바꿈 -->
-    <div v-if="allTags.length > 0" class="flex sm:flex-wrap items-center gap-1.5 mb-5 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">
-      <button
-        v-for="tag in allTags"
-        :key="tag"
-        type="button"
-        class="shrink-0 inline-flex items-center h-7 px-2.5 rounded-full text-xs font-medium border whitespace-nowrap transition-colors"
-        :class="selectedTags.includes(tag)
-          ? 'bg-primary text-primary-foreground border-primary'
-          : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-primary'"
-        @click="toggleTag(tag)"
+    <!-- 태그 필터 (다중 선택, AND) — 줄바꿈 + 기본 2줄 접기/더보기, 해제 버튼 고정 노출 -->
+    <div v-if="allTags.length > 0" class="mb-5">
+      <div
+        ref="tagWrapEl"
+        class="flex flex-wrap items-center gap-1.5"
+        :class="{ 'max-h-16 overflow-hidden': !tagsExpanded && tagsOverflow }"
       >
-        {{ tag }}
-      </button>
-      <button
-        v-if="selectedTags.length > 0"
-        type="button"
-        class="shrink-0 inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground whitespace-nowrap transition-colors"
-        @click="clearTags"
-      >
-        <X class="w-3 h-3" />
-        태그 {{ selectedTags.length }}개 해제
-      </button>
+        <button
+          v-for="tag in allTags"
+          :key="tag"
+          type="button"
+          class="inline-flex items-center h-7 px-2.5 rounded-full text-xs font-medium border transition-colors"
+          :class="selectedTags.includes(tag)
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-primary'"
+          @click="toggleTag(tag)"
+        >
+          {{ tag }}
+        </button>
+      </div>
+      <div v-if="tagsOverflow || selectedTags.length > 0" class="flex items-center gap-3 mt-2">
+        <button
+          v-if="tagsOverflow"
+          type="button"
+          class="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          @click="tagsExpanded = !tagsExpanded"
+        >
+          <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': tagsExpanded }" />
+          {{ tagsExpanded ? '태그 접기' : '태그 더보기' }}
+        </button>
+        <button
+          v-if="selectedTags.length > 0"
+          type="button"
+          class="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors ml-auto"
+          @click="clearTags"
+        >
+          <X class="w-3 h-3" />
+          태그 {{ selectedTags.length }}개 해제
+        </button>
+      </div>
     </div>
 
     <!-- 결과 건수 + 정렬 -->

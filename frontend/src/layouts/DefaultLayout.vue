@@ -1,23 +1,34 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { Sun, Moon, MessageSquarePlus, LogOut } from '@lucide/vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Sun, Moon, MessageSquarePlus, LogOut, HelpCircle, X } from '@lucide/vue'
 import ToastHost from '../components/ui/ToastHost.vue'
 import { useTheme } from '../composables/useTheme'
 import { isLoading } from '../composables/useHttpLoading'
 import { useAuthStore } from '../stores/authStore'
+import { HELP_CONTENT } from '../lib/helpContent'
 
 const { theme, toggleTheme } = useTheme()
 const loading = isLoading()
 const busy = computed(() => loading.value > 0)
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const handleLogout = () => {
   authStore.logout()
   router.push('/login')
 }
+
+// ── 화면별 도움말 팝오버 (#148)
+const showHelp = ref(false)
+const currentHelp = computed(() => HELP_CONTENT[route.name as string] ?? null)
+const toggleHelp = () => { showHelp.value = !showHelp.value }
+watch(() => route.name, () => { showHelp.value = false })
+const onHelpKey = (e: KeyboardEvent) => { if (e.key === 'Escape') showHelp.value = false }
+onMounted(() => document.addEventListener('keydown', onHelpKey))
+onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
 </script>
 
 <template>
@@ -58,7 +69,39 @@ const handleLogout = () => {
             악보
           </RouterLink>
         </nav>
-        <div class="flex items-center gap-0.5 shrink-0">
+        <div class="flex items-center gap-0.5 shrink-0 relative">
+          <!-- 화면별 도움말 (#148) -->
+          <button
+            v-if="currentHelp"
+            type="button"
+            @click="toggleHelp"
+            aria-label="도움말"
+            title="도움말"
+            class="inline-flex items-center justify-center w-9 h-9 rounded-md transition-colors"
+            :class="showHelp ? 'bg-primary-soft text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
+          >
+            <HelpCircle class="w-4 h-4" />
+          </button>
+          <!-- 바깥 클릭 닫기 오버레이 + 팝오버 (아이콘 그룹 우측 끝 정렬) -->
+          <template v-if="showHelp && currentHelp">
+            <div class="fixed inset-0 z-40" @click="showHelp = false" />
+            <div
+              class="absolute right-0 top-full mt-2 z-50 w-[min(20rem,calc(100vw-1.5rem))] rounded-lg border border-border bg-card shadow-lg p-4 text-left"
+            >
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <h3 class="text-sm font-semibold text-foreground">{{ currentHelp.title }} 도움말</h3>
+                <button type="button" aria-label="닫기" class="text-muted-foreground hover:text-foreground shrink-0" @click="showHelp = false">
+                  <X class="w-4 h-4" />
+                </button>
+              </div>
+              <ul class="flex flex-col gap-1.5">
+                <li v-for="(line, i) in currentHelp.lines" :key="i" class="flex gap-1.5 text-xs text-muted-foreground leading-relaxed">
+                  <span class="text-primary shrink-0">•</span>
+                  <span>{{ line }}</span>
+                </li>
+              </ul>
+            </div>
+          </template>
           <RouterLink
             to="/feature-requests"
             active-class="bg-primary-soft text-primary"

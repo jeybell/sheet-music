@@ -53,7 +53,7 @@ const pdfFiles = computed(() =>
 const handleKey = (e: KeyboardEvent) => {
   if (e.key === 'ArrowLeft') prev()
   else if (e.key === 'ArrowRight') next()
-  else if (e.key === 'Escape') emit('close')
+  else if (e.key === 'Escape') handleClose()
 }
 
 onMounted(() => document.addEventListener('keydown', handleKey))
@@ -204,15 +204,35 @@ const loadAnnotationsForCurrentSong = async () => {
   }
 }
 
-watch(currentSong, () => { void loadAnnotationsForCurrentSong() })
+watch(currentSong, () => {
+  void flushSaves() // 곡 전환 시 이전 곡의 미저장 필기 저장
+  void loadAnnotationsForCurrentSong()
+})
 
 let activeStroke: AnnotationStroke | null = null
 let activeFileId: number | null = null
 let activePointerId: number | null = null
 // 파일별로 별도 디바운스 타이머를 둔다. 공유 타이머 하나만 쓰면 여러 악보를 빠르게
 // 오가며 그릴 때 이전 파일의 예약된 저장이 취소되어 필기가 유실될 수 있다.
-const saveTimers = new Map<number, ReturnType<typeof setTimeout>>()
+// 획마다 저장하지 않고, 변경된 파일을 dirty 로 표시만 해둔다.
+// 실제 저장(flush)은 필기 종료(펜 off)·모달 닫기·곡 전환·언마운트 시 1회씩 수행한다 (#147).
+const dirtyFiles = new Set<number>()
 const lastActiveFileId = ref<number | null>(null)
+
+const markDirty = (fileId: number) => { dirtyFiles.add(fileId) }
+
+const flushSaves = async () => {
+  if (dirtyFiles.size === 0) return
+  const ids = [...dirtyFiles]
+  dirtyFiles.clear()
+  await Promise.all(
+    ids.map((id) =>
+      saveSongFileAnnotation(id, strokesByFile[id] ?? []).catch(() => {
+        dirtyFiles.add(id) // 실패 시 재시도 대상으로 다시 표시
+      }),
+    ),
+  )
+}
 
 const onCanvasPointerDown = (e: PointerEvent, fileId: number) => {
   if (!penMode.value) return
@@ -245,21 +265,12 @@ const onCanvasPointerMove = (e: PointerEvent, fileId: number) => {
   redraw(fileId)
 }
 
-const scheduleSave = (fileId: number) => {
-  const existing = saveTimers.get(fileId)
-  if (existing) clearTimeout(existing)
-  saveTimers.set(fileId, setTimeout(() => {
-    saveTimers.delete(fileId)
-    void saveSongFileAnnotation(fileId, strokesByFile[fileId] ?? [])
-  }, 400))
-}
-
 const onCanvasPointerUp = (e: PointerEvent, fileId: number) => {
   if (activePointerId !== e.pointerId || activeFileId !== fileId) return
   activeStroke = null
   activePointerId = null
   activeFileId = null
-  scheduleSave(fileId)
+  markDirty(fileId)
 }
 
 const undoStroke = (fileId: number) => {
@@ -267,14 +278,25 @@ const undoStroke = (fileId: number) => {
   if (strokes.length === 0) return
   strokesByFile[fileId] = strokes.slice(0, -1)
   redraw(fileId)
-  scheduleSave(fileId)
+  markDirty(fileId)
 }
 
 const clearStrokes = (fileId: number) => {
   if (!confirm('이 악보의 필기를 모두 지울까요?')) return
   strokesByFile[fileId] = []
   redraw(fileId)
-  scheduleSave(fileId)
+  markDirty(fileId)
+}
+
+// 필기 종료(펜 off) 시 1회 저장
+watch(penMode, (on, was) => {
+  if (was && !on) void flushSaves()
+})
+
+// 모달 닫기 전에 미저장 필기 저장
+const handleClose = () => {
+  void flushSaves()
+  emit('close')
 }
 
 const onWindowResize = () => {
@@ -285,13 +307,16 @@ onMounted(() => {
   window.addEventListener('resize', onWindowResize)
   void loadAnnotationsForCurrentSong()
 })
-onUnmounted(() => window.removeEventListener('resize', onWindowResize))
+onUnmounted(() => {
+  window.removeEventListener('resize', onWindowResize)
+  void flushSaves() // 라우트 이동 등으로 언마운트될 때 미저장 필기 저장
+})
 </script>
 
 <template>
   <div
     class="fixed inset-0 z-50 bg-black/90 flex flex-col"
-    @click.self="emit('close')"
+    @click.self="handleClose"
   >
     <!-- 헤더 -->
     <div class="flex items-center justify-between px-4 py-3 text-white bg-black/60 flex-shrink-0">
@@ -327,7 +352,7 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
         <button
           type="button"
           class="p-1.5 rounded-md hover:bg-zinc-700 transition-colors"
-          @click="emit('close')"
+          @click="handleClose"
         >
           <X class="w-5 h-5" />
         </button>

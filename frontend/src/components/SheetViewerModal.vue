@@ -17,11 +17,16 @@ export interface ViewerSong {
 const props = defineProps<{
   songs: ViewerSong[]
   setlistTitle: string | null
+  initialIndex?: number
 }>()
 
 const emit = defineEmits<{ close: [] }>()
 
-const currentIndex = ref(0)
+const currentIndex = ref(
+  props.initialIndex != null && props.initialIndex >= 0 && props.initialIndex < props.songs.length
+    ? props.initialIndex
+    : 0,
+)
 const currentSong = computed(() => props.songs[currentIndex.value])
 const isDownloading = ref(false)
 

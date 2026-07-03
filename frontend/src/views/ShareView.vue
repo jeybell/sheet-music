@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Music, BookOpen, Home } from '@lucide/vue'
+import { Music, BookOpen, Home, StickyNote } from '@lucide/vue'
 import { getSharedSetlist } from '../apis/setlistApi'
 import type { SharedSetlist, SharedSetlistItem } from '../types/setlist'
 import SheetViewerModal from '../components/SheetViewerModal.vue'
@@ -26,6 +26,20 @@ const formatDate = (dateStr: string) => {
 
 // ── 악보 풀스크린 뷰어 (SheetViewerModal 재사용)
 const showViewer = ref(false)
+const viewerIndex = ref(0)
+// 특정 곡 인덱스로 뷰어 열기 (상단 버튼은 0번부터)
+const openViewerAt = (i: number) => {
+  viewerIndex.value = i
+  showViewer.value = true
+}
+
+// 곡별 메모 펼침 상태 (setlistItemId 기준)
+const expandedMemo = ref<Set<number>>(new Set())
+const toggleMemo = (id: number) => {
+  const next = new Set(expandedMemo.value)
+  next.has(id) ? next.delete(id) : next.add(id)
+  expandedMemo.value = next
+}
 const viewerSongs = computed<ViewerSong[]>(() =>
   (setlist.value?.items ?? []).map((item) => ({
     title: item.songTitle,
@@ -90,7 +104,7 @@ onMounted(async () => {
             v-if="totalFileCount > 0"
             type="button"
             class="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-            @click="showViewer = true"
+            @click="openViewerAt(0)"
           >
             <BookOpen class="w-4 h-4" />
             악보 보기
@@ -104,12 +118,43 @@ onMounted(async () => {
             <li
               v-for="(item, i) in setlist.items"
               :key="item.setlistItemId"
-              class="flex items-center gap-3 text-sm"
+              class="rounded-lg border border-border"
             >
-              <span class="w-5 h-5 rounded-full bg-muted text-muted-foreground text-xs flex items-center justify-center shrink-0 font-medium">{{ i + 1 }}</span>
-              <span class="font-medium text-foreground">{{ item.songTitle }}</span>
-              <span v-if="item.songArtist" class="text-muted-foreground text-xs">{{ item.songArtist }}</span>
-              <span v-if="sheetLabel(item)" class="ml-auto text-xs text-muted-foreground shrink-0">{{ sheetLabel(item) }}</span>
+              <div class="flex items-center gap-2.5 text-sm px-3 py-2">
+                <span class="w-5 h-5 rounded-full bg-muted text-muted-foreground text-xs flex items-center justify-center shrink-0 font-medium">{{ i + 1 }}</span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-medium text-foreground">{{ item.songTitle }}</span>
+                    <span v-if="item.songArtist" class="text-muted-foreground text-xs">{{ item.songArtist }}</span>
+                    <span v-if="sheetLabel(item)" class="text-xs text-muted-foreground">{{ sheetLabel(item) }}</span>
+                  </div>
+                </div>
+                <!-- 메모 보기 토글 -->
+                <button
+                  v-if="item.memo"
+                  type="button"
+                  class="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-md border border-border transition-colors"
+                  :class="expandedMemo.has(item.setlistItemId) ? 'bg-primary-soft text-primary border-primary/40' : 'text-muted-foreground hover:bg-muted'"
+                  :aria-label="expandedMemo.has(item.setlistItemId) ? '메모 접기' : '메모 보기'"
+                  @click="toggleMemo(item.setlistItemId)"
+                >
+                  <StickyNote class="w-4 h-4" />
+                </button>
+                <!-- 이 곡 악보 바로 보기 -->
+                <button
+                  v-if="item.files.length > 0"
+                  type="button"
+                  class="shrink-0 inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                  @click="openViewerAt(i)"
+                >
+                  <BookOpen class="w-3.5 h-3.5" />
+                  악보
+                </button>
+              </div>
+              <!-- 메모 인라인 -->
+              <div v-if="item.memo && expandedMemo.has(item.setlistItemId)" class="px-3 pb-2.5 pl-10">
+                <p class="text-xs text-muted-foreground whitespace-pre-line bg-muted/50 rounded-md px-2.5 py-2">{{ item.memo }}</p>
+              </div>
             </li>
           </ol>
         </div>
@@ -122,6 +167,7 @@ onMounted(async () => {
       v-if="showViewer"
       :songs="viewerSongs"
       :setlist-title="setlist?.title ?? setlist?.serviceDate ?? null"
+      :initial-index="viewerIndex"
       @close="showViewer = false"
     />
   </div>

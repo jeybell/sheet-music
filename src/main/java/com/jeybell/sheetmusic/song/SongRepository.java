@@ -159,6 +159,9 @@ public interface SongRepository extends JpaRepository<Song, Long> {
             """)
     Optional<Song> findActiveBySongIdWithSheets(@Param("songId") Long songId);
 
+    /** 관리자 휴지통: soft delete 된 곡을 최근 삭제순으로. */
+    List<Song> findByDeletedAtIsNotNullOrderByDeletedAtDesc();
+
     @Query("""
             select count(s) > 0
             from Song s

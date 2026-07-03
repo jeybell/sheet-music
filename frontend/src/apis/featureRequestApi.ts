@@ -11,11 +11,12 @@ export const createFeatureRequest = async (request: FeatureRequestCreateRequest)
   return data
 }
 
+// 상태 변경/삭제는 관리자 전용 엔드포인트(/api/admin/feature-requests)로 처리한다.
 export const updateFeatureRequestStatus = async (id: number, status: FeatureRequestStatus) => {
-  const { data } = await http.patch<FeatureRequest>(`/api/feature-requests/${id}/status`, { status })
+  const { data } = await http.patch<FeatureRequest>(`/api/admin/feature-requests/${id}/status`, { status })
   return data
 }
 
 export const deleteFeatureRequest = async (id: number) => {
-  await http.delete(`/api/feature-requests/${id}`)
+  await http.delete(`/api/admin/feature-requests/${id}`)
 }

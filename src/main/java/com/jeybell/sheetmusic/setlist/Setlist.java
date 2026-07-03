@@ -90,6 +90,11 @@ public class Setlist {
         this.deletedAt = LocalDateTime.now();
     }
 
+    /** 관리자 복구: soft delete 되돌리기. */
+    public void restore() {
+        this.deletedAt = null;
+    }
+
     public void addItem(SetlistItem item) {
         item.assignSetlist(this);
         this.items.add(item);

@@ -12,6 +12,9 @@ import { getFeatureRequests, createFeatureRequest, updateFeatureRequestStatus, d
 import type { FeatureRequest, FeatureRequestStatus } from '../types/featureRequest'
 import { STATUS_LABEL, STATUS_VARIANT } from '../types/featureRequest'
 import { extractApiError } from '../composables/useApiError'
+import { useAuthStore } from '../stores/authStore'
+
+const authStore = useAuthStore()
 
 const items = ref<FeatureRequest[]>([])
 const isLoading = ref(false)
@@ -170,8 +173,8 @@ onMounted(load)
         <div v-if="expandedId === item.featureRequestId" class="px-5 pb-4 border-t border-border">
           <p class="text-sm text-foreground whitespace-pre-line leading-relaxed mt-4 mb-4">{{ item.content }}</p>
 
-          <!-- 상태 변경 + 삭제 -->
-          <div class="flex items-center gap-2 flex-wrap">
+          <!-- 상태 변경 + 삭제 (관리자 전용) -->
+          <div v-if="authStore.isAdmin" class="flex items-center gap-2 flex-wrap">
             <span class="text-xs text-muted-foreground">상태:</span>
             <button
               v-for="status in ALL_STATUSES"

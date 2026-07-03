@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Sun, Moon, MessageSquarePlus, LogOut } from '@lucide/vue'
+import { Sun, Moon, MessageSquarePlus, LogOut, Shield } from '@lucide/vue'
 import ToastHost from '../components/ui/ToastHost.vue'
 import { useTheme } from '../composables/useTheme'
 import { isLoading } from '../composables/useHttpLoading'
@@ -13,6 +13,7 @@ const busy = computed(() => loading.value > 0)
 
 const router = useRouter()
 const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.isAdmin)
 
 const handleLogout = () => {
   authStore.logout()
@@ -59,6 +60,16 @@ const handleLogout = () => {
           </RouterLink>
         </nav>
         <div class="flex items-center gap-0.5 shrink-0">
+          <RouterLink
+            v-if="isAdmin"
+            to="/admin"
+            active-class="bg-primary-soft text-primary"
+            aria-label="관리자"
+            title="관리자"
+            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <Shield class="w-4 h-4" />
+          </RouterLink>
           <RouterLink
             to="/feature-requests"
             active-class="bg-primary-soft text-primary"

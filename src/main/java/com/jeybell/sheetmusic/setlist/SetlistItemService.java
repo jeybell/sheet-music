@@ -46,6 +46,10 @@ public class SetlistItemService {
         SetlistItem item = new SetlistItem(song, songSheet, request.orderNo(), request.memo(),
                 request.performanceKey(), request.youtubeUrl());
         setlist.addItem(item);
+        // setlist.addItem()은 컬렉션에만 추가하므로(cascade persist 대기 상태),
+        // IDENTITY 생성 전략인 setlistItemId가 응답 시점엔 아직 null이다.
+        // 명시적으로 저장해 즉시 INSERT를 실행시켜 생성된 ID를 응답에 채운다.
+        setlistItemRepository.save(item);
 
         return SetlistItemResponse.from(item);
     }

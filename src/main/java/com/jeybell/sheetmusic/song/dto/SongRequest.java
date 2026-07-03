@@ -1,5 +1,6 @@
 package com.jeybell.sheetmusic.song.dto;
 
+import com.jeybell.sheetmusic.global.validation.SafeUrl;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.Valid;
@@ -18,6 +19,7 @@ public record SongRequest(
         String lyrics,
 
         @Size(max = 500, message = "youtube_url must be 500 characters or less")
+        @SafeUrl
         String youtubeUrl,
 
         List<String> tags,

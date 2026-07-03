@@ -5,6 +5,7 @@ import com.jeybell.sheetmusic.auth.dto.LoginRequest;
 import com.jeybell.sheetmusic.auth.dto.RegisterRequest;
 import com.jeybell.sheetmusic.global.exception.DuplicateUsernameException;
 import com.jeybell.sheetmusic.global.exception.InvalidCredentialsException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,13 @@ public class AuthService {
             throw new DuplicateUsernameException(request.username());
         }
         User user = new User(request.username(), passwordEncoder.encode(request.password()));
-        userRepository.save(user);
+        try {
+            // existsByUsername 체크와 save 사이의 경쟁 상태 방어: 동시 요청으로 유니크 제약을
+            // 위반하면 500 대신 명확한 409(DuplicateUsername)로 변환한다.
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateUsernameException(request.username());
+        }
         return new AuthResponse(jwtService.generateToken(user.getUsername()), user.getUsername(), user.getRole().name());
     }
 

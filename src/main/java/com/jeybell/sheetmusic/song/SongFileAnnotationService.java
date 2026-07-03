@@ -28,6 +28,8 @@ public class SongFileAnnotationService {
     }
 
     public SongFileAnnotationResponse getAnnotation(Long songFileId) {
+        // 삭제(soft-delete)된 파일의 필기는 노출하지 않는다(saveAnnotation 과 동일한 활성 파일 기준).
+        requireActiveFile(songFileId);
         return annotationRepository.findBySongFile_SongFileId(songFileId)
                 .map(this::toResponse)
                 .orElseGet(() -> new SongFileAnnotationResponse(songFileId, objectMapper.createArrayNode(), null));
@@ -35,8 +37,7 @@ public class SongFileAnnotationService {
 
     @Transactional
     public SongFileAnnotationResponse saveAnnotation(Long songFileId, SongFileAnnotationRequest request) {
-        SongFile songFile = songFileRepository.findBySongFileIdAndDeletedAtIsNull(songFileId)
-                .orElseThrow(() -> new ResourceNotFoundException("Song file not found: " + songFileId));
+        SongFile songFile = requireActiveFile(songFileId);
         String strokesJson = writeStrokes(request.strokes());
 
         SongFileAnnotation annotation = annotationRepository.findBySongFile_SongFileId(songFileId)
@@ -52,8 +53,14 @@ public class SongFileAnnotationService {
 
     @Transactional
     public void deleteAnnotation(Long songFileId) {
+        requireActiveFile(songFileId);
         annotationRepository.findBySongFile_SongFileId(songFileId)
                 .ifPresent(annotationRepository::delete);
+    }
+
+    private SongFile requireActiveFile(Long songFileId) {
+        return songFileRepository.findBySongFileIdAndDeletedAtIsNull(songFileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Song file not found: " + songFileId));
     }
 
     private SongFileAnnotationResponse toResponse(SongFileAnnotation annotation) {

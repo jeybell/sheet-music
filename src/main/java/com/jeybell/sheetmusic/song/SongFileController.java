@@ -11,6 +11,7 @@ import java.util.Objects;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -51,13 +52,8 @@ public class SongFileController {
     @GetMapping("/api/song-files/{songFileId}/download")
     public ResponseEntity<Resource> downloadFile(@PathVariable("songFileId") Long songFileId) {
         SongFileDownloadResponse response = songFileService.downloadFile(songFileId);
-        String contentTypeValue = Objects.toString(response.contentType(), "");
-        MediaType contentType = contentTypeValue.isBlank()
-                ? MediaType.APPLICATION_OCTET_STREAM
-                : Objects.requireNonNull(MediaType.parseMediaType(contentTypeValue));
-
         return ResponseEntity.ok()
-                .contentType(Objects.requireNonNull(contentType))
+                .contentType(resolveContentType(response.contentType()))
                 .contentLength(response.fileSize())
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename(response.originalFileName(), StandardCharsets.UTF_8)
@@ -69,19 +65,30 @@ public class SongFileController {
     @GetMapping("/api/song-files/{songFileId}/view")
     public ResponseEntity<Resource> viewFile(@PathVariable("songFileId") Long songFileId) {
         SongFileDownloadResponse response = songFileService.downloadFile(songFileId);
-        String contentTypeValue = Objects.toString(response.contentType(), "");
-        MediaType contentType = contentTypeValue.isBlank()
-                ? MediaType.APPLICATION_OCTET_STREAM
-                : Objects.requireNonNull(MediaType.parseMediaType(contentTypeValue));
-
         return ResponseEntity.ok()
-                .contentType(Objects.requireNonNull(contentType))
+                .contentType(resolveContentType(response.contentType()))
                 .contentLength(response.fileSize())
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
                         .filename(response.originalFileName(), StandardCharsets.UTF_8)
                         .build()
                         .toString())
                 .body(response.resource());
+    }
+
+    /**
+     * 저장된 Content-Type 을 안전하게 파싱한다. 업로드 시 비정상 헤더가 들어와도
+     * 파싱 실패 시 application/octet-stream 으로 폴백해 다운로드/뷰가 영구 500 나는 걸 막는다.
+     */
+    private MediaType resolveContentType(String contentTypeValue) {
+        String value = Objects.toString(contentTypeValue, "");
+        if (value.isBlank()) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(value);
+        } catch (InvalidMediaTypeException e) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
     @DeleteMapping("/api/song-files/{songFileId}")

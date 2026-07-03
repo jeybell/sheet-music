@@ -7,6 +7,7 @@ import com.jeybell.sheetmusic.setlist.dto.SetlistItemUpdateRequest;
 import com.jeybell.sheetmusic.setlist.dto.SetlistReorderRequest;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import com.jeybell.sheetmusic.song.Song;
 import com.jeybell.sheetmusic.song.SongRepository;
@@ -52,7 +53,7 @@ public class SetlistItemService {
     @Transactional
     public SetlistItemResponse updateItem(Long itemId, SetlistItemUpdateRequest request) {
         SetlistItem item = getActiveItem(itemId);
-        SongSheet songSheet = resolveSheet(request.songSheetId(), item.getSong());
+        SongSheet songSheet = resolveSheetForUpdate(item, request.songSheetId());
 
         item.update(songSheet, request.orderNo(), request.memo(), request.performanceKey(), request.youtubeUrl());
 
@@ -94,6 +95,22 @@ public class SetlistItemService {
     private SetlistItem getActiveItem(Long itemId) {
         return setlistItemRepository.findBySetlistItemIdAndSetlistDeletedAtIsNull(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Setlist item not found: " + itemId));
+    }
+
+    /**
+     * 수정 시 악보 참조 결정.
+     * 요청한 songSheetId 가 아이템의 현재 값과 동일하면(= 악보 변경 없음) 소유권을 재검증하지 않고
+     * 기존 참조를 그대로 유지한다. 과거 곡 병합/중복 정리(#104)로 song_sheet_id 가 다른 곡 소속이거나
+     * soft-delete 된 시트를 가리키는 스테일 상태가 되더라도, memo/연주키/youtube 인라인 수정은 막지 않기 위함.
+     * 악보를 실제로 다른 값으로 바꾸는 경우에만 {@link #resolveSheet}로 소유권을 검증한다(위반 시 400).
+     */
+    private SongSheet resolveSheetForUpdate(SetlistItem item, Long requestedSongSheetId) {
+        SongSheet current = item.getSongSheet();
+        Long currentSongSheetId = current == null ? null : current.getSongSheetId();
+        if (Objects.equals(requestedSongSheetId, currentSongSheetId)) {
+            return current;
+        }
+        return resolveSheet(requestedSongSheetId, item.getSong());
     }
 
     private SongSheet resolveSheet(Long songSheetId, Song song) {

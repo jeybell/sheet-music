@@ -78,7 +78,6 @@ export const useSongStore = defineStore('song', () => {
 
     try {
       songs.value = await getSongs(params)
-      songsLoaded.value = true
     } catch (error) {
       errorMessage.value = getErrorMessage(error, '곡 목록을 불러오지 못했습니다.')
     } finally {
@@ -86,10 +85,11 @@ export const useSongStore = defineStore('song', () => {
     }
   }
 
-  // 곡 선택 모달용 전체 목록을 최초 1회만 로드 (콘티 화면 진입 시가 아니라 모달 열 때 호출)
-  const songsLoaded = ref(false)
+  // 곡 선택 모달용 전체 목록을 모달 열 때마다 새로 불러온다(세션 캐시 금지).
+  // 캐시해두면 다른 화면에서 곡이 삭제/병합된 뒤에도 피커에 계속 남아있다가,
+  // 추가 시도 시 백엔드에서 404(Song not found)로 실패하는 문제가 있었다.
   const ensureSongsLoaded = async () => {
-    if (songsLoaded.value || isLoading.value) return
+    if (isLoading.value) return
     await fetchSongs()
   }
 

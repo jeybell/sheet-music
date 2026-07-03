@@ -136,15 +136,23 @@ const handleUpdate = async () => {
   }
 }
 
+// ── 삭제 공통 가드: 빠른 중복 클릭으로 삭제가 두 번 발사되어 두 번째가 404 나며
+// "삭제 실패" 오탐 알림이 뜨는 걸 막는다.
+const isDeleting = ref(false)
+
 // ── 셋리스트 삭제
 const handleDelete = async () => {
+  if (isDeleting.value) return
   const label = setlist.value?.title ?? setlist.value?.serviceDate ?? '이 콘티'
   if (!confirm(`"${label}"을 삭제할까요?`)) return
+  isDeleting.value = true
   try {
     await deleteSetlist(props.setlistId)
     await router.push('/setlists')
   } catch (e) {
     alert(apiError(e, '삭제에 실패했습니다.'))
+  } finally {
+    isDeleting.value = false
   }
 }
 
@@ -367,13 +375,17 @@ const setlistYoutubeId = computed(() => {
 
 // ── 곡 삭제
 const handleDeleteItem = async (itemId: number, songTitle: string) => {
+  if (isDeleting.value) return
   if (!confirm(`"${songTitle}"을 콘티에서 제거할까요?`)) return
+  isDeleting.value = true
   try {
     await deleteSetlistItem(itemId)
     await store.fetchSetlist(props.setlistId)
     toast.success('곡을 제거했어요')
   } catch (e) {
     alert(apiError(e, '삭제에 실패했습니다.'))
+  } finally {
+    isDeleting.value = false
   }
 }
 
@@ -448,13 +460,18 @@ const handleGenerateShare = async () => {
   }
 }
 
+const isRevokingShare = ref(false)
 const handleRevokeShare = async () => {
+  if (isRevokingShare.value) return
   if (!confirm('공유 링크를 비활성화할까요? 기존 링크로는 접근할 수 없게 됩니다.')) return
+  isRevokingShare.value = true
   try {
     await revokeShareToken(props.setlistId)
     await store.fetchSetlist(props.setlistId)
   } catch {
     alert('공유 링크 비활성화에 실패했습니다.')
+  } finally {
+    isRevokingShare.value = false
   }
 }
 
@@ -619,7 +636,7 @@ watch(() => props.setlistId, load)
                     <Pencil class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">수정</span>
                   </Button>
-                  <Button variant="destructive" size="sm" @click="handleDelete">
+                  <Button variant="destructive" size="sm" :disabled="isDeleting" @click="handleDelete">
                     <Trash2 class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">삭제</span>
                   </Button>
@@ -674,7 +691,7 @@ watch(() => props.setlistId, load)
                     <QrCode class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">QR코드</span>
                   </Button>
-                  <Button variant="outline" size="sm" @click="handleRevokeShare">
+                  <Button variant="outline" size="sm" :disabled="isRevokingShare" @click="handleRevokeShare">
                     <Link2Off class="w-3.5 h-3.5" />
                     <span class="hidden sm:inline">비활성화</span>
                   </Button>
@@ -966,7 +983,8 @@ watch(() => props.setlistId, load)
                 <button
                   v-if="songViewMode === 'detail'"
                   type="button"
-                  class="p-1.5 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                  class="p-1.5 text-muted-foreground hover:text-destructive transition-colors shrink-0 disabled:opacity-50"
+                  :disabled="isDeleting"
                   @click.stop="handleDeleteItem(item.setlistItemId, item.songTitle)"
                 >
                   <Trash2 class="w-3.5 h-3.5" />

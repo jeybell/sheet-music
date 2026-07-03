@@ -128,14 +128,22 @@ const handleUpdateSong = async () => {
   }
 }
 
+// ── 삭제 공통 가드: 빠른 중복 클릭(특히 모바일)으로 삭제가 두 번 발사되어
+// 두 번째가 404 나며 "삭제 실패" 오탐 알림이 뜨는 걸 막는다.
+const isDeleting = ref(false)
+
 // ── 곡 삭제
 const handleDeleteSong = async () => {
+  if (isDeleting.value) return
   if (!confirm(`"${song.value?.title}" 곡을 삭제할까요?`)) return
+  isDeleting.value = true
   try {
     await deleteSong(props.songId)
     await router.push('/songs')
   } catch (e) {
     alert(extractApiError(e, '삭제에 실패했습니다.'))
+  } finally {
+    isDeleting.value = false
   }
 }
 
@@ -212,14 +220,18 @@ const handleUpdateSheet = async (sheetId: number) => {
 
 // ── 악보 버전 삭제
 const handleDeleteSheet = async (sheet: SongSheetSummary) => {
+  if (isDeleting.value) return
   const label = sheet.versionName || sheet.sheetKey || '이 버전'
   if (!confirm(`"${label}"을 삭제할까요?`)) return
+  isDeleting.value = true
   try {
     await deleteSongSheet(sheet.songSheetId)
     await songStore.fetchSong(props.songId)
     toast.success('악보 버전을 삭제했어요')
   } catch (e) {
     alert(extractApiError(e, '삭제에 실패했습니다.'))
+  } finally {
+    isDeleting.value = false
   }
 }
 
@@ -262,13 +274,17 @@ const handleUpload = async (sheetId: number) => {
 
 // ── 파일 삭제
 const handleDeleteFile = async (fileId: number, fileName: string) => {
+  if (isDeleting.value) return
   if (!confirm(`"${fileName}" 파일을 삭제할까요?`)) return
+  isDeleting.value = true
   try {
     await deleteSongFile(fileId)
     await songStore.fetchSong(props.songId)
     toast.success('파일을 삭제했어요')
   } catch (e) {
     alert(extractApiError(e, '파일 삭제에 실패했습니다.'))
+  } finally {
+    isDeleting.value = false
   }
 }
 
@@ -362,12 +378,16 @@ const handleUpdateLink = async (linkId: number) => {
 }
 
 const handleDeleteLink = async (linkId: number) => {
+  if (isDeleting.value) return
   if (!confirm('링크를 삭제할까요?')) return
+  isDeleting.value = true
   try {
     await deleteSongLink(linkId)
     await loadSong()
     toast.success('링크를 삭제했어요')
-  } catch { /* ignore */ }
+  } catch { /* ignore */ } finally {
+    isDeleting.value = false
+  }
 }
 
 // ── 가사 관리 ─────────────────────────────────────────────
@@ -765,7 +785,8 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 ><Pencil class="w-3.5 h-3.5" /></button>
                 <button
                   type="button"
-                  class="p-1 text-muted-foreground hover:text-destructive shrink-0"
+                  class="p-1 text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50"
+                  :disabled="isDeleting"
                   @click="handleDeleteLink(link.linkId)"
                 ><Trash2 class="w-3.5 h-3.5" /></button>
               </div>
@@ -910,7 +931,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-base font-semibold text-foreground">곡 관리</h2>
               <div v-if="!isEditing" class="flex gap-2 flex-wrap">
-                <Button variant="destructive" size="sm" @click="handleDeleteSong">
+                <Button variant="destructive" size="sm" :disabled="isDeleting" @click="handleDeleteSong">
                   <Trash2 class="w-3.5 h-3.5" />
                   곡 삭제
                 </Button>
@@ -988,7 +1009,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                         <Pencil class="w-3.5 h-3.5" />
                         수정
                       </Button>
-                      <Button variant="destructive" size="sm" @click="handleDeleteSheet(sheet)">
+                      <Button variant="destructive" size="sm" :disabled="isDeleting" @click="handleDeleteSheet(sheet)">
                         <Trash2 class="w-3.5 h-3.5" />
                         삭제
                       </Button>
@@ -1030,8 +1051,9 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                       </a>
                       <button
                         type="button"
-                        class="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        class="p-1 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                         aria-label="삭제"
+                        :disabled="isDeleting"
                         @click="handleDeleteFile(file.songFileId, file.originalFileName ?? '파일')"
                       >
                         <X class="w-3.5 h-3.5" />

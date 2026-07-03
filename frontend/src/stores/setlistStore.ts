@@ -33,16 +33,23 @@ export const useSetlistStore = defineStore('setlist', () => {
     }
   }
 
+  // 빠른 화면 전환 시(콘티 A→B) 느린 A 응답이 나중에 도착해 B 화면을 덮어쓰는 걸 막기 위해
+  // 요청 순번을 매겨 가장 마지막 요청의 결과만 반영한다.
+  let fetchSeq = 0
   const fetchSetlist = async (setlistId: number) => {
+    const seq = ++fetchSeq
     isLoading.value = true
     errorMessage.value = ''
     selectedSetlist.value = null
     try {
-      selectedSetlist.value = await getSetlist(setlistId)
+      const result = await getSetlist(setlistId)
+      if (seq !== fetchSeq) return
+      selectedSetlist.value = result
     } catch (e) {
+      if (seq !== fetchSeq) return
       errorMessage.value = apiError(e, '셋리스트를 불러오지 못했습니다.')
     } finally {
-      isLoading.value = false
+      if (seq === fetchSeq) isLoading.value = false
     }
   }
 

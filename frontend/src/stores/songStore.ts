@@ -93,17 +93,24 @@ export const useSongStore = defineStore('song', () => {
     await fetchSongs()
   }
 
+  // 빠른 화면 전환 시(곡 A→B) 느린 A 응답이 나중에 도착해 B 화면을 덮어쓰는 걸 막기 위해
+  // 요청 순번을 매겨 가장 마지막 요청의 결과만 반영한다.
+  let fetchSongSeq = 0
   const fetchSong = async (songId: number) => {
+    const seq = ++fetchSongSeq
     isLoading.value = true
     errorMessage.value = ''
     selectedSong.value = null
 
     try {
-      selectedSong.value = await getSong(songId)
+      const result = await getSong(songId)
+      if (seq !== fetchSongSeq) return
+      selectedSong.value = result
     } catch (error) {
+      if (seq !== fetchSongSeq) return
       errorMessage.value = getErrorMessage(error, '곡 정보를 불러오지 못했습니다.')
     } finally {
-      isLoading.value = false
+      if (seq === fetchSongSeq) isLoading.value = false
     }
   }
 

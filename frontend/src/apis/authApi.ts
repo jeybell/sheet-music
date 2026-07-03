@@ -3,6 +3,7 @@ import http from "./http";
 export interface AuthResponse {
   token: string;
   username: string;
+  role: string;
 }
 
 export const register = async (username: string, password: string) => {

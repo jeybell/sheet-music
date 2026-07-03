@@ -127,6 +127,11 @@ public class Song {
         this.deletedAt = LocalDateTime.now();
     }
 
+    /** 관리자 복구: soft delete 되돌리기. */
+    public void restore() {
+        this.deletedAt = null;
+    }
+
     public Long getSongId() {
         return songId;
     }

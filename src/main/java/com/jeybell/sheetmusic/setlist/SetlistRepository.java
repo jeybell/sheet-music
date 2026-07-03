@@ -50,4 +50,7 @@ public interface SetlistRepository extends JpaRepository<Setlist, Long> {
               and sl.deletedAt is null
             """)
     Optional<Setlist> findByShareToken(@Param("token") String token);
+
+    /** 관리자 휴지통: soft delete 된 콘티를 최근 삭제순으로. */
+    List<Setlist> findByDeletedAtIsNotNullOrderByDeletedAtDesc();
 }

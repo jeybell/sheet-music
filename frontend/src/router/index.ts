@@ -11,7 +11,8 @@ import FeatureRequestView from "../views/FeatureRequestView.vue";
 import ShareView from "../views/ShareView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
-import { AUTH_TOKEN_KEY } from "../apis/http";
+import AdminView from "../views/AdminView.vue";
+import { AUTH_TOKEN_KEY, AUTH_ROLE_KEY } from "../apis/http";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -72,6 +73,12 @@ const router = createRouter({
       component: ShareView,
     },
     {
+      path: "/admin",
+      name: "admin",
+      component: AdminView,
+      meta: { requiresAdmin: true },
+    },
+    {
       path: "/login",
       name: "login",
       component: LoginView,
@@ -94,6 +101,10 @@ router.beforeEach((to) => {
     return { path: "/login", query: { redirect: to.fullPath } };
   }
   if ((to.name === "login" || to.name === "register") && isAuthenticated) {
+    return { path: "/" };
+  }
+  // 관리자 전용 라우트: ADMIN 역할이 아니면 홈으로. (서버도 /api/admin/** 을 hasRole('ADMIN') 으로 보호)
+  if (to.meta.requiresAdmin && localStorage.getItem(AUTH_ROLE_KEY) !== "ADMIN") {
     return { path: "/" };
   }
 });

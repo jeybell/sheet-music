@@ -29,7 +29,7 @@ public class AuthService {
         }
         User user = new User(request.username(), passwordEncoder.encode(request.password()));
         userRepository.save(user);
-        return new AuthResponse(jwtService.generateToken(user.getUsername()), user.getUsername());
+        return new AuthResponse(jwtService.generateToken(user.getUsername()), user.getUsername(), user.getRole().name());
     }
 
     @Transactional(readOnly = true)
@@ -39,7 +39,7 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
-        return new AuthResponse(jwtService.generateToken(user.getUsername()), user.getUsername());
+        return new AuthResponse(jwtService.generateToken(user.getUsername()), user.getUsername(), user.getRole().name());
     }
 
     /**
@@ -49,6 +49,6 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public AuthResponse guestLogin() {
-        return new AuthResponse(jwtService.generateToken("guest"), "guest");
+        return new AuthResponse(jwtService.generateToken("guest"), "guest", UserRole.USER.name());
     }
 }

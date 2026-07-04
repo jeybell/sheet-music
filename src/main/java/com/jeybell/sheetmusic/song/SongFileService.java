@@ -6,6 +6,7 @@ import com.jeybell.sheetmusic.song.dto.SongFileResponse;
 import com.jeybell.sheetmusic.storage.StorageService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.core.io.Resource;
@@ -43,7 +44,7 @@ public class SongFileService {
         String contentType = multipartFile.getContentType();
 
         // 원본 업로드명은 확장자 추출에만 쓰고, 화면에 표시되는 파일명은
-        // '곡제목_키.확장자'(키 없으면 '곡제목.확장자')로 새로 생성한다.
+        // '곡제목_키_버전.확장자'로 새로 생성한다(키·버전 없으면 해당 부분 생략).
         String uploadedName = cleanOriginalFileName(multipartFile.getOriginalFilename());
         String extension = resolveExtension(uploadedName);
         int existingCount = songFileRepository
@@ -99,6 +100,25 @@ public class SongFileService {
         storageService.delete(songFile.getFilePath());
     }
 
+    /**
+     * 악보의 곡 제목·키·버전이 바뀌면 그 악보에 딸린 활성 파일들의 표시 파일명을
+     * '곡제목_키_버전' 형식으로 다시 생성한다. 등록 순서(songFileId)를 유지하며
+     * 2번째부터 순번(_2, _3)을 붙인다. 저장 파일명(UUID)·스토리지 키는 바꾸지 않는다.
+     * (호출자의 트랜잭션 안에서 관리 엔티티를 수정하므로 dirty checking 으로 반영된다.)
+     */
+    public void regenerateFileNamesForSheet(SongSheet songSheet) {
+        List<SongFile> files = songFileRepository
+                .findAllBySongSheetSongSheetIdAndDeletedAtIsNull(songSheet.getSongSheetId())
+                .stream()
+                .sorted(Comparator.comparing(SongFile::getSongFileId))
+                .toList();
+        for (int i = 0; i < files.size(); i++) {
+            SongFile file = files.get(i);
+            String extension = resolveExtension(file.getStoredFileName());
+            file.rename(buildDisplayFileName(songSheet, extension, i));
+        }
+    }
+
     @Transactional
     public void deleteFilesBySongSheetId(Long songSheetId) {
         List<SongFile> files = songFileRepository.findAllBySongSheetSongSheetIdAndDeletedAtIsNull(songSheetId);
@@ -135,24 +155,34 @@ public class SongFileService {
     }
 
     /**
-     * 화면에 표시할 파일명을 '곡제목_키.확장자' 형태로 만든다.
-     * 키가 없으면 '곡제목.확장자', 같은 악보에 이미 파일이 있으면 순번(_2, _3...)을 붙인다.
+     * 화면에 표시할 파일명을 '곡제목_키_버전.확장자' 형태로 만든다.
+     * 키·버전이 없으면 해당 부분을 생략하고, index 가 0보다 크면 순번(_2, _3...)을 붙인다.
      */
-    private String buildDisplayFileName(SongSheet songSheet, String extension, int existingCount) {
+    private String buildDisplayFileName(SongSheet songSheet, String extension, int index) {
+        String name = baseName(songSheet);
+        if (index > 0) {
+            name = name + "_" + (index + 1);
+        }
+        return name + extension;
+    }
+
+    /** 순번·확장자를 제외한 파일명 본체 '곡제목[_키][_버전]'. */
+    private String baseName(SongSheet songSheet) {
         String title = sanitizeForFileName(songSheet.getSong().getTitle());
         if (title.isBlank()) {
             title = "악보";
         }
-        String key = sanitizeForFileName(songSheet.getSheetKey());
-
         StringBuilder base = new StringBuilder(title);
+
+        String key = sanitizeForFileName(songSheet.getSheetKey());
         if (!key.isBlank()) {
             base.append("_").append(key);
         }
-        if (existingCount > 0) {
-            base.append("_").append(existingCount + 1);
+        String version = sanitizeForFileName(songSheet.getVersionName());
+        if (!version.isBlank()) {
+            base.append("_").append(version);
         }
-        return base + extension;
+        return base.toString();
     }
 
     /** 파일명에 부적합한 문자(경로 구분자·제어문자 등)를 제거하고 앞뒤 공백/점을 정리한다. */

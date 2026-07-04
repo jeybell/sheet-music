@@ -113,4 +113,9 @@ public class SongFile {
     public void updateFilePath(String filePath) {
         this.filePath = filePath;
     }
+
+    /** 화면에 표시되는 파일명을 변경한다(저장 파일명·경로는 그대로). */
+    public void rename(String originalFileName) {
+        this.originalFileName = originalFileName;
+    }
 }

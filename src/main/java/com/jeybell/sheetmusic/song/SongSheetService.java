@@ -60,6 +60,8 @@ public class SongSheetService {
                 request.versionName(),
                 request.memo()
         );
+        // 키/버전이 바뀌면 이 악보 파일들의 표시 파일명(곡제목_키_버전)을 다시 생성한다.
+        songFileService.regenerateFileNamesForSheet(sheet);
 
         return SongSheetResponse.from(sheet);
     }

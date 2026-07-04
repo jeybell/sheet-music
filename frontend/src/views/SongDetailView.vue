@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
   X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink,
@@ -25,8 +25,20 @@ import type { SongSheetSummary, SongFile } from '../types/song'
 
 const props = defineProps<{ songId: number }>()
 const router = useRouter()
+const route = useRoute()
 const songStore = useSongStore()
 const toast = useToast()
+
+// 이 화면으로 들어온 출처(예: 콘티 상세)가 query.from 에 있으면 '목록으로'가 그리로 돌아간다.
+// 없으면 기본값(악보 목록). 내부 경로만 허용해 오픈 리다이렉트를 막는다.
+const goBackToList = () => {
+  const from = route.query.from
+  if (typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')) {
+    router.push(from)
+  } else {
+    router.push('/songs')
+  }
+}
 
 const song = computed(() => songStore.selectedSong)
 const sheets = computed(() => song.value?.sheets ?? song.value?.songSheets ?? [])
@@ -466,10 +478,10 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
       <button
         type="button"
         class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        @click="$router.push('/songs')"
+        @click="goBackToList"
       >
         <ChevronLeft class="w-4 h-4" />
-        목록으로
+        {{ typeof route.query.from === 'string' ? '돌아가기' : '목록으로' }}
       </button>
     </div>
 

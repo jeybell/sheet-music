@@ -97,6 +97,15 @@ public class SongFileController {
         return ResponseEntity.noContent().build();
     }
 
+    /** 밝기/대비 보정 등으로 편집한 이미지를 같은 파일(songFileId)의 내용으로 교체 저장한다. */
+    @PutMapping(path = "/api/song-files/{songFileId}/content", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<SongFileResponse> replaceContent(
+            @PathVariable("songFileId") Long songFileId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(songFileService.replaceContent(songFileId, file));
+    }
+
     @GetMapping("/api/song-files/{songFileId}/annotation")
     public ResponseEntity<SongFileAnnotationResponse> getAnnotation(@PathVariable("songFileId") Long songFileId) {
         return ResponseEntity.ok(songFileAnnotationService.getAnnotation(songFileId));

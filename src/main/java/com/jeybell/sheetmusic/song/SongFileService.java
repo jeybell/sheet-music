@@ -93,6 +93,40 @@ public class SongFileService {
         );
     }
 
+    /**
+     * 기존 파일의 내용을 새 blob 으로 교체한다(밝기·대비 보정 저장 등).
+     * songFileId·표시 파일명(originalFileName)은 그대로 유지하고, 저장 파일명/경로만 새로 만든다.
+     * 새 파일을 먼저 저장한 뒤 옛 파일을 지워, 중간에 실패해도 기존 파일이 남아있게 한다.
+     */
+    @Transactional
+    public SongFileResponse replaceContent(Long songFileId, MultipartFile multipartFile) {
+        if (multipartFile == null || multipartFile.isEmpty()) {
+            throw new IllegalArgumentException("File is required");
+        }
+
+        SongFile songFile = getActiveSongFile(songFileId);
+        Long songId = songFile.getSongSheet().getSong().getSongId();
+        String contentType = multipartFile.getContentType();
+        String extension = resolveExtension(cleanOriginalFileName(multipartFile.getOriginalFilename()));
+        String newStoredFileName = UUID.randomUUID() + extension;
+        String newKey = "songs/" + songId + "/" + newStoredFileName;
+
+        byte[] fileBytes;
+        try {
+            fileBytes = multipartFile.getBytes();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read upload stream", e);
+        }
+
+        storageService.store(newKey, new ByteArrayInputStream(fileBytes), multipartFile.getSize(), contentType);
+
+        String oldKey = songFile.getFilePath();
+        songFile.replaceStored(newStoredFileName, newKey, contentType, multipartFile.getSize());
+        storageService.delete(oldKey);
+
+        return SongFileResponse.from(songFile);
+    }
+
     @Transactional
     public void deleteFile(Long songFileId) {
         SongFile songFile = getActiveSongFile(songFileId);

@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -52,6 +53,7 @@ public class Song {
     private List<String> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL)
+    @OrderBy("sortNo asc, songSheetId asc")
     private List<SongSheet> sheets = new ArrayList<>();
 
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)

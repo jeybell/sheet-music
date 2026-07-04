@@ -1,5 +1,6 @@
 package com.jeybell.sheetmusic.song;
 
+import com.jeybell.sheetmusic.song.dto.SongSheetReorderRequest;
 import com.jeybell.sheetmusic.song.dto.SongSheetRequest;
 import com.jeybell.sheetmusic.song.dto.SongSheetResponse;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import java.util.Objects;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -38,6 +40,15 @@ public class SongSheetController {
     @GetMapping("/api/songs/{songId}/sheets")
     public ResponseEntity<List<SongSheetResponse>> getSheets(@PathVariable("songId") Long songId) {
         return ResponseEntity.ok(songSheetService.getSheets(songId));
+    }
+
+    @PatchMapping("/api/songs/{songId}/sheets/reorder")
+    public ResponseEntity<Void> reorderSheets(
+            @PathVariable("songId") Long songId,
+            @RequestBody SongSheetReorderRequest request
+    ) {
+        songSheetService.reorderSheets(songId, request.songSheetIds());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/api/song-sheets/{songSheetId}")

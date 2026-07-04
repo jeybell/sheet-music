@@ -3,14 +3,14 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink,
+  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { useToast } from '../composables/useToast'
 import { deleteSong, updateSong, updateLyrics, getAllTags, addSongLink, updateSongLink, deleteSongLink, getSongSetlistHistory } from '../apis/songApi'
 import type { SongSetlistHistory } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
-import { createSongSheet, deleteSongSheet, updateSongSheet } from '../apis/songSheetApi'
+import { createSongSheet, deleteSongSheet, updateSongSheet, reorderSongSheets } from '../apis/songSheetApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
@@ -188,6 +188,7 @@ const sheetUpdateError = ref('')
 
 const startEditSheet = (sheet: SongSheetSummary) => {
   editingSheetId.value = sheet.songSheetId
+  expandedSheetId.value = sheet.songSheetId
   sheetEditForm.sheetKey = sheet.sheetKey ?? ''
   sheetEditForm.versionName = sheet.versionName ?? ''
   sheetEditForm.memo = sheet.memo ?? ''
@@ -233,6 +234,65 @@ const handleDeleteSheet = async (sheet: SongSheetSummary) => {
   } finally {
     isDeleting.value = false
   }
+}
+
+// ── 악보 버전 아코디언: 한 번에 한 버전만 펼침 (누르면 나머지는 접힘)
+const expandedSheetId = ref<number | null>(null)
+const toggleSheet = (id: number) => {
+  expandedSheetId.value = expandedSheetId.value === id ? null : id
+}
+watch(sheets, (list) => {
+  const ids = list.map((s) => s.songSheetId)
+  if (expandedSheetId.value == null) {
+    expandedSheetId.value = ids[0] ?? null
+  } else if (!ids.includes(expandedSheetId.value)) {
+    // 펼쳐둔 버전이 사라졌으면(삭제 등) 첫 버전으로
+    expandedSheetId.value = ids[0] ?? null
+  }
+}, { immediate: true })
+
+// ── 악보 버전 드래그 순서 변경 (Pointer Events: 마우스/터치/펜 공통, 변경 즉시 자동 저장)
+const sheetDragIndex = ref<number | null>(null)
+const sheetDragOverIndex = ref<number | null>(null)
+
+const onSheetHandleDown = (e: PointerEvent, index: number) => {
+  sheetDragIndex.value = index
+  sheetDragOverIndex.value = index
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+}
+const onSheetHandleMove = (e: PointerEvent) => {
+  if (sheetDragIndex.value === null) return
+  e.preventDefault()
+  const target = document.elementFromPoint(e.clientX, e.clientY)
+  const card = target?.closest<HTMLElement>('[data-sheet-drag-index]')
+  if (card) sheetDragOverIndex.value = Number(card.dataset.sheetDragIndex)
+}
+const finishSheetDrag = async () => {
+  const from = sheetDragIndex.value
+  const to = sheetDragOverIndex.value
+  sheetDragIndex.value = null
+  sheetDragOverIndex.value = null
+  if (from === null || to === null || from === to) return
+
+  const reordered = [...sheets.value]
+  const [moved] = reordered.splice(from, 1)
+  reordered.splice(to, 0, moved)
+  try {
+    await reorderSongSheets(props.songId, reordered.map((s) => s.songSheetId))
+    await songStore.fetchSong(props.songId)
+    toast.success('악보 버전 순서를 저장했어요')
+  } catch (e) {
+    await songStore.fetchSong(props.songId)
+    alert(extractApiError(e, '순서 저장에 실패했습니다.'))
+  }
+}
+const onSheetHandleUp = (e: PointerEvent) => {
+  ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+  void finishSheetDrag()
+}
+const onSheetHandleCancel = () => {
+  sheetDragIndex.value = null
+  sheetDragOverIndex.value = null
 }
 
 // ── 파일 업로드
@@ -964,7 +1024,46 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
             </p>
 
             <div v-else class="flex flex-col gap-3">
-              <Card v-for="sheet in sheets" :key="sheet.songSheetId" class="p-5">
+              <Card
+                v-for="(sheet, idx) in sheets"
+                :key="sheet.songSheetId"
+                :data-sheet-drag-index="idx"
+                class="p-0 overflow-hidden transition-shadow"
+                :class="{ 'ring-2 ring-primary ring-offset-1 ring-offset-background': sheetDragOverIndex === idx && sheetDragIndex !== idx }"
+              >
+                <!-- 아코디언 헤더: 클릭 시 펼침/접힘, 손잡이로 순서 변경 -->
+                <div class="flex items-center gap-2 px-4 py-3">
+                  <button
+                    type="button"
+                    class="shrink-0 -ml-1 p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none"
+                    aria-label="순서 변경 손잡이"
+                    @pointerdown="onSheetHandleDown($event, idx)"
+                    @pointermove="onSheetHandleMove"
+                    @pointerup="onSheetHandleUp"
+                    @pointercancel="onSheetHandleCancel"
+                    @click.stop
+                  >
+                    <GripVertical class="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    class="flex-1 min-w-0 flex items-center gap-2 flex-wrap text-left"
+                    @click="toggleSheet(sheet.songSheetId)"
+                  >
+                    <Badge v-if="sheet.sheetKey" variant="violet">{{ sheet.sheetKey }}</Badge>
+                    <span v-if="sheet.versionName" class="text-sm font-medium text-foreground">{{ sheet.versionName }}</span>
+                    <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-sm text-muted-foreground">버전명 없음</span>
+                    <span v-if="sheet.files?.length" class="text-xs text-muted-foreground">· {{ sheet.files.length }}개 파일</span>
+                  </button>
+                  <ChevronDown
+                    class="w-4 h-4 text-muted-foreground transition-transform shrink-0"
+                    :class="{ 'rotate-180': expandedSheetId === sheet.songSheetId }"
+                    @click="toggleSheet(sheet.songSheetId)"
+                  />
+                </div>
+
+                <!-- 펼친 내용 -->
+                <div v-if="expandedSheetId === sheet.songSheetId" class="px-4 pb-4 border-t border-border pt-3">
                 <!-- 인라인 수정 폼 -->
                 <template v-if="editingSheetId === sheet.songSheetId">
                   <div class="flex items-center justify-between mb-4">
@@ -998,22 +1097,15 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
 
                 <!-- 기본 뷰 -->
                 <template v-else>
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <Badge v-if="sheet.sheetKey" variant="violet">{{ sheet.sheetKey }}</Badge>
-                      <span v-if="sheet.versionName" class="text-sm font-medium text-foreground">{{ sheet.versionName }}</span>
-                      <span v-if="!sheet.sheetKey && !sheet.versionName" class="text-sm text-muted-foreground">버전명 없음</span>
-                    </div>
-                    <div class="flex gap-2">
-                      <Button variant="outline" size="sm" @click="startEditSheet(sheet)">
-                        <Pencil class="w-3.5 h-3.5" />
-                        수정
-                      </Button>
-                      <Button variant="destructive" size="sm" :disabled="isDeleting" @click="handleDeleteSheet(sheet)">
-                        <Trash2 class="w-3.5 h-3.5" />
-                        삭제
-                      </Button>
-                    </div>
+                  <div class="flex items-center justify-end gap-2 mb-3">
+                    <Button variant="outline" size="sm" @click="startEditSheet(sheet)">
+                      <Pencil class="w-3.5 h-3.5" />
+                      수정
+                    </Button>
+                    <Button variant="destructive" size="sm" :disabled="isDeleting" @click="handleDeleteSheet(sheet)">
+                      <Trash2 class="w-3.5 h-3.5" />
+                      삭제
+                    </Button>
                   </div>
                   <p v-if="sheet.memo" class="text-xs text-muted-foreground mb-3">{{ sheet.memo }}</p>
                 </template>
@@ -1094,6 +1186,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                   <span v-if="uploadErrors[sheet.songSheetId]" class="text-xs text-destructive">
                     {{ uploadErrors[sheet.songSheetId] }}
                   </span>
+                </div>
                 </div>
               </Card>
             </div>

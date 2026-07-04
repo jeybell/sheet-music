@@ -37,6 +37,9 @@ public class SongSheet {
     @Column(columnDefinition = "TEXT")
     private String memo;
 
+    @Column(name = "sort_no", nullable = false)
+    private int sortNo = 0;
+
     @OneToMany(mappedBy = "songSheet")
     private List<SongFile> files = new ArrayList<>();
 
@@ -60,6 +63,10 @@ public class SongSheet {
         this.sheetKey = sheetKey;
         this.versionName = versionName;
         this.memo = memo;
+    }
+
+    public void updateSortNo(int sortNo) {
+        this.sortNo = sortNo;
     }
 
     public void softDelete() {
@@ -88,6 +95,10 @@ public class SongSheet {
 
     public String getMemo() {
         return memo;
+    }
+
+    public int getSortNo() {
+        return sortNo;
     }
 
     public List<SongFile> getFiles() {

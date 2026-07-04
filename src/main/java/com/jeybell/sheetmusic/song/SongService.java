@@ -99,6 +99,10 @@ public class SongService {
                 request.youtubeUrl()
         );
         song.updateTags(request.tags());
+        // 제목이 바뀌면 이 곡의 모든 활성 악보 파일 표시명(곡제목_키_버전)을 다시 생성한다.
+        song.getSheets().stream()
+                .filter(SongSheet::isActive)
+                .forEach(songFileService::regenerateFileNamesForSheet);
 
         return SongResponse.from(song);
     }

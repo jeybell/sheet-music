@@ -59,6 +59,27 @@ export const deleteSong = async (songId: number) => {
   await http.delete(`/api/songs/${songId}`);
 };
 
+export interface SongMergeResponse {
+  targetSongId: number;
+  mergedSongCount: number;
+  movedSheetCount: number;
+  removedDuplicateSheetCount: number;
+  redirectedSetlistItemCount: number;
+}
+
+/** 중복 곡 병합: sourceSongIds 곡들을 targetId 곡으로 합친다(원본은 soft delete). */
+export const mergeSongs = async (
+  targetId: number,
+  sourceSongIds: number[],
+  dedupeSheets = true,
+): Promise<SongMergeResponse> => {
+  const { data } = await http.post<SongMergeResponse>(`/api/songs/${targetId}/merge`, {
+    sourceSongIds,
+    dedupeSheets,
+  });
+  return data;
+};
+
 export const getAllTags = async (): Promise<string[]> => {
   const { data } = await http.get<string[]>("/api/songs/tags");
   return data;

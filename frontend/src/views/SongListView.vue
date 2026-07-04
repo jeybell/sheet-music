@@ -1,13 +1,66 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Plus, Music, Search, X, FolderUp, Loader2, ChevronDown } from '@lucide/vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Plus, Music, Search, X, FolderUp, Loader2, ChevronDown, GitMerge, CheckSquare } from '@lucide/vue'
 import SongList from '../components/SongList.vue'
 import Select from '../components/ui/Select.vue'
+import Button from '../components/ui/Button.vue'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
 import { useSongStore } from '../stores/songStore'
-import { getAllTags } from '../apis/songApi'
+import { getAllTags, mergeSongs } from '../apis/songApi'
+import { useToast } from '../composables/useToast'
+import { extractApiError } from '../composables/useApiError'
 
 const songStore = useSongStore()
+const toast = useToast()
+
+// ── 곡 합치기(병합) 선택 모드 ──────────────────────────────
+const selectMode = ref(false)
+const selectedIds = ref<number[]>([])
+const showMergeModal = ref(false)
+const mergeTargetId = ref<number | null>(null)
+const isMerging = ref(false)
+
+const selectedSongs = computed(() =>
+  songStore.listSongs.filter((s) => selectedIds.value.includes(s.songId)),
+)
+
+const toggleSelectMode = () => {
+  selectMode.value = !selectMode.value
+  selectedIds.value = []
+}
+
+const toggleSelect = (songId: number) => {
+  const idx = selectedIds.value.indexOf(songId)
+  if (idx === -1) selectedIds.value.push(songId)
+  else selectedIds.value.splice(idx, 1)
+}
+
+const openMergeModal = () => {
+  // 기본 대상: 선택한 곡 중 가장 위(먼저 선택 목록에 있는) 곡
+  mergeTargetId.value = selectedIds.value[0] ?? null
+  showMergeModal.value = true
+}
+
+const confirmMerge = async () => {
+  if (mergeTargetId.value == null || isMerging.value) return
+  const target = mergeTargetId.value
+  const sources = selectedIds.value.filter((id) => id !== target)
+  if (sources.length === 0) return
+  isMerging.value = true
+  try {
+    const res = await mergeSongs(target, sources)
+    showMergeModal.value = false
+    selectMode.value = false
+    selectedIds.value = []
+    toast.success(`${res.mergedSongCount}곡을 합쳤어요 (악보 ${res.movedSheetCount}개 이관)`)
+    runSearch()
+    allTags.value = await getAllTags()
+  } catch (e) {
+    toast.error(extractApiError(e, '곡 합치기에 실패했습니다.'))
+  } finally {
+    isMerging.value = false
+  }
+}
 
 const query = ref('')
 const songKey = ref('')
@@ -119,7 +172,19 @@ onBeforeUnmount(() => {
     <div class="flex items-center justify-between mb-5">
       <h1 class="text-xl font-bold text-foreground">악보</h1>
       <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border text-sm font-medium transition-colors"
+          :class="selectMode
+            ? 'border-primary bg-primary-soft text-primary'
+            : 'border-border bg-card text-foreground hover:bg-muted'"
+          @click="toggleSelectMode"
+        >
+          <CheckSquare class="w-4 h-4" />
+          {{ selectMode ? '선택 취소' : '곡 합치기' }}
+        </button>
         <RouterLink
+          v-if="!selectMode"
           to="/songs/bulk"
           class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
@@ -127,6 +192,7 @@ onBeforeUnmount(() => {
           일괄 업로드
         </RouterLink>
         <RouterLink
+          v-if="!selectMode"
           to="/songs/new"
           class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
         >
@@ -134,6 +200,11 @@ onBeforeUnmount(() => {
           곡 등록
         </RouterLink>
       </div>
+    </div>
+
+    <!-- 선택 모드 안내 -->
+    <div v-if="selectMode" class="mb-4 rounded-lg border border-primary/30 bg-primary-soft/30 px-4 py-2.5 text-sm text-foreground">
+      합칠 곡들을 선택하세요. 선택한 곡을 하나로 합치고, 남길 곡을 다음 단계에서 고릅니다.
     </div>
 
     <!-- 검색 영역 -->
@@ -258,7 +329,12 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-else>
-      <SongList :songs="songStore.listSongs" />
+      <SongList
+        :songs="songStore.listSongs"
+        :selectable="selectMode"
+        :selected-ids="selectedIds"
+        @toggle="toggleSelect"
+      />
 
       <!-- 무한 스크롤 감지 지점 -->
       <div ref="sentinel" class="h-4" />
@@ -267,5 +343,66 @@ onBeforeUnmount(() => {
         더 불러오는 중...
       </div>
     </template>
+
+    <!-- 선택 모드 하단 액션 바 -->
+    <div
+      v-if="selectMode"
+      class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur px-4 py-3"
+    >
+      <div class="max-w-5xl mx-auto flex items-center gap-3">
+        <span class="text-sm text-foreground"><span class="font-semibold text-primary">{{ selectedIds.length }}</span>곡 선택됨</span>
+        <button
+          v-if="selectedIds.length > 0"
+          type="button"
+          class="text-xs text-muted-foreground hover:text-foreground"
+          @click="selectedIds = []"
+        >선택 해제</button>
+        <Button class="ml-auto" :disabled="selectedIds.length < 2" @click="openMergeModal">
+          <GitMerge class="w-4 h-4" />
+          합치기 ({{ selectedIds.length }})
+        </Button>
+      </div>
+    </div>
+
+    <!-- 병합 대상 선택 모달 -->
+    <div
+      v-if="showMergeModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      @click.self="showMergeModal = false"
+    >
+      <div class="w-full max-w-md rounded-xl bg-card border border-border shadow-lg p-5 max-h-[85vh] flex flex-col">
+        <h2 class="text-base font-semibold text-foreground mb-1">곡 합치기</h2>
+        <p class="text-sm text-muted-foreground mb-4">
+          <span class="font-medium text-foreground">남길 곡</span>을 하나 고르세요. 나머지 곡의 악보·콘티 참조가 이 곡으로 합쳐지고, 나머지 곡은 삭제됩니다.
+        </p>
+        <div class="flex flex-col gap-1.5 overflow-y-auto -mx-1 px-1">
+          <label
+            v-for="song in selectedSongs"
+            :key="song.songId"
+            class="flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors"
+            :class="mergeTargetId === song.songId ? 'border-primary bg-primary-soft/30' : 'border-border hover:bg-muted'"
+          >
+            <input
+              type="radio"
+              name="merge-target"
+              class="accent-primary"
+              :value="song.songId"
+              :checked="mergeTargetId === song.songId"
+              @change="mergeTargetId = song.songId"
+            />
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-foreground truncate">{{ song.title }}</p>
+              <p class="text-xs text-muted-foreground truncate">{{ song.artist ?? '아티스트 미상' }}</p>
+            </div>
+          </label>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <Button :disabled="mergeTargetId == null || isMerging" @click="confirmMerge">
+            {{ isMerging ? '합치는 중...' : '이 곡으로 합치기' }}
+          </Button>
+          <Button variant="outline" :disabled="isMerging" @click="showMergeModal = false">취소</Button>
+        </div>
+      </div>
+    </div>
   </DefaultLayout>
 </template>

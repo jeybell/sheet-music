@@ -61,7 +61,7 @@ public class SongMergeService {
         int removedDuplicates = 0;
         if (dedupeSheets) {
             List<SongSheet> sheets =
-                    songSheetRepository.findAllBySongSongIdAndDeletedAtIsNullOrderBySongSheetIdAsc(targetId);
+                    songSheetRepository.findAllBySongSongIdAndDeletedAtIsNullOrderBySortNoAscSongSheetIdAsc(targetId);
             Map<String, SongSheet> seen = new HashMap<>();
             for (SongSheet sheet : sheets) {
                 String signature = signatureOf(sheet);

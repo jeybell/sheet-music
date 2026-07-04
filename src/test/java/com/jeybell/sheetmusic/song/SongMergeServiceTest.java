@@ -74,7 +74,7 @@ class SongMergeServiceTest {
         em.clear();
 
         List<SongSheet> targetSheets =
-                songSheetRepository.findAllBySongSongIdAndDeletedAtIsNullOrderBySongSheetIdAsc(target.getSongId());
+                songSheetRepository.findAllBySongSongIdAndDeletedAtIsNullOrderBySortNoAscSongSheetIdAsc(target.getSongId());
         assertThat(targetSheets).extracting(SongSheet::getSheetKey).containsExactlyInAnyOrder("G", "A");
         assertThat(songRepository.findActiveBySongIdWithSheets(source.getSongId())).isEmpty();
     }

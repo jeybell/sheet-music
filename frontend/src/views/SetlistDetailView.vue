@@ -848,7 +848,7 @@ watch(() => props.setlistId, load)
                       type="button"
                       class="text-sm font-semibold text-foreground hover:text-primary hover:underline text-left"
                       title="곡 상세 보기"
-                      @click.stop="router.push(`/songs/${item.songId}`)"
+                      @click.stop="router.push({ path: `/songs/${item.songId}`, query: { from: `/setlists/${props.setlistId}` } })"
                     >{{ item.songTitle }}</button>
                     <span v-if="item.songArtist" class="text-xs text-muted-foreground">{{ item.songArtist }}</span>
                   </div>

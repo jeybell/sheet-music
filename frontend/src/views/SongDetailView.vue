@@ -1137,15 +1137,6 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                     </div>
                     <div class="flex gap-1.5 shrink-0 ml-2">
                       <a
-                        :href="fileUrl(file.songFileId, 'view')"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label="보기"
-                      >
-                        <Eye class="w-3.5 h-3.5" />
-                      </a>
-                      <a
                         :href="fileUrl(file.songFileId, 'download')"
                         :download="file.originalFileName ?? 'sheet'"
                         class="p-1 text-muted-foreground hover:text-foreground transition-colors"

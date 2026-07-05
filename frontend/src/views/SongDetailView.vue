@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical,
+  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical, SunMedium,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { useToast } from '../composables/useToast'
@@ -102,6 +102,15 @@ const viewerSongs = computed<ViewerSong[]>(() =>
     }],
   })),
 )
+
+// 악보 관리 목록의 개별 파일에서 바로 밝기 보정을 열 수 있도록, 해당 파일의
+// 슬라이드 인덱스를 찾아 뷰어를 그 위치로 연다.
+const openViewerAtFile = (fileId: number) => {
+  const index = slides.value.findIndex((slide) => slide.file.songFileId === fileId)
+  if (index === -1) return
+  currentIndex.value = index
+  showViewer.value = true
+}
 
 const onKey = (e: KeyboardEvent) => {
   if (e.key === 'ArrowLeft') go(-1)
@@ -1166,6 +1175,15 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                       </span>
                     </div>
                     <div class="flex gap-1.5 shrink-0 ml-2">
+                      <button
+                        v-if="!isPdf(file)"
+                        type="button"
+                        class="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="밝기 보정"
+                        @click="openViewerAtFile(file.songFileId)"
+                      >
+                        <SunMedium class="w-3.5 h-3.5" />
+                      </button>
                       <a
                         :href="fileUrl(file.songFileId, 'download')"
                         :download="file.originalFileName ?? 'sheet'"

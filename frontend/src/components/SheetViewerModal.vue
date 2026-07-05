@@ -367,7 +367,12 @@ const closeBrightnessEditor = () => {
   revokeEditingImageUrl()
 }
 
-/** 이미지 평균 밝기를 재서, 어두우면 밝기를 올리고 대비를 살짝 높이는 간단한 자동 보정. */
+/**
+ * 악보는 대부분 흰 배경 위에 어두운 음표/글자가 놓인 구도라, 평균 밝기가 아니라
+ * "배경(가장 밝은 축에 속하는 화소들)"의 밝기를 기준으로 보정해야 배경이 확실히
+ * 흰색에 가까워진다. 샘플 화소를 밝기순으로 정렬해 상위 10% 지점(배경으로 추정)의
+ * 값이 거의 흰색(250)이 되도록 배율을 계산한다.
+ */
 const applyAutoLevel = () => {
   const img = editingImage.value
   if (!img) return
@@ -379,15 +384,15 @@ const applyAutoLevel = () => {
   if (!ctx) return
   ctx.drawImage(img, 0, 0, sampleSize, sampleSize)
   const { data } = ctx.getImageData(0, 0, sampleSize, sampleSize)
-  let sum = 0
-  const pixelCount = data.length / 4
+  const luminances: number[] = []
   for (let i = 0; i < data.length; i += 4) {
-    sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+    luminances.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2])
   }
-  const avgLuminance = Math.max(sum / pixelCount, 1)
-  const target = 170 // 대부분 흰 배경인 악보 이미지가 밝게 보이도록 하는 목표 밝기
-  const brightnessPercent = Math.round(((target - avgLuminance) / avgLuminance) * 100)
-  brightness.value = Math.min(Math.max(brightnessPercent, -50), 150)
+  luminances.sort((a, b) => a - b)
+  const backgroundLuminance = Math.max(luminances[Math.floor(luminances.length * 0.9)], 1)
+  const target = 250
+  const brightnessPercent = Math.round(((target - backgroundLuminance) / backgroundLuminance) * 100)
+  brightness.value = Math.min(Math.max(brightnessPercent, -50), 400)
   contrast.value = 25
 }
 
@@ -665,7 +670,7 @@ onUnmounted(() => {
         <p v-if="brightnessError && editingImageUrl" class="text-xs text-red-400">{{ brightnessError }}</p>
         <div class="flex items-center gap-3">
           <span class="text-xs text-zinc-300 w-12 shrink-0">밝기</span>
-          <input v-model.number="brightness" type="range" min="-100" max="150" class="flex-1" />
+          <input v-model.number="brightness" type="range" min="-100" max="400" class="flex-1" />
           <span class="text-xs text-zinc-400 w-10 text-right shrink-0">{{ brightness }}</span>
         </div>
         <div class="flex items-center gap-3">

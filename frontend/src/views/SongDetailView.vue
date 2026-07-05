@@ -12,6 +12,8 @@ import type { SongSetlistHistory } from '../apis/songApi'
 import { deleteSongFile, uploadSongSheetFile } from '../apis/songFileApi'
 import { createSongSheet, deleteSongSheet, updateSongSheet, reorderSongSheets } from '../apis/songSheetApi'
 import DefaultLayout from '../layouts/DefaultLayout.vue'
+import SheetViewerModal from '../components/SheetViewerModal.vue'
+import type { ViewerSong } from '../components/SheetViewerModal.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import Textarea from '../components/ui/Textarea.vue'
@@ -82,6 +84,24 @@ const go = (delta: number) => {
 const goTo = (i: number) => { currentIndex.value = i }
 
 const slideLabel = (slide: Slide) => slide.sheet.versionName || slide.sheet.sheetKey || '버전'
+
+// ── 전체화면 뷰어(밝기 보정 등 편집 기능 포함)
+// 슬라이드 1개(악보 버전 1개의 파일 1장)를 SheetViewerModal 의 "song" 1개로 매핑해,
+// 모달의 이전/다음 탐색이 이 화면의 슬라이드 탐색과 동일하게 동작하도록 한다.
+const showViewer = ref(false)
+const viewerSongs = computed<ViewerSong[]>(() =>
+  slides.value.map((slide) => ({
+    title: song.value?.title ?? '',
+    artist: song.value?.artist ?? null,
+    sheetKey: slide.sheet.sheetKey ?? null,
+    versionName: slide.sheet.versionName ?? null,
+    files: [{
+      songFileId: slide.file.songFileId,
+      originalFileName: slide.file.originalFileName ?? null,
+      contentType: slide.file.contentType ?? null,
+    }],
+  })),
+)
 
 const onKey = (e: KeyboardEvent) => {
   if (e.key === 'ArrowLeft') go(-1)
@@ -609,11 +629,21 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 </span>
               </div>
               <div class="absolute top-2 right-2 flex items-center gap-1.5">
+                <button
+                  v-if="!isPdf(currentSlide.file)"
+                  type="button"
+                  aria-label="전체화면"
+                  class="w-7 h-7 rounded-full bg-background/80 backdrop-blur border border-border flex items-center justify-center text-foreground hover:bg-background"
+                  @click="showViewer = true"
+                >
+                  <Maximize2 class="w-3.5 h-3.5" />
+                </button>
                 <a
+                  v-else
                   :href="fileUrl(currentSlide.file.songFileId)"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="전체화면"
+                  aria-label="새 탭에서 열기"
                   class="w-7 h-7 rounded-full bg-background/80 backdrop-blur border border-border flex items-center justify-center text-foreground hover:bg-background"
                 >
                   <Maximize2 class="w-3.5 h-3.5" />
@@ -1199,4 +1229,12 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
       </div>
     </template>
   </DefaultLayout>
+
+  <SheetViewerModal
+    v-if="showViewer"
+    :songs="viewerSongs"
+    :setlist-title="song?.title ?? null"
+    :initial-index="currentIndex"
+    @close="showViewer = false"
+  />
 </template>

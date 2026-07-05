@@ -118,4 +118,12 @@ public class SongFile {
     public void rename(String originalFileName) {
         this.originalFileName = originalFileName;
     }
+
+    /** 파일 실제 내용을 교체한다(밝기 보정 등). 표시 파일명(originalFileName)·id 는 유지. */
+    public void replaceStored(String storedFileName, String filePath, String contentType, Long fileSize) {
+        this.storedFileName = storedFileName;
+        this.filePath = filePath;
+        this.contentType = contentType;
+        this.fileSize = fileSize;
+    }
 }

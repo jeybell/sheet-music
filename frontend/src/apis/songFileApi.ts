@@ -21,6 +21,19 @@ export const deleteSongFile = async (songFileId: number) => {
   await http.delete(`/api/song-files/${songFileId}`);
 };
 
+/** 밝기·대비 보정 등으로 편집한 이미지를 같은 파일 내용으로 교체 저장한다. */
+export const replaceSongFileContent = async (songFileId: number, file: Blob, fileName: string) => {
+  const formData = new FormData();
+  formData.append("file", file, fileName);
+
+  const { data } = await http.put<SongFile>(
+    `/api/song-files/${songFileId}/content`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return data;
+};
+
 export interface AnnotationStrokePoint {
   x: number;
   y: number;

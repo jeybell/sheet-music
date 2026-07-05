@@ -403,6 +403,10 @@ const saveBrightnessEdit = async () => {
     canvas.height = img.naturalHeight
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('canvas unsupported')
+    // 투명 배경 PNG가 어두운 뷰어 배경에 비쳐 어둡게 보이는 문제를 막기 위해
+    // 흰 배경을 먼저 채운 뒤 그 위에 이미지를 그린다(알파를 흰색으로 플래튼).
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.filter = cssFilter.value
     ctx.drawImage(img, 0, 0)
 

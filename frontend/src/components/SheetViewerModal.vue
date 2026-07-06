@@ -568,7 +568,7 @@ onUnmounted(() => {
             <img
               :src="fileUrl(file.songFileId)"
               :alt="file.originalFileName ?? '악보'"
-              class="max-w-full max-h-[80vh] object-contain rounded shadow-lg block"
+              class="max-w-full max-h-[80vh] object-contain rounded shadow-lg block bg-white"
               @error="(e) => ((e.target as HTMLImageElement).style.display = 'none')"
               @load="() => { void ensureAnnotationLoaded(file.songFileId); syncCanvasSize(file.songFileId) }"
             />
@@ -661,7 +661,7 @@ onUnmounted(() => {
           v-else-if="editingImageUrl"
           :src="editingImageUrl"
           alt="편집 중인 악보"
-          class="max-w-full max-h-full object-contain rounded shadow-lg"
+          class="max-w-full max-h-full object-contain rounded shadow-lg bg-white"
           :style="{ filter: cssFilter }"
         />
       </div>

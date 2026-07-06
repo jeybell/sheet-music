@@ -591,7 +591,7 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                 v-if="!isPdf(currentSlide.file)"
                 :src="fileUrl(currentSlide.file.songFileId)"
                 :alt="currentSlide.file.originalFileName ?? '악보'"
-                class="max-h-full w-full object-contain"
+                class="max-h-full w-full object-contain bg-white"
               />
               <!-- PDF 슬라이드 -->
               <div v-else class="flex flex-col items-center gap-3 py-20 text-center px-6">

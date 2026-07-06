@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, X, Download, Pencil, Eraser, Undo2, Trash2, SunMedium, Wand2 } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, X, Download, Pencil, Eraser, Undo2, Trash2, PaintBucket } from '@lucide/vue'
 import { jsPDF } from 'jspdf'
 import { getSongFileAnnotation, saveSongFileAnnotation, replaceSongFileContent } from '../apis/songFileApi'
 import type { AnnotationStroke } from '../apis/songFileApi'
@@ -33,7 +33,7 @@ const isDownloading = ref(false)
 const prev = () => { if (currentIndex.value > 0) currentIndex.value-- }
 const next = () => { if (currentIndex.value < props.songs.length - 1) currentIndex.value++ }
 
-// 밝기 보정 저장 후 같은 URL이 브라우저에 캐시되어 옛 이미지가 보이는 걸 막기 위한 버전 쿼리.
+// 배경 흰색 저장 후 같은 URL이 브라우저에 캐시되어 옛 이미지가 보이는 걸 막기 위한 버전 쿼리.
 const fileVersions = reactive<Record<number, number>>({})
 
 const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
@@ -212,7 +212,6 @@ const loadAnnotationsForCurrentSong = async () => {
 watch(currentSong, () => {
   void flushSaves() // 곡 전환 시 이전 곡의 미저장 필기 저장
   void loadAnnotationsForCurrentSong()
-  closeBrightnessEditor() // 곡을 넘기면 편집 중이던 밝기 보정 오버레이는 닫는다
 })
 
 let activeStroke: AnnotationStroke | null = null
@@ -309,123 +308,56 @@ const onWindowResize = () => {
   for (const fileId of canvasEls.keys()) syncCanvasSize(fileId)
 }
 
-// ── 악보 이미지 밝기·대비 보정 ──────────────────────────────
-interface BrightnessTarget {
+// ── 악보 이미지 배경 흰색으로 저장 ──────────────────────────
+// (이전의 "밝기·대비 보정" UI는 제거. 투명 PNG가 어둡게 보이는 문제는 표시 시점에
+// bg-white 로 이미 해결되므로, 여기서는 그 결과를 파일 자체에 굽는 단순한 저장 동작만 남긴다.)
+interface WhiteBgTarget {
   songFileId: number
   originalFileName: string | null
   contentType: string | null
 }
-const editingFile = ref<BrightnessTarget | null>(null)
-const editingImage = ref<HTMLImageElement | null>(null)
-const editingImageUrl = ref<string | null>(null)
-const isLoadingEditImage = ref(false)
-const brightness = ref(0) // -100..100
-const contrast = ref(0) // -100..100
-const isSavingBrightness = ref(false)
-const brightnessError = ref('')
+const whiteBgSavingId = ref<number | null>(null)
 
-const cssFilter = computed(() => `brightness(${1 + brightness.value / 100}) contrast(${1 + contrast.value / 100})`)
-
-const revokeEditingImageUrl = () => {
-  if (editingImageUrl.value) {
-    URL.revokeObjectURL(editingImageUrl.value)
-    editingImageUrl.value = null
-  }
-}
-
-const openBrightnessEditor = async (file: BrightnessTarget) => {
-  brightnessError.value = ''
-  brightness.value = 0
-  contrast.value = 0
-  editingFile.value = file
-  editingImage.value = null
-  isLoadingEditImage.value = true
+const saveWhiteBackground = async (file: WhiteBgTarget) => {
+  if (whiteBgSavingId.value != null) return
+  if (!confirm('이 악보의 배경을 흰색으로 저장할까요? 원본 파일이 대체됩니다.')) return
+  whiteBgSavingId.value = file.songFileId
   try {
-    // fetch 로 blob 을 받아 Image 를 만들면 <canvas>에서 픽셀을 읽어도(getImageData/toBlob)
+    // fetch 로 blob 을 받아 Image 를 만들면 <canvas>에서 픽셀을 읽어도(toBlob)
     // cross-origin taint 가 나지 않는다(다른 도메인의 <img> 를 바로 그리면 오류가 날 수 있음).
     const blob = await fetch(fileUrl(file.songFileId)).then((r) => r.blob())
-    revokeEditingImageUrl()
     const url = URL.createObjectURL(blob)
-    editingImageUrl.value = url
     const img = new Image()
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve()
-      img.onerror = () => reject(new Error('이미지를 불러오지 못했습니다.'))
-      img.src = url
-    })
-    editingImage.value = img
-  } catch {
-    brightnessError.value = '이미지를 불러오지 못했습니다.'
-  } finally {
-    isLoadingEditImage.value = false
-  }
-}
+    try {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('이미지를 불러오지 못했습니다.'))
+        img.src = url
+      })
+    } finally {
+      URL.revokeObjectURL(url)
+    }
 
-const closeBrightnessEditor = () => {
-  editingFile.value = null
-  editingImage.value = null
-  revokeEditingImageUrl()
-}
-
-/**
- * 악보는 대부분 흰 배경 위에 어두운 음표/글자가 놓인 구도라, 평균 밝기가 아니라
- * "배경(가장 밝은 축에 속하는 화소들)"의 밝기를 기준으로 보정해야 배경이 확실히
- * 흰색에 가까워진다. 샘플 화소를 밝기순으로 정렬해 상위 10% 지점(배경으로 추정)의
- * 값이 거의 흰색(250)이 되도록 배율을 계산한다.
- */
-const applyAutoLevel = () => {
-  const img = editingImage.value
-  if (!img) return
-  const sampleSize = 64
-  const canvas = document.createElement('canvas')
-  canvas.width = sampleSize
-  canvas.height = sampleSize
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-  ctx.drawImage(img, 0, 0, sampleSize, sampleSize)
-  const { data } = ctx.getImageData(0, 0, sampleSize, sampleSize)
-  const luminances: number[] = []
-  for (let i = 0; i < data.length; i += 4) {
-    luminances.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2])
-  }
-  luminances.sort((a, b) => a - b)
-  const backgroundLuminance = Math.max(luminances[Math.floor(luminances.length * 0.9)], 1)
-  const target = 250
-  const brightnessPercent = Math.round(((target - backgroundLuminance) / backgroundLuminance) * 100)
-  brightness.value = Math.min(Math.max(brightnessPercent, -50), 400)
-  contrast.value = 25
-}
-
-const saveBrightnessEdit = async () => {
-  const file = editingFile.value
-  const img = editingImage.value
-  if (!file || !img || isSavingBrightness.value) return
-  isSavingBrightness.value = true
-  brightnessError.value = ''
-  try {
     const canvas = document.createElement('canvas')
     canvas.width = img.naturalWidth
     canvas.height = img.naturalHeight
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('canvas unsupported')
-    // 투명 배경 PNG가 어두운 뷰어 배경에 비쳐 어둡게 보이는 문제를 막기 위해
-    // 흰 배경을 먼저 채운 뒤 그 위에 이미지를 그린다(알파를 흰색으로 플래튼).
+    // 투명 배경 PNG의 알파를 흰색으로 플래튼한다(밝기·대비 조정 없음).
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.filter = cssFilter.value
     ctx.drawImage(img, 0, 0)
 
     const mimeType = file.contentType?.startsWith('image/') ? file.contentType : 'image/jpeg'
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, 0.92))
-    if (!blob) throw new Error('이미지 생성에 실패했습니다.')
+    const outBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, 0.92))
+    if (!outBlob) throw new Error('이미지 생성에 실패했습니다.')
 
-    await replaceSongFileContent(file.songFileId, blob, file.originalFileName ?? 'sheet')
+    await replaceSongFileContent(file.songFileId, outBlob, file.originalFileName ?? 'sheet')
     fileVersions[file.songFileId] = (fileVersions[file.songFileId] ?? 0) + 1
-    closeBrightnessEditor()
   } catch {
-    brightnessError.value = '저장에 실패했습니다. 다시 시도해주세요.'
+    alert('배경 저장에 실패했습니다. 다시 시도해주세요.')
   } finally {
-    isSavingBrightness.value = false
+    whiteBgSavingId.value = null
   }
 }
 
@@ -436,7 +368,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', onWindowResize)
   void flushSaves() // 라우트 이동 등으로 언마운트될 때 미저장 필기 저장
-  revokeEditingImageUrl()
 })
 </script>
 
@@ -581,15 +512,16 @@ onUnmounted(() => {
               @pointerup="onCanvasPointerUp($event, file.songFileId)"
               @pointercancel="onCanvasPointerUp($event, file.songFileId)"
             />
-            <!-- 밝기 보정 진입 버튼 -->
+            <!-- 배경 흰색으로 저장 -->
             <button
               v-if="!penMode"
               type="button"
-              class="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-black/60 hover:bg-black/80 text-white transition-colors"
-              @click="openBrightnessEditor(file)"
+              :disabled="whiteBgSavingId === file.songFileId"
+              class="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-black/60 hover:bg-black/80 disabled:opacity-60 text-white transition-colors"
+              @click="saveWhiteBackground(file)"
             >
-              <SunMedium class="w-3.5 h-3.5" />
-              밝기 보정
+              <PaintBucket class="w-3.5 h-3.5" />
+              {{ whiteBgSavingId === file.songFileId ? '저장 중...' : '배경 흰색으로' }}
             </button>
           </div>
         </template>
@@ -639,73 +571,6 @@ onUnmounted(() => {
       >
         {{ i + 1 }}. {{ song.title }}
       </button>
-    </div>
-
-    <!-- 밝기·대비 보정 오버레이 -->
-    <div
-      v-if="editingFile"
-      class="fixed inset-0 z-[60] bg-black/95 flex flex-col"
-      @click.self="closeBrightnessEditor"
-    >
-      <div class="flex items-center justify-between px-4 py-3 text-white bg-black/60 flex-shrink-0">
-        <span class="font-semibold text-sm">밝기·대비 보정</span>
-        <button type="button" class="p-1.5 rounded-md hover:bg-zinc-700 transition-colors" @click="closeBrightnessEditor">
-          <X class="w-5 h-5" />
-        </button>
-      </div>
-
-      <div class="flex-1 flex items-center justify-center overflow-hidden px-6 py-4">
-        <p v-if="isLoadingEditImage" class="text-zinc-400 text-sm">불러오는 중...</p>
-        <p v-else-if="brightnessError && !editingImageUrl" class="text-red-400 text-sm">{{ brightnessError }}</p>
-        <img
-          v-else-if="editingImageUrl"
-          :src="editingImageUrl"
-          alt="편집 중인 악보"
-          class="max-w-full max-h-full object-contain rounded shadow-lg bg-white"
-          :style="{ filter: cssFilter }"
-        />
-      </div>
-
-      <div class="flex flex-col gap-3 px-4 py-3 bg-black/60 flex-shrink-0">
-        <p v-if="brightnessError && editingImageUrl" class="text-xs text-red-400">{{ brightnessError }}</p>
-        <div class="flex items-center gap-3">
-          <span class="text-xs text-zinc-300 w-12 shrink-0">밝기</span>
-          <input v-model.number="brightness" type="range" min="-100" max="400" class="flex-1" />
-          <span class="text-xs text-zinc-400 w-10 text-right shrink-0">{{ brightness }}</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="text-xs text-zinc-300 w-12 shrink-0">대비</span>
-          <input v-model.number="contrast" type="range" min="-100" max="100" class="flex-1" />
-          <span class="text-xs text-zinc-400 w-10 text-right shrink-0">{{ contrast }}</span>
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            :disabled="!editingImage"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 transition-colors"
-            @click="applyAutoLevel"
-          >
-            <Wand2 class="w-3.5 h-3.5" />
-            자동 보정
-          </button>
-          <button
-            type="button"
-            :disabled="!editingImage || isSavingBrightness"
-            class="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs bg-primary text-primary-foreground disabled:opacity-50 transition-opacity hover:opacity-90"
-            @click="saveBrightnessEdit"
-          >
-            {{ isSavingBrightness ? '저장 중...' : '저장' }}
-          </button>
-          <button
-            type="button"
-            :disabled="isSavingBrightness"
-            class="px-4 py-1.5 rounded-md text-xs bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 transition-colors"
-            @click="closeBrightnessEditor"
-          >
-            취소
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>

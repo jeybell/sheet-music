@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2, Plus, Upload, FileText,
-  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical, SunMedium,
+  X, Eye, Download, Settings2, Music, Maximize2, AlignLeft, Type, ExternalLink, GripVertical, PaintBucket,
 } from '@lucide/vue'
 import { extractApiError } from '../composables/useApiError'
 import { useToast } from '../composables/useToast'
@@ -85,7 +85,7 @@ const goTo = (i: number) => { currentIndex.value = i }
 
 const slideLabel = (slide: Slide) => slide.sheet.versionName || slide.sheet.sheetKey || '버전'
 
-// ── 전체화면 뷰어(밝기 보정 등 편집 기능 포함)
+// ── 전체화면 뷰어(배경 흰색 저장 등 편집 기능 포함)
 // 슬라이드 1개(악보 버전 1개의 파일 1장)를 SheetViewerModal 의 "song" 1개로 매핑해,
 // 모달의 이전/다음 탐색이 이 화면의 슬라이드 탐색과 동일하게 동작하도록 한다.
 const showViewer = ref(false)
@@ -103,7 +103,7 @@ const viewerSongs = computed<ViewerSong[]>(() =>
   })),
 )
 
-// 악보 관리 목록의 개별 파일에서 바로 밝기 보정을 열 수 있도록, 해당 파일의
+// 악보 관리 목록의 개별 파일에서 바로 배경 흰색 저장을 열 수 있도록, 해당 파일의
 // 슬라이드 인덱스를 찾아 뷰어를 그 위치로 연다.
 const openViewerAtFile = (fileId: number) => {
   const index = slides.value.findIndex((slide) => slide.file.songFileId === fileId)
@@ -1179,10 +1179,11 @@ watch(() => props.songId, () => { loadSong(); void loadSetlistHistory() })
                         v-if="!isPdf(file)"
                         type="button"
                         class="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label="밝기 보정"
+                        aria-label="배경 흰색으로 저장"
+                        title="배경 흰색으로 저장"
                         @click="openViewerAtFile(file.songFileId)"
                       >
-                        <SunMedium class="w-3.5 h-3.5" />
+                        <PaintBucket class="w-3.5 h-3.5" />
                       </button>
                       <a
                         :href="fileUrl(file.songFileId, 'download')"

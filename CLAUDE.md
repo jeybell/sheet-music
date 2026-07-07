@@ -109,6 +109,7 @@ setlists (셋리스트/콘티)
 - **Tailwind v4**: `@custom-variant dark (&:where(.dark, .dark *))` + `@theme inline`
 - **반응형**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
 - **곡 상세**: 악보 이미지 슬라이드 캐러셀 (sheets × files 플랫화), 키보드 ←/→ 네비게이션
+- **로컬 개발 백엔드 전환**: `npm run dev`(기본) → `.env.local`의 `VITE_API_BASE_URL=https://worship-sheet.fly.dev`(Fly 프로덕션 백엔드 대상, 기존 방식 유지). 로컬에서 직접 띄운 백엔드(JDK17 `./gradlew bootRun`, 기본 포트 8080)를 쓰려면 `npm run dev:local`(Vite `--mode localdev` → `frontend/.env.localdev`가 `http://localhost:8080`으로 오버라이드). 두 모드 모두 동시에 안 켜도 되고, 커맨드만 바꿔서 그때그때 전환.
 - **로컬 개발**: `frontend/.env.local` → `VITE_API_BASE_URL=https://worship-sheet.fly.dev`
 
 ## 로컬 백엔드 실행

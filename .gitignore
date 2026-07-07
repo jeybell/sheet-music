@@ -30,6 +30,7 @@ uploads/
 .env
 .env.*
 !.env.example
+!.env.localdev
 
 *.log
 .vercel

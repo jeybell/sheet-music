@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ChevronLeft, ChevronRight, X } from '@lucide/vue'
 import { getSetlist } from '../apis/setlistApi'
 import { getSong } from '../apis/songApi'
+import { getActiveBaseUrl } from '../apis/apiBase'
 
 const props = defineProps<{ setlistId: number }>()
 const router = useRouter()
@@ -25,8 +26,7 @@ const currentIndex = ref(0)
 const currentSong = computed(() => songs.value[currentIndex.value])
 
 const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  return `${base}/api/song-files/${fileId}/${mode}`
+  return `${getActiveBaseUrl()}/api/song-files/${fileId}/${mode}`
 }
 const isPdf = (f: PresentFile) =>
   f.contentType?.includes('pdf') || f.originalFileName?.toLowerCase().endsWith('.pdf') || false

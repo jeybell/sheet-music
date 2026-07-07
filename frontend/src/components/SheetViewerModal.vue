@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X, Download, Pencil, Eraser, Undo2, Trash2, 
 import { jsPDF } from 'jspdf'
 import { getSongFileAnnotation, saveSongFileAnnotation, replaceSongFileContent } from '../apis/songFileApi'
 import type { AnnotationStroke } from '../apis/songFileApi'
+import { getActiveBaseUrl } from '../apis/apiBase'
 
 export interface ViewerSong {
   title: string
@@ -37,8 +38,7 @@ const next = () => { if (currentIndex.value < props.songs.length - 1) currentInd
 const fileVersions = reactive<Record<number, number>>({})
 
 const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  const url = `${base}/api/song-files/${fileId}/${mode}`
+  const url = `${getActiveBaseUrl()}/api/song-files/${fileId}/${mode}`
   const version = fileVersions[fileId]
   return version ? `${url}?v=${version}` : url
 }

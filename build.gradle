@@ -4,6 +4,12 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.6'
 }
 
+dependencyManagement {
+    imports {
+        mavenBom 'me.paulschwarz:spring-dotenv-bom:5.1.0'
+    }
+}
+
 group = 'com.jeybell'
 version = '0.0.1-SNAPSHOT'
 
@@ -42,6 +48,12 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     runtimeOnly 'org.postgresql:postgresql'
+
+    // 저장소 루트 .env(docker-compose 도 같이 씀, .env.example 참고)를 Spring 이
+    // 기동 시 자동으로 읽어 환경변수로 반영한다(실제 OS 환경변수가 항상 우선).
+    // developmentOnly 라 패키징된 운영 jar(Fly.io 배포)에는 포함되지 않고,
+    // 로컬 실행(Gradle bootRun, IntelliJ Run/Debug 등 어떤 방식이든)에만 적용된다.
+    developmentOnly 'me.paulschwarz:springboot3-dotenv'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

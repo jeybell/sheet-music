@@ -45,3 +45,9 @@ storage:
     access-key: ${R2_ACCESS_KEY:}
     secret-key: ${R2_SECRET_KEY:}
     bucket: ${R2_BUCKET:}
+
+logging:
+  level:
+    org.springframework.web: ${LOCAL_WEB_LOG_LEVEL:INFO}
+    org.hibernate.SQL: ${LOCAL_SQL_LOG_LEVEL:WARN}
+    org.hibernate.orm.jdbc.bind: ${LOCAL_SQL_BIND_LOG_LEVEL:WARN}

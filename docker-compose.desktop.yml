@@ -1,0 +1,22 @@
+# 회사 데스크탑에서 백엔드를 상시 구동할 때 쓰는 compose 파일.
+# DB는 Supabase(운영과 동일)를 그대로 쓰고, 로컬 postgres 컨테이너는 띄우지 않는다.
+# 사용법: docker compose --env-file .env.desktop -f docker-compose.desktop.yml up -d --build
+services:
+  backend:
+    build: .
+    container_name: sheet-music-backend-desktop
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      PORT: ${PORT:-8080}
+      STORAGE_TYPE: ${STORAGE_TYPE:-r2}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_ACCESS_KEY: ${R2_ACCESS_KEY}
+      R2_SECRET_KEY: ${R2_SECRET_KEY}
+      R2_BUCKET: ${R2_BUCKET}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}

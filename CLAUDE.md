@@ -110,3 +110,12 @@ setlists (셋리스트/콘티)
 - **반응형**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
 - **곡 상세**: 악보 이미지 슬라이드 캐러셀 (sheets × files 플랫화), 키보드 ←/→ 네비게이션
 - **로컬 개발**: `frontend/.env.local` → `VITE_API_BASE_URL=https://worship-sheet.fly.dev`
+
+## 로컬 백엔드 실행
+- **기본**: `JAVA_HOME=<jdk17 경로> ./gradlew bootRun` → 저장소 루트에 `.env`가 없으면 `application.yml` 기본값(로컬 Postgres, `localhost:5432/sheet_music`) 사용.
+- **운영(Supabase) DB에 붙여서 실행하고 싶을 때**: 저장소 루트 `.env.example`을 `.env`로 복사(gitignore 처리, 커밋 안 됨) → `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`를 Supabase 값으로 채움. `build.gradle`의 `bootRun` 태스크가 이 `.env`를 자동으로 읽어 프로세스 환경변수로 주입하므로 별도 플래그 없이 그냥 실행하면 됨:
+  ```
+  JAVA_HOME=<jdk17 경로> ./gradlew bootRun
+  ```
+  Docker Compose도 같은 `.env`를 쓰므로 파일 하나로 두 실행 방식 모두 커버됨.
+  ⚠️ 운영 DB에 쓰기까지 그대로 반영됨(회원가입·곡 등록/삭제·콘티 편집 등). 순수 조회만 필요하면 대신 읽기전용 MCP(`.mcp.json`의 `supabase-db`, `SUPABASE_READONLY_URL`)를 사용할 것.

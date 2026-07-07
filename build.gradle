@@ -55,3 +55,23 @@ tasks.named('test') {
 springBoot {
     mainClass = 'com.jeybell.sheetmusic.SheetmusicApplication'
 }
+
+// 저장소 루트 .env(docker-compose 도 같은 파일을 씀, .env.example 참고)가 있으면
+// bootRun 의 자식 프로세스 환경변수로 그대로 주입한다. 로컬에서 운영(Supabase) DB에
+// 붙이고 싶을 때 .env 의 SPRING_DATASOURCE_* 값만 Supabase 값으로 바꿔주면 되고,
+// 새 프로필/설정 파일 없이 기존 관례(.env)를 그대로 재사용한다. .env 가 없으면
+// 아무 영향 없음(application.yml 의 기본값 그대로 로컬 Postgres 사용).
+tasks.named('bootRun') {
+    def envFile = rootProject.file('.env')
+    if (envFile.exists()) {
+        def vars = [:]
+        envFile.eachLine { line ->
+            line = line.trim()
+            if (line && !line.startsWith('#') && line.contains('=')) {
+                def idx = line.indexOf('=')
+                vars[line.substring(0, idx).trim()] = line.substring(idx + 1).trim()
+            }
+        }
+        environment(vars)
+    }
+}

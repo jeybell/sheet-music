@@ -12,6 +12,28 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:sheet_user}
     password: ${SPRING_DATASOURCE_PASSWORD:sheet_pass}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Fly.io 는 유휴 시 머신을 완전히 정지하지 않고 메모리 스냅샷으로 정지(suspend)한다.
+      # 정지된 동안 Supabase 쪽에서 유휴 커넥션을 이미 끊어버릴 수 있는데, 재개 시
+      # HikariCP 풀은 그 죽은 커넥션을 여전히 idle 로 들고 있어 다음 요청(대표적으로 로그인)이
+      # "Connection is not available" 로 30초 넘게 대기하다 실패하는 문제가 있었다.
+      # minimum-idle=0 으로 유휴 커넥션을 붙들고 있지 않게 하고, idle-timeout/max-lifetime 을
+      # 짧게 잡아 커넥션이 오래 방치되지 않게 한다. connection-timeout 도 줄여 죽은 커넥션을
+      # 오래 기다리지 않고 빨리 실패(→ HikariCP 가 새 커넥션으로 교체)하도록 한다.
+      minimum-idle: 0
+      maximum-pool-size: 10
+      idle-timeout: 60000
+      max-lifetime: 270000
+      connection-timeout: 10000
+      keepalive-time: 120000
+      # Supabase 쪽에서 커넥션을 끊어도 클라이언트 소켓은 FIN/RST 없이 그냥 방치될 수 있어,
+      # PGJDBC 레벨 타임아웃이 없으면 죽은 커넥션 검증/쿼리가 OS 기본 TCP 타임아웃(수십 초)까지
+      # 무한 대기한다. socketTimeout/connectTimeout으로 죽은 소켓을 빨리 실패시켜 위 connection-timeout
+      # 예산 안에서 HikariCP가 다음 커넥션으로 넘어갈 수 있게 한다.
+      data-source-properties:
+        socketTimeout: 5
+        connectTimeout: 5
+        tcpKeepAlive: true
   flyway:
     enabled: true
     locations: classpath:db/migration

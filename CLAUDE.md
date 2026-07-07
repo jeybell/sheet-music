@@ -113,9 +113,11 @@ setlists (셋리스트/콘티)
 
 ## 로컬 백엔드 실행
 - **기본**: `JAVA_HOME=<jdk17 경로> ./gradlew bootRun` → 저장소 루트에 `.env`가 없으면 `application.yml` 기본값(로컬 Postgres, `localhost:5432/sheet_music`) 사용.
-- **운영(Supabase) DB에 붙여서 실행하고 싶을 때**: 저장소 루트 `.env.example`을 `.env`로 복사(gitignore 처리, 커밋 안 됨) → `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`를 Supabase 값으로 채움. `build.gradle`의 `bootRun` 태스크가 이 `.env`를 자동으로 읽어 프로세스 환경변수로 주입하므로 별도 플래그 없이 그냥 실행하면 됨:
+- **운영(Supabase) DB에 붙여서 실행하고 싶을 때**: 저장소 루트 `.env.example`을 `.env`로 복사(gitignore 처리, 커밋 안 됨) → `SPRING_DATASOURCE_URL`/`_USERNAME`/`_PASSWORD`를 Supabase 값으로 채움. `spring-dotenv` 라이브러리(`build.gradle`의 `developmentOnly` 의존성)가 기동 시 이 `.env`를 자동으로 읽어 반영하므로, Gradle `bootRun`/IntelliJ Run·Debug/jar 직접 실행 등 어떤 방식으로 띄워도 별도 설정 없이 동일하게 동작함(운영 배포용 jar에는 포함되지 않음):
   ```
   JAVA_HOME=<jdk17 경로> ./gradlew bootRun
   ```
-  Docker Compose도 같은 `.env`를 쓰므로 파일 하나로 두 실행 방식 모두 커버됨.
+  Docker Compose도 같은 `.env`를 쓰므로 파일 하나로 모든 실행 방식을 커버함.
   ⚠️ 운영 DB에 쓰기까지 그대로 반영됨(회원가입·곡 등록/삭제·콘티 편집 등). 순수 조회만 필요하면 대신 읽기전용 MCP(`.mcp.json`의 `supabase-db`, `SUPABASE_READONLY_URL`)를 사용할 것.
+- **로컬 디버그 로깅(선택)**: `.env`에 `LOCAL_WEB_LOG_LEVEL=DEBUG`, `LOCAL_SQL_LOG_LEVEL=DEBUG`, `LOCAL_SQL_BIND_LOG_LEVEL=TRACE`를 추가하면 요청 로그(DispatcherServlet)와 실행되는 SQL/바인드 파라미터가 콘솔에 찍힘(`application.yml`에 고정 로거 이름 + 플레이스홀더 기본값 `WARN`/`INFO`로 선언되어 있어 운영에는 영향 없음). 실행 중인 프로세스는 `.env` 변경을 반영하지 않으므로 재시작 필요.
+  ⚠️ Hibernate 로거 이름(`org.hibernate.SQL`)처럼 대소문자가 섞인 카테고리는 환경변수로 직접(`LOGGING_LEVEL_ORG_HIBERNATE_SQL=...`) 설정하면 Spring이 맵 키를 소문자로 접어버려 무시됨 — 반드시 `application.yml`에 고정 키로 선언하고 값만 환경변수로 주입할 것.

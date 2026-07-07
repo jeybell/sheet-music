@@ -23,6 +23,7 @@ import Card from '../components/ui/Card.vue'
 import TagInput from '../components/ui/TagInput.vue'
 import { useSongStore } from '../stores/songStore'
 import { isSafeHttpUrl } from '../lib/utils'
+import { getActiveBaseUrl } from '../apis/apiBase'
 import type { SongSheetSummary, SongFile } from '../types/song'
 
 const props = defineProps<{ songId: number }>()
@@ -48,8 +49,7 @@ const sheets = computed(() => song.value?.sheets ?? song.value?.songSheets ?? []
 const toOpt = (v: string) => v.trim() || null
 
 const fileUrl = (fileId: number, mode: 'view' | 'download' = 'view') => {
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  return `${base}/api/song-files/${fileId}/${mode}`
+  return `${getActiveBaseUrl()}/api/song-files/${fileId}/${mode}`
 }
 
 const isPdf = (file: { contentType?: string | null; originalFileName?: string | null }) => {

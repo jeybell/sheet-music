@@ -20,3 +20,11 @@ services:
       R2_BUCKET: ${R2_BUCKET}
       JWT_SECRET: ${JWT_SECRET}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: sheet-music-tunnel-desktop
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://backend:8080
+    depends_on:
+      - backend

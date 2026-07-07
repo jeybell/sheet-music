@@ -31,6 +31,9 @@ uploads/
 .env.*
 !.env.example
 
+# 로컬 백엔드에서 운영 DB 등 실제 자격증명을 담는 Spring 프로필 (템플릿 .example만 커밋)
+src/main/resources/application-local.yml
+
 *.log
 .vercel
 

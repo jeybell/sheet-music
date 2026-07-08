@@ -105,6 +105,18 @@ const downloadPdf = async () => {
           img.onload = () => resolve()
           img.src = dataUrl
         })
+        // jsPDF 는 JPEG/PNG 만 직접 디코드한다(WebP 미지원). 브라우저가 디코드한
+        // 이미지를 흰 배경 위에 그려 JPEG 로 재인코딩하면 소스 포맷과 무관하게
+        // (WebP 포함) 안전하고, 투명 PNG 도 흰 배경으로 평탄화되어 들어간다.
+        const pdfCanvas = document.createElement('canvas')
+        pdfCanvas.width = img.naturalWidth
+        pdfCanvas.height = img.naturalHeight
+        const pctx = pdfCanvas.getContext('2d')
+        if (!pctx) throw new Error('canvas unsupported')
+        pctx.fillStyle = '#ffffff'
+        pctx.fillRect(0, 0, pdfCanvas.width, pdfCanvas.height)
+        pctx.drawImage(img, 0, 0)
+        const jpegDataUrl = pdfCanvas.toDataURL('image/jpeg', 0.92)
         if (!firstPage) doc.addPage()
         firstPage = false
         const pageW = doc.internal.pageSize.getWidth()
@@ -114,7 +126,7 @@ const downloadPdf = async () => {
         const h = img.height * ratio
         const x = (pageW - w) / 2
         const y = (pageH - h) / 2
-        doc.addImage(dataUrl, 'JPEG', x, y, w, h)
+        doc.addImage(jpegDataUrl, 'JPEG', x, y, w, h)
       }
     }
 
@@ -348,11 +360,17 @@ const saveWhiteBackground = async (file: WhiteBgTarget) => {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0)
 
-    const mimeType = file.contentType?.startsWith('image/') ? file.contentType : 'image/jpeg'
-    const outBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, 0.92))
+    // 흰색으로 구운 뒤라 알파가 필요 없다. WebP(q0.95)로 저장하면 무손실 PNG보다
+    // 용량이 절반 이하이면서 악보 선/글자 화질 손상도 거의 없다(악보엔 JPEG보다
+    // 유리). WebP 인코딩을 지원하지 않는 오래된 브라우저에선 canvas.toBlob 이
+    // 자동으로 PNG(무손실)로 폴백하므로, 결과 Blob 의 실제 type 을 보고 확장자를
+    // 정해 바이트·확장자·contentType 이 어긋나지 않게 한다.
+    const outBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.95))
     if (!outBlob) throw new Error('이미지 생성에 실패했습니다.')
 
-    await replaceSongFileContent(file.songFileId, outBlob, file.originalFileName ?? 'sheet')
+    const ext = outBlob.type === 'image/webp' ? 'webp' : 'png'
+    const baseName = (file.originalFileName ?? 'sheet').replace(/\.[^./\\]+$/, '')
+    await replaceSongFileContent(file.songFileId, outBlob, `${baseName}.${ext}`)
     fileVersions[file.songFileId] = (fileVersions[file.songFileId] ?? 0) + 1
   } catch {
     alert('배경 저장에 실패했습니다. 다시 시도해주세요.')

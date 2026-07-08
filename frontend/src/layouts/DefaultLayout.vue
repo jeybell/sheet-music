@@ -43,29 +43,29 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
         />
       </div>
 
-      <div class="max-w-5xl mx-auto px-3 sm:px-6 h-12 sm:h-14 flex items-center gap-2 sm:gap-8">
-        <RouterLink to="/" class="text-base font-bold text-primary tracking-tight shrink-0">
+      <div class="max-w-5xl mx-auto px-2 sm:px-6 h-12 sm:h-14 flex items-center gap-1.5 sm:gap-8">
+        <RouterLink to="/" class="text-sm sm:text-base font-bold text-primary tracking-tight shrink-0">
           Worship Sheet
         </RouterLink>
         <nav class="flex gap-0.5 sm:gap-1 flex-1">
           <RouterLink
             to="/"
             exact-active-class="bg-primary-soft text-primary font-semibold"
-            class="px-2.5 sm:px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            class="whitespace-nowrap px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             홈
           </RouterLink>
           <RouterLink
             to="/setlists"
             active-class="bg-primary-soft text-primary font-semibold"
-            class="px-2.5 sm:px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            class="whitespace-nowrap px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             콘티
           </RouterLink>
           <RouterLink
             to="/songs"
             active-class="bg-primary-soft text-primary font-semibold"
-            class="px-2.5 sm:px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            class="whitespace-nowrap px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             악보
           </RouterLink>
@@ -78,7 +78,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
             @click="toggleHelp"
             aria-label="도움말"
             title="도움말"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-md transition-colors"
+            class="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md transition-colors"
             :class="showHelp ? 'bg-primary-soft text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
           >
             <HelpCircle class="w-4 h-4" />
@@ -109,7 +109,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
             active-class="bg-primary-soft text-primary"
             aria-label="관리자"
             title="관리자"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            class="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <Shield class="w-4 h-4" />
           </RouterLink>
@@ -118,7 +118,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
             active-class="bg-primary-soft text-primary"
             aria-label="기능 요청"
             title="기능 요청"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            class="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <MessageSquarePlus class="w-4 h-4" />
           </RouterLink>
@@ -126,7 +126,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
             type="button"
             @click="toggleTheme"
             :aria-label="theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            class="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <Sun v-if="theme === 'dark'" class="w-4 h-4" />
             <Moon v-else class="w-4 h-4" />
@@ -136,7 +136,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onHelpKey))
             @click="handleLogout"
             aria-label="로그아웃"
             title="로그아웃"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            class="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <LogOut class="w-4 h-4" />
           </button>

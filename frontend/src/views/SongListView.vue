@@ -174,30 +174,33 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border text-sm font-medium transition-colors"
+          :aria-label="selectMode ? '선택 취소' : '곡 합치기'"
+          class="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-md border text-sm font-medium whitespace-nowrap transition-colors"
           :class="selectMode
             ? 'border-primary bg-primary-soft text-primary'
             : 'border-border bg-card text-foreground hover:bg-muted'"
           @click="toggleSelectMode"
         >
-          <CheckSquare class="w-4 h-4" />
-          {{ selectMode ? '선택 취소' : '곡 합치기' }}
+          <CheckSquare class="w-4 h-4 shrink-0" />
+          <span class="hidden sm:inline">{{ selectMode ? '선택 취소' : '곡 합치기' }}</span>
         </button>
         <RouterLink
           v-if="!selectMode"
           to="/songs/bulk"
-          class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          aria-label="일괄 업로드"
+          class="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-md border border-border bg-card text-sm font-medium text-foreground whitespace-nowrap hover:bg-muted transition-colors"
         >
-          <FolderUp class="w-4 h-4" />
-          일괄 업로드
+          <FolderUp class="w-4 h-4 shrink-0" />
+          <span class="hidden sm:inline">일괄 업로드</span>
         </RouterLink>
         <RouterLink
           v-if="!selectMode"
           to="/songs/new"
-          class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          aria-label="곡 등록"
+          class="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium whitespace-nowrap hover:opacity-90 transition-opacity"
         >
-          <Plus class="w-4 h-4" />
-          곡 등록
+          <Plus class="w-4 h-4 shrink-0" />
+          <span class="hidden sm:inline">곡 등록</span>
         </RouterLink>
       </div>
     </div>

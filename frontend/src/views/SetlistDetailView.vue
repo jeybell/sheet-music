@@ -4,7 +4,7 @@ import { isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
 import { addSetlistItem, deleteSetlistItem, updateSetlistItem } from '../apis/setlistItemApi'
 import { useSetlistFavorites } from '../composables/useSetlistFavorites'
-import { ChevronLeft, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, QrCode, Copy, Download, Presentation, Star, KeyRound, Check, PlayCircle} from '@lucide/vue'
+import { ChevronLeft, ChevronDown, Pencil, Trash2, Plus, X, BookOpen, Share2, Link, Link2Off, Music, GripVertical, QrCode, Copy, Download, Presentation, Star, KeyRound, Check, PlayCircle} from '@lucide/vue'
 import QRCode from 'qrcode'
 import { deleteSetlist, updateSetlist, generateShareToken, revokeShareToken, reorderSetlistItems, duplicateSetlist } from '../apis/setlistApi'
 import { getSong } from '../apis/songApi'
@@ -197,6 +197,8 @@ watch(songViewMode, (v) => localStorage.setItem(SONG_VIEW_KEY, v))
 // ── 곡 추가
 const showAddItem = ref(false)
 const showSongPicker = ref(false)
+// 곡 선택 직후엔 폼 공간을 아끼기 위해 연주 키·YouTube·메모는 "더보기"로 접어둔다.
+const showAddItemDetails = ref(false)
 const addForm = reactive({ songId: null as number | null, songSheetId: null as number | null, songTitle: '', memo: '', performanceKey: '', youtubeUrl: '' })
 const addError = ref('')
 const isAddingItem = ref(false)
@@ -222,6 +224,7 @@ const resetAddForm = () => {
   addForm.performanceKey = ''
   addForm.youtubeUrl = ''
   addError.value = ''
+  showAddItemDetails.value = false
 }
 
 const handleAddItem = async () => {
@@ -785,21 +788,33 @@ watch(() => props.setlistId, load)
                   <span v-else class="text-muted-foreground">곡을 검색해서 선택하세요</span>
                 </button>
               </div>
-              <!-- 연주 키(이번 예배 키) -->
-              <div class="flex flex-col gap-1.5">
-                <Label for="add-performance-key">연주 키 <span class="text-muted-foreground font-normal">(악보 원래 키와 다를 경우)</span></Label>
-                <Input id="add-performance-key" v-model="addForm.performanceKey" type="text" placeholder="예: G" class="max-w-[8rem]" />
-              </div>
-              <!-- YouTube 링크 (곡별) -->
-              <div class="flex flex-col gap-1.5">
-                <Label for="add-youtube">YouTube 링크 <span class="text-muted-foreground font-normal">(이 곡 참고 영상)</span></Label>
-                <Input id="add-youtube" v-model="addForm.youtubeUrl" type="url" placeholder="https://youtu.be/..." />
-              </div>
-              <!-- 메모 (여러 줄) -->
-              <div class="flex flex-col gap-1.5">
-                <Label for="add-memo">메모</Label>
-                <Textarea id="add-memo" v-model="addForm.memo" rows="3" placeholder="악보 지시사항, 전조 메모 등 자유롭게 입력" />
-              </div>
+              <!-- 상세 정보 더보기 토글 -->
+              <button
+                type="button"
+                class="self-start flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                @click="showAddItemDetails = !showAddItemDetails"
+              >
+                <ChevronDown class="w-3.5 h-3.5 transition-transform" :class="showAddItemDetails ? 'rotate-180' : ''" />
+                {{ showAddItemDetails ? '상세 정보 접기' : '상세 정보 입력 (연주 키·YouTube·메모)' }}
+              </button>
+
+              <template v-if="showAddItemDetails">
+                <!-- 연주 키(이번 예배 키) -->
+                <div class="flex flex-col gap-1.5">
+                  <Label for="add-performance-key">연주 키 <span class="text-muted-foreground font-normal">(악보 원래 키와 다를 경우)</span></Label>
+                  <Input id="add-performance-key" v-model="addForm.performanceKey" type="text" placeholder="예: G" class="max-w-[8rem]" />
+                </div>
+                <!-- YouTube 링크 (곡별) -->
+                <div class="flex flex-col gap-1.5">
+                  <Label for="add-youtube">YouTube 링크 <span class="text-muted-foreground font-normal">(이 곡 참고 영상)</span></Label>
+                  <Input id="add-youtube" v-model="addForm.youtubeUrl" type="url" placeholder="https://youtu.be/..." />
+                </div>
+                <!-- 메모 (여러 줄) -->
+                <div class="flex flex-col gap-1.5">
+                  <Label for="add-memo">메모</Label>
+                  <Textarea id="add-memo" v-model="addForm.memo" rows="3" placeholder="악보 지시사항, 전조 메모 등 자유롭게 입력" />
+                </div>
+              </template>
               <div class="flex gap-2">
                 <Button :disabled="isAddingItem || !addForm.songId" @click="handleAddItem">
                   {{ isAddingItem ? '추가 중...' : '추가' }}

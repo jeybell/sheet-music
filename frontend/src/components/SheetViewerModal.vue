@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, X, Download, Pencil, Eraser, Undo2, Trash2, PaintBucket } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, X, Download, Pencil, Eraser, Undo2, Trash2, PaintBucket, Plus } from '@lucide/vue'
 import { jsPDF } from 'jspdf'
 import { getSongFileAnnotation, saveSongFileAnnotation, replaceSongFileContent } from '../apis/songFileApi'
 import type { AnnotationStroke } from '../apis/songFileApi'
@@ -19,9 +19,12 @@ const props = defineProps<{
   songs: ViewerSong[]
   setlistTitle: string | null
   initialIndex?: number
+  // true면 현재 페이지(악보 버전)를 바로 고를 수 있는 "이 버전 추가" 버튼을 보여준다
+  // (콘티 곡 추가 시 여러 악보 버전을 넘겨보며 바로 선택하는 용도).
+  selectable?: boolean
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; select: [index: number] }>()
 
 const currentIndex = ref(
   props.initialIndex != null && props.initialIndex >= 0 && props.initialIndex < props.songs.length
@@ -406,6 +409,15 @@ onUnmounted(() => {
         </div>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          v-if="selectable"
+          type="button"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-primary text-primary-foreground hover:opacity-90 transition-colors"
+          @click="emit('select', currentIndex)"
+        >
+          <Plus class="w-3.5 h-3.5" />
+          이 버전 추가
+        </button>
         <button
           v-if="imageFiles.length > 0"
           type="button"

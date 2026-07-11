@@ -67,20 +67,41 @@ const addWithSheet = (songId: number, songSheetId: number | null) => {
 }
 
 // 악보 미리보기 (SheetViewerModal 재사용)
-const viewerSheet = ref<ViewerSong | null>(null)
+// 클릭한 버전 하나만이 아니라 그 곡의 모든 악보 버전을 넘겨보며 바로 고를 수 있도록,
+// 곡의 전체 버전을 songs 배열로 넘기고 클릭한 버전의 인덱스로 초기 위치를 잡는다.
+const viewerSongs = ref<ViewerSong[]>([])
+const viewerSongId = ref<number | null>(null)
+const viewerInitialIndex = ref(0)
 
 const openViewer = (song: Song, sheet: SongSheetSummary) => {
-  viewerSheet.value = {
+  const sheets = sheetsOf(song)
+  viewerSongId.value = song.songId
+  viewerInitialIndex.value = Math.max(sheets.findIndex(s => s.songSheetId === sheet.songSheetId), 0)
+  viewerSongs.value = sheets.map(s => ({
     title: song.title,
     artist: song.artist,
-    sheetKey: sheet.sheetKey,
-    versionName: sheet.versionName,
-    files: (sheet.files ?? []).map(f => ({
+    sheetKey: s.sheetKey,
+    versionName: s.versionName,
+    files: (s.files ?? []).map(f => ({
       songFileId: f.songFileId,
       originalFileName: f.originalFileName ?? null,
       contentType: f.contentType ?? null,
     })),
-  }
+  }))
+}
+
+const closeViewer = () => {
+  viewerSongs.value = []
+  viewerSongId.value = null
+}
+
+// 뷰어에서 넘겨보다가 "이 버전 추가"를 누르면 그 자리에서 바로 추가한다.
+const onViewerSelect = (index: number) => {
+  const song = props.songs.find(s => s.songId === viewerSongId.value)
+  const sheet = song ? sheetsOf(song)[index] : undefined
+  if (!song || !sheet) return
+  closeViewer()
+  addWithSheet(song.songId, sheet.songSheetId)
 }
 
 // 악보 인라인 수정
@@ -123,7 +144,7 @@ const saveEditSheet = async (sheet: SongSheetSummary) => {
 
 const onKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
-    if (viewerSheet.value) return // 뷰어가 열려있으면 뷰어만 닫히도록 피커는 유지
+    if (viewerSongs.value.length > 0) return // 뷰어가 열려있으면 뷰어만 닫히도록 피커는 유지
     emit('close')
   }
 }
@@ -287,11 +308,14 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
     </div>
   </div>
 
-  <!-- 악보 미리보기 (피커 위에 오버레이) -->
+  <!-- 악보 미리보기 (피커 위에 오버레이). 같은 곡의 버전들을 넘겨보다가 바로 추가할 수 있다 -->
   <SheetViewerModal
-    v-if="viewerSheet"
-    :songs="[viewerSheet]"
+    v-if="viewerSongs.length > 0"
+    :songs="viewerSongs"
     :setlist-title="null"
-    @close="viewerSheet = null"
+    :initial-index="viewerInitialIndex"
+    selectable
+    @select="onViewerSelect"
+    @close="closeViewer"
   />
 </template>
